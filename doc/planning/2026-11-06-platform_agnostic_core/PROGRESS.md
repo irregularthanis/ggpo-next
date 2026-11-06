@@ -42,7 +42,7 @@ May overlap late M1; owns CMake platform selection and Windows target wiring.
 - [ ] M3-T01: Make the Windows layer own sources, definitions, and system libraries.
 - [ ] M3-T02: Keep core source composition platform-neutral and reject unsupported targets clearly.
 - [ ] M3-T03: Expose only public headers and install the `GGPO::GGPO` consumer target.
-- [ ] M3-T04: Build and install the complete M0 Windows matrix.
+- [ ] M3-T04: Build/install the M0 Windows matrix and prove default builds execute and enforce self-contained tests.
 - [ ] M3-T05: Run shared platform-contract and UDP-loopback smoke tests against Windows.
 
 ### M4: Integrate and qualify (depends: M1, M2, M3)

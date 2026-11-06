@@ -31,6 +31,8 @@ Linux and Apple PRs can implement without forking GGPO's behavior.
   internal headers stop leaking through the consumer interface.
 - Platform-agnostic smoke tests run the core against a deterministic fake
   adapter; platform smoke tests run the same adapter contract against Windows.
+- Native builds compile and execute their self-contained tests by default; a
+  failed test fails the build rather than leaving validation as an optional step.
 - Linux, Apple, and sample-frontend ports remain follow-ups against the frozen
   contracts. Unsupported platforms fail configuration with a useful message.
 
@@ -47,6 +49,7 @@ Linux and Apple PRs can implement without forking GGPO's behavior.
 | Runtime behavior | No automated SDK regression suite | SyncTest and local UDP peers produce matching frame/checksum results | CTest integration evidence |
 | Core smoke | Core cannot run without Win32-shaped facilities | Deterministic fake adapter exercises startup, SyncTest, frame advance, rollback, and failures | OS-independent CTest target |
 | Platform smoke | Windows build success is the only adapter evidence | Shared conformance tests validate Windows clock/wait/config/files/network plus UDP loopback | Windows CTest target; mandatory for later adapters |
+| Default build gate | Current build does not run tests | Native `cmake --build` runs self-contained CTest suites and propagates failure | Build log shows executed tests; intentional opt-out is explicit |
 
 Performance changes, wire-format redesign, new public features, and a Linux or
 Apple SDK binary are not acceptance criteria. The network protocol must remain

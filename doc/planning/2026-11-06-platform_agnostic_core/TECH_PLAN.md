@@ -217,6 +217,33 @@ Tests use unique temporary directories and ephemeral loopback ports, clean them
 on success/failure, and never access external networks. A missing adapter test is
 `not qualified`, not a skip that still grants support.
 
+### Default test execution
+
+Tests are enabled and run during native builds by default. `include(CTest)` keeps
+the standard `BUILD_TESTING=ON` default; `GGPO_RUN_TESTS_ON_BUILD=ON` adds an
+`ALL` target that runs every self-contained test after its executables are built.
+CTest failure therefore returns a failing build status in local builds and CI.
+
+```cmake
+include(CTest)
+option(GGPO_RUN_TESTS_ON_BUILD "Run GGPO tests as part of the default build" ON)
+
+if(BUILD_TESTING AND GGPO_RUN_TESTS_ON_BUILD)
+  add_custom_target(ggpo_check ALL
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
+            -C $<CONFIG> -LE cross-revision
+    DEPENDS ggpo_core_smoke ggpo_platform_smoke ggpo_api_smoke
+    USES_TERMINAL)
+endif()
+```
+
+`BUILD_TESTING=OFF` is the explicit consumer/packaging opt-out. Setting only
+`GGPO_RUN_TESTS_ON_BUILD=OFF` still builds tests but requires an explicit
+`ctest`. Cross-compilation must provide `CMAKE_CROSSCOMPILING_EMULATOR` or
+explicitly disable execution; configuration fails instead of silently claiming
+tests ran. Cross-revision old/new DLL checks carry the `cross-revision` label and
+remain mandatory in CI, where the frozen M0 artifacts are available.
+
 ### Build toolchain: before
 
 ```mermaid
@@ -315,6 +342,7 @@ be introduced, but existing names and build options remain accepted.
 | Runtime | SyncTest and two local UDP peers over fixed frame counts | All frames complete; peer checksums match | Missing run or mismatch is inconclusive/fail |
 | Agnostic smoke | Core linked with deterministic fake adapter | Startup, frames, rollback, scripted failures, cleanup all pass without OS calls | Any fallback to real time/network fails |
 | Platform smoke | Shared conformance executable linked to Windows adapter | Contract cases and UDP loopback pass with cleanup | Missing/unsupported case leaves Windows layer unqualified |
+| Default build | Native `cmake --build` with defaults | `ggpo_check` runs all self-contained tests and propagates failures | Absent test output or ignored failure fails qualification |
 | Follow-up readiness | Header-only GCC/Clang compile on Linux/macOS | Public contract compiles; no SDK binary claim | Unavailable runner is recorded, not passed |
 
 ## Implementation order
@@ -345,7 +373,7 @@ implement them for Windows, and compare runtime behavior with M0.
 ### M3: Separate the Windows build layer
 
 Own platform selection and Windows CMake wiring. Move OS sources, definitions,
-libraries, and install behavior behind the Windows target.
+libraries, install behavior, and default test execution behind the Windows target.
 
 ### M4: Integrate and qualify
 
