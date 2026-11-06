@@ -26,7 +26,7 @@ main(void)
    GGPOSessionCallbacks callbacks;
    GGPOPlayerHandle handles[2];
    SmokeState expected = { 0, 0, 0 };
-   char game_name[] = "ggpo-m0-synctest";
+   char game_name[] = "ggpo-windows-synctest";
    int frame;
 
    SmokeReset();

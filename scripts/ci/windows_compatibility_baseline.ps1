@@ -14,10 +14,10 @@ $sharedLabel = if ($Shared -eq "ON") { "shared" } else { "static" }
 $architectureLabel = if ($Architecture -eq "x64") { "x64" } else { "x86" }
 
 if (!$BuildDirectory) {
-    $BuildDirectory = Join-Path $repo "build/m0-$architectureLabel-$sharedLabel"
+    $BuildDirectory = Join-Path $repo "build/windows-compatibility-$architectureLabel-$sharedLabel"
 }
 if (!$EvidenceDirectory) {
-    $EvidenceDirectory = Join-Path $repo "build/m0-evidence/$architectureLabel-$sharedLabel-$Configuration"
+    $EvidenceDirectory = Join-Path $repo "build/windows-compatibility-evidence/$architectureLabel-$sharedLabel-$Configuration"
 }
 
 cmake -S $repo -B $BuildDirectory -G $Generator -A $Architecture `
@@ -33,13 +33,13 @@ if ($LASTEXITCODE -ne 0) { throw "CMake build failed" }
 ctest --test-dir $BuildDirectory -C $Configuration --output-on-failure
 if ($LASTEXITCODE -ne 0) { throw "CTest failed" }
 
-& (Join-Path $PSScriptRoot "capture_windows_m0.ps1") `
+& (Join-Path $PSScriptRoot "capture_windows_compatibility_baseline.ps1") `
     -BuildDirectory $BuildDirectory `
     -Configuration $Configuration `
     -Architecture $Architecture `
     -Shared $Shared `
     -OutputDirectory $EvidenceDirectory `
     -NoiseRuns $NoiseRuns
-if ($LASTEXITCODE -ne 0) { throw "M0 evidence capture failed" }
+if ($LASTEXITCODE -ne 0) { throw "Windows compatibility evidence capture failed" }
 
-Write-Host "M0 evidence: $EvidenceDirectory"
+Write-Host "Windows compatibility evidence: $EvidenceDirectory"

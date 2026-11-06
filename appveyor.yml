@@ -33,14 +33,14 @@ test_script:
 
 after_test:
   - ps: >-
-      ./scripts/ci/capture_windows_m0.ps1
+      ./scripts/ci/capture_windows_compatibility_baseline.ps1
       -BuildDirectory build
       -Configuration $env:CONFIGURATION
       -Architecture x64
       -Shared $(if ($env:GGPO_SHARED_LIB -eq 'on') { 'ON' } else { 'OFF' })
-      -OutputDirectory "build/m0-evidence/x64-$env:GGPO_SHARED_LIB-$env:CONFIGURATION"
+      -OutputDirectory "build/windows-compatibility-evidence/x64-$env:GGPO_SHARED_LIB-$env:CONFIGURATION"
       -NoiseRuns 0
 
 artifacts:
-  - path: build\m0-evidence\**\*
-    name: m0-evidence
+  - path: build\windows-compatibility-evidence\**\*
+    name: windows-compatibility-evidence

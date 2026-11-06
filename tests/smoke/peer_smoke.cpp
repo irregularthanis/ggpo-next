@@ -83,7 +83,7 @@ main(int argc, char **argv)
    callbacks = SmokeCallbacks();
    if (!CheckResult(ggpo_start_session(&g_smoke_session,
                                        &callbacks,
-                                       "ggpo-m0-peer-smoke",
+                                       "ggpo-windows-peer-smoke",
                                        2,
                                        (int)sizeof(int),
                                        (unsigned short)local_port),

@@ -1,6 +1,6 @@
 # PROGRESS — Platform-agnostic GGPO core and Windows build layer
 
-Status: In progress  
+Status: M0 complete; M1–M4 planned
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
 ## Milestones
@@ -9,14 +9,14 @@ Status: In progress
 
 Architecture: [current build and platform status](../../architecture/Build.md#platform-status).
 
-Implementation is present on the planning branch; completion remains unchecked
-until the Windows matrix produces nonempty build, ABI, layout, and runtime evidence.
+Implemented at [`3498899`](https://github.com/irregularthanis/ggpo-next/commit/34988996cab45c1a37a9c556fe66b192d60a547b)
+and qualified by the [Windows compatibility matrix](https://github.com/irregularthanis/ggpo-next/actions/runs/42296246130).
 
-- [ ] M0-T01: Build current Windows x64 Debug/Release static/shared outputs.
-- [ ] M0-T02: Record public DLL exports and public structure/callback layouts.
-- [ ] M0-T03: Add fixed SyncTest, local-peer, and packet-layout baseline fixtures.
-- [ ] M0-T04: Record whether Win32/x86 has a qualifying baseline.
-- [ ] M0-T05: Freeze the legacy build recipe and measure repeated-run noise for A/B interpretation.
+- [x] M0-T01: Build current Windows x64 Debug/Release static/shared outputs.
+- [x] M0-T02: Record public DLL exports and public structure/callback layouts.
+- [x] M0-T03: Add fixed SyncTest, local-peer, and packet-layout baseline fixtures.
+- [x] M0-T04: Record whether Win32/x86 has a qualifying baseline.
+- [x] M0-T05: Freeze the legacy build recipe and measure repeated-run noise for A/B interpretation.
 
 ### M1: Stabilize the public API and ABI (depends: M0)
 
@@ -61,4 +61,9 @@ May overlap late M1; owns CMake platform selection and Windows target wiring.
 
 | Task | Commit / artifact | Command / method | Environment / input | Result |
 | --- | --- | --- | --- | --- |
+| M0-T01 | [`be5e746`](https://github.com/irregularthanis/ggpo-next/commit/be5e7462794629afb971c7ea5edf60a14810b409), [matrix](https://github.com/irregularthanis/ggpo-next/actions/runs/42296246130) | `windows_compatibility_baseline.ps1`, eight-job CMake matrix | Windows Server 2022; MSVC; x64/Win32; shared/static; Debug/Release | All eight builds and evidence uploads passed |
+| M0-T02 | [`public_layout.cpp`](../../../tests/baseline/windows/public_layout.cpp), [`exports-x64.txt`](../../../tests/baseline/windows/exports-x64.txt) | Execute layout fixture; normalize `dumpbin /exports`; compare x64 manifest | Shared x64 and Win32 builds | 16 public exports preserved; public sizes, offsets, enums, and callback slots passed |
+| M0-T03 | [`synctest_smoke.cpp`](../../../tests/smoke/synctest_smoke.cpp), [`peer_smoke.cpp`](../../../tests/smoke/peer_smoke.cpp), [`packet_layout.cpp`](../../../tests/baseline/windows/packet_layout.cpp) | CTest runs SyncTest, two loopback processes, and wire-layout assertions | Every matrix lane; 180 peer frames | 4/4 tests passed in every lane; peer checksums matched at frame 180 |
+| M0-T04 | [Win32 matrix jobs](https://github.com/irregularthanis/ggpo-next/actions/runs/42296246130) | Build and test four Win32 variants | Win32 shared/static; Debug/Release | x86 is qualified for this baseline |
+| M0-T05 | [`windows_compatibility_baseline.ps1`](../../../scripts/ci/windows_compatibility_baseline.ps1), [x64 shared Release evidence](https://github.com/irregularthanis/ggpo-next/actions/runs/42296246130) | Ten sequential two-peer loopback runs after the normal CTest pass | 180 frames/run; matching checksum `0x7db6c67b` | 17,484.7–33,180.3 ms; median 32,984.7 ms; variance requires interleaved repeated A/B comparisons |
 

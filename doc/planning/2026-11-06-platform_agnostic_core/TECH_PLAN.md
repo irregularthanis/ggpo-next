@@ -1,7 +1,8 @@
 # TECH_PLAN — Platform-agnostic GGPO core and Windows build layer
 
-Status: Planning only  
+Status: M0 implemented; M1–M4 planned
 Source: [`004ffd7`](https://github.com/irregularthanis/ggpo-next/tree/004ffd7f47603d3bae4abd1d541501d715e03279)  
+M0 implementation: [`3498899`](https://github.com/irregularthanis/ggpo-next/commit/34988996cab45c1a37a9c556fe66b192d60a547b)
 [Product brief](PRD.md) · [Tracker](PROGRESS.md)
 
 ## Inspected facts
@@ -29,6 +30,25 @@ Source: [`004ffd7`](https://github.com/irregularthanis/ggpo-next/tree/004ffd7f47
   but emulate several Win32 names inside Unix code. This plan instead keeps OS
   names out of the core and preserves attribution for reused logic.
 
+## M0 Windows compatibility baseline
+
+M0 adds tests and evidence capture without changing GGPO runtime behavior. The
+[successful matrix](https://github.com/irregularthanis/ggpo-next/actions/runs/42296246130)
+builds x64 and Win32, shared and static, in Debug and Release.
+
+| Contract | Persistent fixture | Qualified result |
+| --- | --- | --- |
+| Public ABI | [`public_layout.cpp`](../../../tests/baseline/windows/public_layout.cpp), [`exports-x64.txt`](../../../tests/baseline/windows/exports-x64.txt) | 16 exports plus public sizes, offsets, enum values, and callback slots pass |
+| Wire layout | [`packet_layout.cpp`](../../../tests/baseline/windows/packet_layout.cpp) | Packed `UdpMsg` sizes, offsets, and representative input packet sizes pass |
+| Deterministic rollback | [`synctest_smoke.cpp`](../../../tests/smoke/synctest_smoke.cpp) | Fixed inputs reach the expected frame and checksum through SyncTest |
+| Real transport | [`peer_smoke.cpp`](../../../tests/smoke/peer_smoke.cpp), [`run_peer_smoke.py`](../../../tests/smoke/run_peer_smoke.py) | Two loopback processes reach frame 180 with matching state |
+| Build recipe | [`windows_compatibility_baseline.ps1`](../../../scripts/ci/windows_compatibility_baseline.ps1), [`windows-compatibility.yml`](../../../.github/workflows/windows-compatibility.yml) | Eight variants pass and publish nonempty evidence |
+
+The ten-run x64 shared Release sample ranged from 17,484.7 to 33,180.3 ms
+with a 32,984.7 ms median. Every run produced checksum `0x7db6c67b`, but timing
+and rollback counts varied; future performance comparisons therefore require
+repeated, interleaved A/B runs rather than a single elapsed-time result.
+
 ## Target boundary
 
 ```mermaid
@@ -55,7 +75,7 @@ as defining `SOCKET`, `HANDLE`, or `WSAGetLastError` on every OS.
 | Status | File / symbol | Practical edit | Milestone |
 | --- | --- | --- | --- |
 | Modify | [`ggponet.h`](../../../src/include/ggponet.h) | Add `GGPO_CALL` and complete `GGPO_API`; include C boolean support without changing Windows signatures/layout | M1 |
-| Proposed | `tests/api/`, `tests/abi/windows/` | C/C++ consumer fixtures, export manifest, and public layout checks | M0, M1 |
+| Implemented for M0; extend in M1 | [Windows baseline fixtures](../../../tests/baseline/windows/README.md), [smoke targets](../../../tests/CMakeLists.txt) | Export/layout fixtures, SyncTest, and real two-peer baseline; add installed C/C++ consumers in M1 | M0, M1 |
 | Modify | [`types.h`](../../../src/lib/ggpo/types.h) | Use fixed-width internal types and include a neutral platform contract | M2 |
 | Proposed | `src/platform/common/platform.h`, `udp_socket.h` | Declare clock/wait, process/config/diagnostic, and UDP semantics | M2 |
 | Move/modify | `platform_windows.*`, [`poll.cpp`](../../../src/lib/ggpo/poll.cpp), [`udp.cpp`](../../../src/lib/ggpo/network/udp.cpp) | Implement those contracts on Windows; keep protocol/session logic in core | M2 |

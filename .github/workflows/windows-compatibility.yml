@@ -1,4 +1,4 @@
-name: Windows M0 baseline
+name: Windows compatibility baseline
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure, build, test, and capture M0
+      - name: Build and test the Windows compatibility baseline
         shell: pwsh
         run: |
           $noiseRuns = 0
@@ -28,19 +28,19 @@ jobs:
               "${{ matrix.configuration }}" -eq "Release") {
             $noiseRuns = 10
           }
-          ./scripts/ci/windows_m0.ps1 `
+          ./scripts/ci/windows_compatibility_baseline.ps1 `
             -Architecture "${{ matrix.architecture }}" `
             -Shared "${{ matrix.shared }}" `
             -Configuration "${{ matrix.configuration }}" `
             -Generator "Visual Studio 17 2022" `
-            -BuildDirectory "build/m0" `
-            -EvidenceDirectory "build/m0-evidence" `
+            -BuildDirectory "build/windows-compatibility" `
+            -EvidenceDirectory "build/windows-compatibility-evidence" `
             -NoiseRuns $noiseRuns
 
-      - name: Upload M0 evidence
+      - name: Upload Windows compatibility evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: m0-${{ matrix.architecture }}-${{ matrix.shared }}-${{ matrix.configuration }}
-          path: build/m0-evidence
+          name: windows-compatibility-${{ matrix.architecture }}-${{ matrix.shared }}-${{ matrix.configuration }}
+          path: build/windows-compatibility-evidence
           if-no-files-found: error

@@ -49,10 +49,10 @@ function Find-DumpBin {
 }
 
 Invoke-CapturedExecutable `
-    (Join-Path $binaryDirectory "ggpo_m0_public_layout.exe") `
+    (Join-Path $binaryDirectory "ggpo_windows_public_layout.exe") `
     (Join-Path $output "public-layout.txt")
 Invoke-CapturedExecutable `
-    (Join-Path $binaryDirectory "ggpo_m0_packet_layout.exe") `
+    (Join-Path $binaryDirectory "ggpo_windows_packet_layout.exe") `
     (Join-Path $output "packet-layout.txt")
 
 if ($Shared -eq "ON") {
@@ -79,7 +79,7 @@ if ($Shared -eq "ON") {
         $difference = Compare-Object $expected $symbols
         if ($difference) {
             $difference | Format-Table | Out-String | Write-Error
-            throw "x64 DLL exports differ from the M0 baseline"
+            throw "x64 DLL exports differ from the Windows compatibility baseline"
         }
     }
 }
@@ -101,7 +101,7 @@ $artifacts = Get-ChildItem $artifactDirectories -File |
 $artifacts | ConvertTo-Json | Set-Content -Encoding ascii (Join-Path $output "artifacts.json")
 
 if ($NoiseRuns -gt 0) {
-    $peer = Join-Path $binaryDirectory "ggpo_m0_peer_smoke.exe"
+    $peer = Join-Path $binaryDirectory "ggpo_windows_peer_smoke.exe"
     & python (Join-Path $repo "tests/smoke/run_peer_smoke.py") `
         $peer --frames 180 --runs $NoiseRuns `
         --summary (Join-Path $output "peer-noise.json")
