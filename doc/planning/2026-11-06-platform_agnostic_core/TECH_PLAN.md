@@ -59,7 +59,9 @@ as defining `SOCKET`, `HANDLE`, or `WSAGetLastError` on every OS.
 | Modify | [`types.h`](../../../src/lib/ggpo/types.h) | Use fixed-width internal types and include a neutral platform contract | M2 |
 | Proposed | `src/platform/common/platform.h`, `udp_socket.h` | Declare clock/wait, process/config/diagnostic, and UDP semantics | M2 |
 | Move/modify | `platform_windows.*`, [`poll.cpp`](../../../src/lib/ggpo/poll.cpp), [`udp.cpp`](../../../src/lib/ggpo/network/udp.cpp) | Implement those contracts on Windows; keep protocol/session logic in core | M2 |
+| Proposed | `tests/smoke/core/`, `tests/platform/fake/` | Run core/session smoke cases with deterministic time, config, filesystem, wait, and UDP outcomes | M2 |
 | Proposed | `src/platform/windows/Platform.cmake` | Own Windows sources, definitions, `winmm`, and `ws2_32` | M3 |
+| Proposed | `tests/smoke/platform/` | Reusable adapter conformance and two-peer loopback tests, first instantiated for Windows | M3 |
 | Modify | Root and [`src` CMake](../../../src/CMakeLists.txt) | Build portable `GGPO`, select one platform target, install `GGPO::GGPO`, and make internal includes private | M3 |
 | Modify | [`appveyor.yml`](../../../appveyor.yml), architecture docs | Run compatibility gates and document the extension point | M4 |
 
@@ -164,6 +166,57 @@ file opening become portable internal helpers rather than fake platform APIs.
 All adapters are synchronous on the calling GGPO thread; this phase adds no
 threads, callbacks, or new public lifecycle obligations.
 
+### Smoke-test contracts
+
+The two suites answer different questions and must remain separate:
+
+```mermaid
+flowchart TD
+    CoreSuite["Platform-agnostic smoke suite"]
+    Fake["Deterministic fake adapter<br/>virtual time, memory UDP, temp files"]
+    Core["GGPO portable core"]
+    ContractSuite["Shared platform conformance suite"]
+    Windows["Real Windows adapter<br/>Win32 and Winsock"]
+    Full["Public API and two-peer smoke"]
+
+    CoreSuite --> Fake --> Core
+    ContractSuite --> Windows
+    Windows --> Full
+    Core --> Full
+```
+
+| Suite | Concrete cases | Required result | What it does not prove |
+| --- | --- | --- | --- |
+| Core startup | Link core with the fake adapter; create and close SyncTest sessions repeatedly | No OS symbols, leaks, or stale adapter state | Real socket/timer behavior |
+| Core frames | Submit fixed inputs, save/load, force rollback, and compare checksums | Expected frame count and identical restored state | Cross-process networking |
+| Core failures | Script `would_block`, send error, directory failure, and clock wrap in the fake adapter | Stable documented error/cleanup path | Windows error-code mapping |
+| Platform contract | Run monotonic clock, zero/bounded wait, config fallback, assertion hook, and temporary-directory cases | Windows obeys every shared semantic contract | GGPO session correctness |
+| UDP adapter | Startup, bind ephemeral loopback ports, exchange payloads, observe `would_block`, close, and restart | Exact payload/source endpoint; clean lifecycle | Internet/NAT behavior |
+| Full platform | Run public C/C++ consumers, SyncTest, and two local GGPO peers | Fixed frames complete with matching checksums | Linux or Apple support |
+
+The fake adapter is selected only by test targets and is never installed. It
+uses virtual time and in-memory packet queues, so core tests contain no sleeps,
+ports, or machine-dependent timing. The platform conformance source is shared:
+every later `ggpo_configure_platform(target)` implementation must compile and
+pass it before that platform is called supported.
+
+**Proposed CMake shape:**
+
+```cmake
+add_library(GGPOTestPlatform STATIC tests/platform/fake/platform_fake.cpp)
+add_executable(ggpo_core_smoke ${GGPO_CORE_SOURCES}
+                               tests/smoke/core/core_smoke.cpp)
+target_link_libraries(ggpo_core_smoke PRIVATE GGPOTestPlatform)
+
+add_executable(ggpo_platform_smoke tests/smoke/platform/contract_smoke.cpp)
+ggpo_configure_platform(ggpo_platform_smoke)
+add_test(NAME ggpo_platform_smoke COMMAND ggpo_platform_smoke)
+```
+
+Tests use unique temporary directories and ephemeral loopback ports, clean them
+on success/failure, and never access external networks. A missing adapter test is
+`not qualified`, not a skip that still grants support.
+
 ### Build toolchain: before
 
 ```mermaid
@@ -260,6 +313,8 @@ be introduced, but existing names and build options remain accepted.
 | ABI | Run the M0/refactored compatibility matrix and compare exports/layouts | No signature, decoration, symbol, layout, or old-binary runtime drift | Any difference blocks this work; redesign or defer it |
 | Core boundary | Source-contract scan plus target include inspection | No Win32/Winsock/secure-CRT names in portable sources | Match outside allowed Windows layer fails |
 | Runtime | SyncTest and two local UDP peers over fixed frame counts | All frames complete; peer checksums match | Missing run or mismatch is inconclusive/fail |
+| Agnostic smoke | Core linked with deterministic fake adapter | Startup, frames, rollback, scripted failures, cleanup all pass without OS calls | Any fallback to real time/network fails |
+| Platform smoke | Shared conformance executable linked to Windows adapter | Contract cases and UDP loopback pass with cleanup | Missing/unsupported case leaves Windows layer unqualified |
 | Follow-up readiness | Header-only GCC/Clang compile on Linux/macOS | Public contract compiles; no SDK binary claim | Unavailable runner is recorded, not passed |
 
 ## Implementation order

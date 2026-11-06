@@ -33,6 +33,7 @@ Parallel with M1; owns internal core/platform sources. Architecture:
 - [ ] M2-T02: Move Win32/Winsock implementations behind the Windows adapters.
 - [ ] M2-T03: Remove OS and secure-CRT names from portable core sources.
 - [ ] M2-T04: Re-run M0 runtime and packet fixtures against the adapters.
+- [ ] M2-T05: Add deterministic fake-adapter core startup, rollback, failure, and cleanup smoke tests.
 
 ### M3: Separate the Windows build layer (depends: M2)
 
@@ -42,10 +43,11 @@ May overlap late M1; owns CMake platform selection and Windows target wiring.
 - [ ] M3-T02: Keep core source composition platform-neutral and reject unsupported targets clearly.
 - [ ] M3-T03: Expose only public headers and install the `GGPO::GGPO` consumer target.
 - [ ] M3-T04: Build and install the complete M0 Windows matrix.
+- [ ] M3-T05: Run shared platform-contract and UDP-loopback smoke tests against Windows.
 
 ### M4: Integrate and qualify (depends: M1, M2, M3)
 
-- [ ] M4-T01: Run the old/new binary compatibility matrix plus core-boundary, SyncTest, and local-peer gates in CI.
+- [ ] M4-T01: Run the compatibility matrix, agnostic smoke, Windows conformance, SyncTest, and local-peer gates in CI.
 - [ ] M4-T02: Verify header-only GCC/Clang consumers without claiming a Unix SDK port.
 - [ ] M4-T03: Update Build, Portability, API, and Testing architecture pages.
 - [ ] M4-T04: Publish complete evidence and the contract for Linux/Apple follow-ups.

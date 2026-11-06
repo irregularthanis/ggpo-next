@@ -29,6 +29,8 @@ Linux and Apple PRs can implement without forking GGPO's behavior.
   live in one build layer selected by the root build.
 - The installed SDK exposes only public headers and a namespaced CMake target;
   internal headers stop leaking through the consumer interface.
+- Platform-agnostic smoke tests run the core against a deterministic fake
+  adapter; platform smoke tests run the same adapter contract against Windows.
 - Linux, Apple, and sample-frontend ports remain follow-ups against the frozen
   contracts. Unsupported platforms fail configuration with a useful message.
 
@@ -43,6 +45,8 @@ Linux and Apple PRs can implement without forking GGPO's behavior.
 | Core boundary | `HANDLE`, `SOCKET`, WSA, Win32 wait/time, and secure CRT leak into core | No direct OS symbols outside the selected platform layer and Windows sample | Source-contract check plus builds |
 | Consumer surface | Internal `src/lib/ggpo` is a public include directory | Only `src/include` is public; `GGPO::GGPO` installs and links | External consumer smoke project |
 | Runtime behavior | No automated SDK regression suite | SyncTest and local UDP peers produce matching frame/checksum results | CTest integration evidence |
+| Core smoke | Core cannot run without Win32-shaped facilities | Deterministic fake adapter exercises startup, SyncTest, frame advance, rollback, and failures | OS-independent CTest target |
+| Platform smoke | Windows build success is the only adapter evidence | Shared conformance tests validate Windows clock/wait/config/files/network plus UDP loopback | Windows CTest target; mandatory for later adapters |
 
 Performance changes, wire-format redesign, new public features, and a Linux or
 Apple SDK binary are not acceptance criteria. The network protocol must remain
