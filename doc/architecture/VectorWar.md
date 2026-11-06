@@ -177,13 +177,13 @@ integration example:
 
 ```mermaid
 sequenceDiagram
-    participant Loop as Win32 frame loop
+    participant MainLoop as Win32 frame loop
     participant VW as Vector War adapter
     participant GGPO as GGPO session
     participant GS as GameState
     participant Draw as Renderer
 
-    Loop->>VW: VectorWar_RunFrame(hwnd)
+    MainLoop->>VW: VectorWar_RunFrame(hwnd)
     VW->>VW: ReadInputs(hwnd)
     VW->>GGPO: ggpo_add_local_input()
     VW->>GGPO: ggpo_synchronize_input()
