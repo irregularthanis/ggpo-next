@@ -62,14 +62,17 @@ if ($Shared -eq "ON") {
     if ($LASTEXITCODE -ne 0) {
         throw "dumpbin failed with exit code $LASTEXITCODE"
     }
+    Set-Content -Encoding ascii `
+        (Join-Path $output "dumpbin-exports.txt") `
+        -Value $exports
     $symbols = @(
         $exports | ForEach-Object {
-            if ($_ -match '^\s+\d+\s+[0-9A-Fa-f]+\s+[0-9A-Fa-f]+\s+(\S+)\s*$') {
+            if ($_ -match '\b(ggpo_[A-Za-z0-9_]+)\b') {
                 $Matches[1]
             }
         } | Sort-Object -Unique
     )
-    $symbols | Set-Content -Encoding ascii (Join-Path $output "exports.txt")
+    Set-Content -Encoding ascii (Join-Path $output "exports.txt") -Value $symbols
 
     if ($Architecture -eq "x64") {
         $expected = Get-Content (Join-Path $repo "tests/baseline/windows/exports-x64.txt")
