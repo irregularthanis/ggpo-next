@@ -57,17 +57,37 @@ as defining `SOCKET`, `HANDLE`, or `WSAGetLastError` on every OS.
 | Modify | [`ggponet.h`](../../../src/include/ggponet.h) | Add `GGPO_CALL` and complete `GGPO_API`; include C boolean support without changing Windows signatures/layout | M1 |
 | Proposed | `tests/api/`, `tests/abi/windows/` | C/C++ consumer fixtures, export manifest, and public layout checks | M0, M1 |
 | Modify | [`types.h`](../../../src/lib/ggpo/types.h) | Use fixed-width internal types and include a neutral platform contract | M2 |
-| Proposed | `src/platform/common/` | Declare clock/sleep, process/config/diagnostic, wait, and UDP socket semantics | M2 |
+| Proposed | `src/platform/common/platform.h`, `udp_socket.h` | Declare clock/wait, process/config/diagnostic, and UDP semantics | M2 |
 | Move/modify | `platform_windows.*`, [`poll.cpp`](../../../src/lib/ggpo/poll.cpp), [`udp.cpp`](../../../src/lib/ggpo/network/udp.cpp) | Implement those contracts on Windows; keep protocol/session logic in core | M2 |
-| Proposed | `src/platform/windows/CMakeLists.txt` | Own Windows sources, definitions, `winmm`, and `ws2_32` | M3 |
+| Proposed | `src/platform/windows/Platform.cmake` | Own Windows sources, definitions, `winmm`, and `ws2_32` | M3 |
 | Modify | Root and [`src` CMake](../../../src/CMakeLists.txt) | Build portable `GGPO`, select one platform target, install `GGPO::GGPO`, and make internal includes private | M3 |
 | Modify | [`appveyor.yml`](../../../appveyor.yml), architecture docs | Run compatibility gates and document the extension point | M4 |
 
 ## Contracts and examples
 
-**Proposed public declaration pattern** (the function signatures remain intact):
+### Public API and ABI contract
+
+The installed header remains the only consumer contract. Existing function
+names, parameter order, enum values, public field order, and Windows x64 calling
+convention do not change. Portability is expressed through macros and language
+support, not parallel platform-specific headers.
+
+| Surface | Proposed contract | Compatibility gate |
+| --- | --- | --- |
+| Linkage | All functions retain C linkage | C and C++ consumers resolve the same exported names |
+| Visibility | `GGPO_API` maps build/import/export visibility per toolchain | M0 Windows DLL export manifest is unchanged |
+| Calls and callbacks | `GGPO_CALL` replaces direct `__cdecl` on functions and callback fields | Windows x86/x64 convention is explicit; other targets use their default C convention |
+| Boolean callbacks | C includes `<stdbool.h>`; C++ continues using built-in `bool` | Callback structure size/offsets match M0 on Windows |
+| Public data | Existing integer, enum, union, and array declarations remain unchanged | `sizeof` and `offsetof` report matches M0 |
+| Versioning | ABI-breaking cleanup requires a versioned major contract; it is not folded into a platform port | CI rejects unreviewed export/layout drift |
+
+**Proposed declaration pattern:**
 
 ```c
+#ifndef __cplusplus
+#  include <stdbool.h>
+#endif
+
 #if defined(_WIN32)
 #  define GGPO_CALL __cdecl
 #else
@@ -78,21 +98,133 @@ GGPO_API GGPOErrorCode GGPO_CALL ggpo_idle(GGPOSession *session,
                                             int timeout);
 ```
 
-**Proposed build ownership:**
+The same `GGPO_CALL` macro is applied to every function pointer in
+`GGPOSessionCallbacks`. `GGPOSession` remains opaque. Internal C++ classes never
+become installed ABI.
 
-```cmake
-# src/platform/windows/CMakeLists.txt
-add_library(GGPOPlatform STATIC ${GGPO_WINDOWS_SOURCES})
-target_link_libraries(GGPOPlatform PRIVATE winmm ws2_32)
-target_compile_definitions(GGPOPlatform PRIVATE GGPO_PLATFORM_WINDOWS)
+### Internal platform contracts
 
-# src/CMakeLists.txt
-target_link_libraries(GGPO PRIVATE GGPOPlatform)
-target_include_directories(GGPO PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+The contracts use GGPO-owned values. In particular, portable code never sees a
+Win32 `HANDLE`, Winsock `SOCKET`, `sockaddr_in`, or WSA error number.
+
+| Contract | Operations and semantics | Windows implementation | Core owner |
+| --- | --- | --- | --- |
+| Clock | `MonotonicTimeMs()` returns a wrapping millisecond counter; differences remain valid across wrap | `timeGetTime()` initially, replaceable with a monotonic source under the same semantics | `Poll`, UDP timing, logging |
+| Wait | `WaitMs(timeout)` uses the requested wait budget; `0` is nonblocking and the caller recomputes deadlines after return | Win32 wait/sleep primitive | `Poll::Pump()` after it computes the next periodic deadline |
+| Process/config | `ProcessId()`, `GetConfigInt(name, fallback)`, `GetConfigBool(name, fallback)` | Process ID and environment lookup | initialization, logging, simulated network settings |
+| Diagnostics/files | `AssertFailed(message)` and `EnsureDirectory(path)` report failure without exposing UI or path separators | optional debugger/UI notification plus Win32 directory creation | assertions and SyncTest evidence |
+| Network lifetime | `NetworkStartup()` / `NetworkShutdown()` acquire and release process socket services safely | balanced `WSAStartup()` / `WSACleanup()` | session/platform initialization, not Vector War |
+| Endpoint | `UdpEndpoint` stores four IPv4 octets and a host-order port | adapter converts to/from `sockaddr_in` | UDP protocol, queues, backend callbacks |
+| UDP socket | bind with retry, nonblocking send/receive, close, address formatting, and explicit `ok`/`would_block`/`error` results | Winsock socket and error mapping | `Udp`; no native handle leaves the adapter |
+
+**Proposed C++98-compatible shape** (names may be refined during M2, semantics
+are the contract):
+
+```cpp
+namespace ggpo_platform {
+struct UdpEndpoint {
+   uint8 address[4];
+   uint16 port;                 // host byte order
+};
+
+enum IoResult { IO_OK, IO_WOULD_BLOCK, IO_ERROR };
+
+uint32 MonotonicTimeMs();
+void WaitMs(int timeout_ms);
+int ProcessId();
+int GetConfigInt(const char *name, int fallback);
+bool GetConfigBool(const char *name, bool fallback);
+void AssertFailed(const char *message);
+bool EnsureDirectory(const char *path);
+
+class UdpSocket {
+public:
+   bool OpenAndBind(uint16 requested_port, int retries, uint16 *bound_port);
+   IoResult Send(const void *data, int bytes, const UdpEndpoint &to);
+   IoResult Receive(void *data, int capacity, int *bytes, UdpEndpoint *from);
+   void Close();
+};
+}
 ```
 
-`GGPOPlatform` is private implementation. Consumers continue linking only
-`GGPO::GGPO`. The Windows sample remains an app layer and is not generalized.
+`UdpProtocol`, `Peer2PeerBackend`, and `SpectatorBackend` replace
+`sockaddr_in` fields and callbacks with `UdpEndpoint`. Packet payloads are not
+changed. `Poll` retains scheduling and callback ownership; only OS waiting moves
+behind `WaitMs()`. The unused native-handle registration path is removed only if
+M0 confirms no required behavior.
+
+MSVC secure-CRT calls are a separate concern: bounded formatting, copying, and
+file opening become portable internal helpers rather than fake platform APIs.
+All adapters are synchronous on the calling GGPO thread; this phase adds no
+threads, callbacks, or new public lifecycle obligations.
+
+### Build toolchain: before
+
+```mermaid
+flowchart TD
+    Entry["configure_windows.cmd<br/>or AppVeyor"]
+    Root["Root CMake<br/>global options and output policy"]
+    List["src/CMakeLists and CMakeSources<br/>mixed source selection"]
+    Mixed["GGPO target<br/>core plus selected OS code"]
+    Inline["Inline Windows policy<br/>defines, winmm, ws2_32"]
+    Leak["Public includes<br/>API plus internal headers"]
+    Output["DLL or static library<br/>partial install export"]
+    Sample["Windows Vector War target"]
+
+    Entry --> Root --> List --> Mixed --> Output
+    Root --> Sample
+    Inline --> Mixed
+    Leak --> Mixed
+```
+
+The root and SDK build files know Windows details, the source inventory chooses
+an incomplete Unix file, and consumers inherit the internal include directory.
+
+### Build toolchain: after
+
+```mermaid
+flowchart TD
+    Entry["CMake configure<br/>directly or CI wrapper"]
+    Root["Root CMake<br/>products and platform selection"]
+    Core["src/CMakeLists<br/>portable GGPO sources"]
+    Select{"Supported platform layer?"}
+    Win["platform/windows CMake<br/>sources, defines, system libraries"]
+    Future["Future Linux or Apple layer<br/>same build contract"]
+    Target["GGPO target<br/>core plus one private platform layer"]
+    Public["Public build/install surface<br/>ggponet.h and GGPO::GGPO"]
+    Sample["apps/vectorwar<br/>separate Windows application"]
+
+    Entry --> Root --> Core --> Select
+    Select -->|"Windows"| Win --> Target --> Public
+    Select -.->|"follow-up"| Future -.-> Target
+    Root --> Sample
+    Sample --> Target
+```
+
+The root selects exactly one platform layer. Unsupported platforms fail during
+configuration until their follow-up layer exists; they do not fall through to an
+incomplete implementation.
+
+**Proposed platform build entry:**
+
+```cmake
+# src/platform/windows/Platform.cmake
+function(ggpo_configure_platform target)
+  target_sources(${target} PRIVATE ${GGPO_WINDOWS_SOURCES})
+  target_compile_definitions(${target} PRIVATE GGPO_PLATFORM_WINDOWS)
+  target_link_libraries(${target} PRIVATE winmm ws2_32)
+endfunction()
+
+# src/CMakeLists.txt
+add_library(GGPO ${GGPO_CORE_SOURCES})
+include(platform/windows/Platform.cmake)
+ggpo_configure_platform(GGPO)
+add_library(GGPO::GGPO ALIAS GGPO)
+```
+
+Each future platform module implements `ggpo_configure_platform(target)` and the
+internal runtime contracts. Consumers always link only `GGPO::GGPO`. Vector War
+remains a separate Windows application layer in this phase.
 
 The public ABI baseline covers exported symbol names and `sizeof`/`offsetof` for
 `GGPOPlayer`, `GGPOEvent`, `GGPOSessionCallbacks`, and `GGPONetworkStats`.
