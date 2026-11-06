@@ -312,6 +312,57 @@ Each future platform module implements `ggpo_configure_platform(target)` and the
 internal runtime contracts. Consumers always link only `GGPO::GGPO`. Vector War
 remains a separate Windows application layer in this phase.
 
+### Build-system A/B qualification
+
+Two comparisons are required because M0-versus-final proves overall
+compatibility but does not isolate whether a difference came from core changes
+or CMake restructuring.
+
+| Artifact | Source | Build path | Purpose |
+| --- | --- | --- | --- |
+| A — M0 control | Pinned `004ffd7` | Unmodified existing build | True pre-refactor baseline |
+| B — refactored legacy | Candidate commit | Temporary legacy entry point; only source-path updates allowed | Holds source constant while retaining the previous build organization |
+| C — refactored layered | Same candidate commit as B | New core plus Windows platform layer | Candidate shipped build |
+
+```mermaid
+flowchart LR
+    A["A: M0 source<br/>existing build"]
+    B["B: refactored source<br/>legacy build entry"]
+    C["C: same refactored source<br/>layered build entry"]
+    Total["A vs C<br/>end-to-end compatibility"]
+    Source["A vs B<br/>source and adapter effects"]
+    Build["B vs C<br/>build-system effect"]
+
+    A --> Total
+    C --> Total
+    A --> Source
+    B --> Source
+    B --> Build
+    C --> Build
+```
+
+A/B/C use the same Windows image, MSVC version, generator, architecture,
+configuration, static/shared choice, definitions, optimization/link flags, and
+clean isolated output directories. The comparison records the complete CMake
+cache and compiler/link command lines so an apparent build-system difference can
+be traced to an actual flag or input.
+
+| Comparison | Required evidence | Decision rule |
+| --- | --- | --- |
+| B vs C | Exports/layouts, installed headers, compile/link commands, smoke checksums, rollback traces, two-peer frame/checksum results | Exact contract and deterministic results; any flag/input difference is explained and removed unless intentionally additive |
+| A vs B | Same API/ABI and runtime evidence | Identifies effects of source/platform refactoring independently of build layering |
+| A vs C | Old consumer with candidate DLL plus complete qualification suite | Final compatibility gate; any API/ABI or deterministic behavior mismatch blocks merge |
+| All artifacts | Build duration, output size, and paired runtime samples | Informational until M0 establishes same-build noise; differences outside that measured envelope require investigation |
+
+Binary hashes are recorded for identity, not equality: compiler metadata, PDBs,
+paths, and timestamps can differ. Export/layout reports and deterministic runtime
+evidence are the equality contracts.
+
+The legacy entry point is test-only, never installed, and deleted after B-vs-C
+passes. If refactored sources cannot be built through it without changing flags
+or behavior, the gap is recorded and the build-system effect remains
+inconclusive rather than being attributed to the layered build.
+
 The public ABI baseline covers exported symbol names and `sizeof`/`offsetof` for
 `GGPOPlayer`, `GGPOEvent`, `GGPOSessionCallbacks`, and `GGPONetworkStats`.
 Internal C++ classes are not ABI. Packet structure snapshots remain unchanged;
@@ -343,6 +394,7 @@ be introduced, but existing names and build options remain accepted.
 | Agnostic smoke | Core linked with deterministic fake adapter | Startup, frames, rollback, scripted failures, cleanup all pass without OS calls | Any fallback to real time/network fails |
 | Platform smoke | Shared conformance executable linked to Windows adapter | Contract cases and UDP loopback pass with cleanup | Missing/unsupported case leaves Windows layer unqualified |
 | Default build | Native `cmake --build` with defaults | `ggpo_check` runs all self-contained tests and propagates failures | Absent test output or ignored failure fails qualification |
+| Build A/B | A/B/C clean builds under one pinned Windows toolchain | Same-source B/C commands, ABI, smoke, and deterministic outputs match | Uncontrolled flag/input drift or missing legacy path is inconclusive/fail |
 | Follow-up readiness | Header-only GCC/Clang compile on Linux/macOS | Public contract compiles; no SDK binary claim | Unavailable runner is recorded, not passed |
 
 ## Implementation order
@@ -374,6 +426,7 @@ implement them for Windows, and compare runtime behavior with M0.
 
 Own platform selection and Windows CMake wiring. Move OS sources, definitions,
 libraries, install behavior, and default test execution behind the Windows target.
+Retain the test-only legacy entry until the same-source B-vs-C gate passes.
 
 ### M4: Integrate and qualify
 

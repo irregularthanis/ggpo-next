@@ -50,6 +50,7 @@ Linux and Apple PRs can implement without forking GGPO's behavior.
 | Core smoke | Core cannot run without Win32-shaped facilities | Deterministic fake adapter exercises startup, SyncTest, frame advance, rollback, and failures | OS-independent CTest target |
 | Platform smoke | Windows build success is the only adapter evidence | Shared conformance tests validate Windows clock/wait/config/files/network plus UDP loopback | Windows CTest target; mandatory for later adapters |
 | Default build gate | Current build does not run tests | Native `cmake --build` runs self-contained CTest suites and propagates failure | Build log shows executed tests; intentional opt-out is explicit |
+| Build refactor equivalence | Existing mixed build only | Same-source legacy/layered artifacts preserve ABI and deterministic behavior | Staged A/B matrix with isolated build directories |
 
 Performance changes, wire-format redesign, new public features, and a Linux or
 Apple SDK binary are not acceptance criteria. The network protocol must remain
