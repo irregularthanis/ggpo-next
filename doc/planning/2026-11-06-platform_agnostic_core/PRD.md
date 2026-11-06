@@ -21,6 +21,8 @@ Linux and Apple PRs can implement without forking GGPO's behavior.
   calling-convention macros, and no direct Windows requirement for consumers.
 - Existing Windows x64 public signatures, exported symbols, structure layouts,
   callback layouts, and runtime behavior remain compatible.
+- Existing source consumers rebuild unchanged, and binaries linked to the M0
+  shared-library ABI continue loading and running with the refactored DLL.
 - Portable rollback, backend, and protocol code no longer names Win32 handles,
   socket errors, clocks, sleeps, filesystem calls, or secure-CRT functions.
 - Windows-specific sources, definitions, system libraries, and packaging rules
@@ -37,6 +39,7 @@ Linux and Apple PRs can implement without forking GGPO's behavior.
 | Windows builds | AppVeyor builds x64 Debug/Release, static/shared | Same matrix remains green after separation | CMake build and install matrix |
 | Public API | `extern "C"`, but `bool` and `__cdecl` are not portable C declarations | Header compiles as C and C++ without platform shims in consumer code | Installed-header compile/link fixtures |
 | Windows ABI | No checked-in export/layout baseline | Export names and public type offsets/sizes are captured and unchanged | `dumpbin` export manifest plus layout assertions |
+| Existing consumers | Current source and binaries target the Windows SDK directly | Unmodified source rebuilds; M0 consumer binaries run with the new DLL | Old/new header, import library, DLL, and executable compatibility matrix |
 | Core boundary | `HANDLE`, `SOCKET`, WSA, Win32 wait/time, and secure CRT leak into core | No direct OS symbols outside the selected platform layer and Windows sample | Source-contract check plus builds |
 | Consumer surface | Internal `src/lib/ggpo` is a public include directory | Only `src/include` is public; `GGPO::GGPO` installs and links | External consumer smoke project |
 | Runtime behavior | No automated SDK regression suite | SyncTest and local UDP peers produce matching frame/checksum results | CTest integration evidence |
@@ -44,6 +47,10 @@ Linux and Apple PRs can implement without forking GGPO's behavior.
 Performance changes, wire-format redesign, new public features, and a Linux or
 Apple SDK binary are not acceptance criteria. The network protocol must remain
 byte-compatible in this phase.
+
+API and ABI compatibility are release-blocking. A mismatch is not accepted as a
+portability tradeoff: the implementation must be redesigned additively or the
+incompatible change moved to a separately versioned future proposal.
 
 ## Clarifications
 

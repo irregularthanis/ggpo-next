@@ -20,7 +20,7 @@ Parallel with M2; owns `src/include`, API/ABI fixtures, and installed-consumer
 contracts. Architecture: [public API](../../architecture/API.md).
 
 - [ ] M1-T01: Introduce portable export/call macros and C boolean support.
-- [ ] M1-T02: Preserve the M0 Windows export and public-layout baseline.
+- [ ] M1-T02: Preserve every M0 export, decoration, signature, enum value, callback slot, and public layout.
 - [ ] M1-T03: Compile and link installed-header C11 and C++98 consumers.
 - [ ] M1-T04: Define the ABI/versioning policy for later platform packages.
 
@@ -45,7 +45,7 @@ May overlap late M1; owns CMake platform selection and Windows target wiring.
 
 ### M4: Integrate and qualify (depends: M1, M2, M3)
 
-- [ ] M4-T01: Run API, ABI, core-boundary, SyncTest, and local-peer gates in CI.
+- [ ] M4-T01: Run the old/new binary compatibility matrix plus core-boundary, SyncTest, and local-peer gates in CI.
 - [ ] M4-T02: Verify header-only GCC/Clang consumers without claiming a Unix SDK port.
 - [ ] M4-T03: Update Build, Portability, API, and Testing architecture pages.
 - [ ] M4-T04: Publish complete evidence and the contract for Linux/Apple follow-ups.

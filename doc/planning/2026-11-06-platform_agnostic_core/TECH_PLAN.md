@@ -72,6 +72,12 @@ names, parameter order, enum values, public field order, and Windows x64 calling
 convention do not change. Portability is expressed through macros and language
 support, not parallel platform-specific headers.
 
+**Hard gate:** the refactor cannot change an existing export name or decoration,
+function signature, calling convention, enum value, public type size/alignment,
+field offset/order, union layout, callback slot/order, library name, or existing
+consumer behavior. Failing any comparison blocks the change; a version bump is
+not an escape hatch within this work.
+
 | Surface | Proposed contract | Compatibility gate |
 | --- | --- | --- |
 | Linkage | All functions retain C linkage | C and C++ consumers resolve the same exported names |
@@ -79,7 +85,7 @@ support, not parallel platform-specific headers.
 | Calls and callbacks | `GGPO_CALL` replaces direct `__cdecl` on functions and callback fields | Windows x86/x64 convention is explicit; other targets use their default C convention |
 | Boolean callbacks | C includes `<stdbool.h>`; C++ continues using built-in `bool` | Callback structure size/offsets match M0 on Windows |
 | Public data | Existing integer, enum, union, and array declarations remain unchanged | `sizeof` and `offsetof` report matches M0 |
-| Versioning | ABI-breaking cleanup requires a versioned major contract; it is not folded into a platform port | CI rejects unreviewed export/layout drift |
+| Versioning | ABI-breaking cleanup is deferred to a separate future proposal; this work is compatibility-preserving | CI rejects every export/layout drift |
 
 **Proposed declaration pattern:**
 
@@ -231,6 +237,19 @@ The public ABI baseline covers exported symbol names and `sizeof`/`offsetof` for
 Internal C++ classes are not ABI. Packet structure snapshots remain unchanged;
 wire normalization belongs to a separately reviewed protocol change.
 
+The Windows compatibility matrix is bidirectional where the contract allows:
+
+| Consumer test | Header/import library | Runtime library | Required result |
+| --- | --- | --- | --- |
+| Existing binary | M0 | Refactored DLL | Loads and completes the fixed smoke scenario unchanged |
+| Existing source | M0 application source, refactored SDK | Refactored DLL/static library | Compiles, links, and completes the same scenario without source edits |
+| New-header consumer | Refactored header/import library | M0 DLL | Links and runs because no existing declaration/export changed |
+| C and C++ fixtures | Refactored installed package | Refactored DLL/static library | Both use only the public include and `GGPO::GGPO` |
+
+Static libraries have no cross-build binary promise; they must retain source and
+link compatibility when consumers rebuild. Additive CMake targets or macros may
+be introduced, but existing names and build options remain accepted.
+
 ## Verification
 
 | Layer | Input / command | Required evidence | Failure / skip |
@@ -238,7 +257,7 @@ wire normalization belongs to a separately reviewed protocol change.
 | Plan | `validate_plan.py <planning-dir>` | Structural pass and valid links | Any error blocks planning PR completion |
 | Windows build | CMake x64 Debug/Release, static/shared | SDK, install tree, and Vector War compile | Any current matrix regression fails |
 | Public API | Build C11 and C++98 consumers from installed headers | Compile and link with no internal includes | Either language failure fails |
-| ABI | Compare DLL exports and public layout report with M0 baseline | No removed/renamed symbol or layout drift | Difference requires explicit versioned decision |
+| ABI | Run the M0/refactored compatibility matrix and compare exports/layouts | No signature, decoration, symbol, layout, or old-binary runtime drift | Any difference blocks this work; redesign or defer it |
 | Core boundary | Source-contract scan plus target include inspection | No Win32/Winsock/secure-CRT names in portable sources | Match outside allowed Windows layer fails |
 | Runtime | SyncTest and two local UDP peers over fixed frame counts | All frames complete; peer checksums match | Missing run or mismatch is inconclusive/fail |
 | Follow-up readiness | Header-only GCC/Clang compile on Linux/macOS | Public contract compiles; no SDK binary claim | Unavailable runner is recorded, not passed |
@@ -285,7 +304,10 @@ depend on the same frozen contract.
 
 ## Decisions and gaps
 
-- Preserve Windows x64 ABI; do not "clean up" public field types in this phase.
+- Preserve the complete Windows x64 API/ABI; do not rename, reorder, retype, or
+  "clean up" any existing public declaration in this phase.
+- If C compilation cannot be added without changing callback ABI, retain the
+  existing ABI and add a separate compatible declaration layer or defer C mode.
 - Remove or replace the unused handle-registration path only after M0 runtime
   evidence; absence of current callers is not alone proof of external use.
 - The current repository has no automated test suite. M0/M1 fixtures are required
