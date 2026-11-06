@@ -1,0 +1,91 @@
+param(
+    [Parameter(Mandatory = $true)][string]$BuildDirectory,
+    [Parameter(Mandatory = $true)][string]$Configuration,
+    [Parameter(Mandatory = $true)][ValidateSet("x64", "Win32")][string]$Architecture,
+    [Parameter(Mandatory = $true)][ValidateSet("ON", "OFF")][string]$Shared,
+    [Parameter(Mandatory = $true)][string]$OutputDirectory,
+    [int]$NoiseRuns = 0
+)
+
+$ErrorActionPreference = "Stop"
+$repo = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
+$build = (Resolve-Path $BuildDirectory).Path
+$output = New-Item -ItemType Directory -Force -Path $OutputDirectory
+$prefix = if ($Architecture -eq "x64") { "x64" } else { "x86" }
+$binaryDirectory = Join-Path $build "bin/$prefix/$Configuration"
+$libraryDirectory = Join-Path $build "lib/$prefix/$Configuration"
+
+function Invoke-CapturedExecutable {
+    param([string]$Executable, [string]$Destination)
+    & $Executable 2>&1 | Tee-Object -FilePath $Destination
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Executable failed with exit code $LASTEXITCODE"
+    }
+}
+
+Invoke-CapturedExecutable `
+    (Join-Path $binaryDirectory "ggpo_m0_public_layout.exe") `
+    (Join-Path $output "public-layout.txt")
+Invoke-CapturedExecutable `
+    (Join-Path $binaryDirectory "ggpo_m0_packet_layout.exe") `
+    (Join-Path $output "packet-layout.txt")
+
+if ($Shared -eq "ON") {
+    $dll = Join-Path $binaryDirectory "GGPO.dll"
+    $exports = & dumpbin.exe /nologo /exports $dll
+    if ($LASTEXITCODE -ne 0) {
+        throw "dumpbin failed with exit code $LASTEXITCODE"
+    }
+    $symbols = @(
+        $exports | ForEach-Object {
+            if ($_ -match '^\s+\d+\s+[0-9A-Fa-f]+\s+[0-9A-Fa-f]+\s+(\S+)\s*$') {
+                $Matches[1]
+            }
+        } | Sort-Object -Unique
+    )
+    $symbols | Set-Content -Encoding ascii (Join-Path $output "exports.txt")
+
+    if ($Architecture -eq "x64") {
+        $expected = Get-Content (Join-Path $repo "tests/baseline/windows/exports-x64.txt")
+        $difference = Compare-Object $expected $symbols
+        if ($difference) {
+            $difference | Format-Table | Out-String | Write-Error
+            throw "x64 DLL exports differ from the M0 baseline"
+        }
+    }
+}
+
+Copy-Item (Join-Path $build "CMakeCache.txt") (Join-Path $output "CMakeCache.txt")
+
+$artifactDirectories = @($binaryDirectory, $libraryDirectory) |
+    Where-Object { Test-Path $_ }
+$artifacts = Get-ChildItem $artifactDirectories -File |
+    Where-Object { $_.Extension -in ".dll", ".exe", ".lib", ".pdb" } |
+    ForEach-Object {
+        $hash = Get-FileHash -Algorithm SHA256 $_.FullName
+        [PSCustomObject]@{
+            file = $_.FullName.Substring($build.Length + 1).Replace("\", "/")
+            bytes = $_.Length
+            sha256 = $hash.Hash.ToLowerInvariant()
+        }
+    }
+$artifacts | ConvertTo-Json | Set-Content -Encoding ascii (Join-Path $output "artifacts.json")
+
+if ($NoiseRuns -gt 0) {
+    $peer = Join-Path $binaryDirectory "ggpo_m0_peer_smoke.exe"
+    & python (Join-Path $repo "tests/smoke/run_peer_smoke.py") `
+        $peer --frames 180 --runs $NoiseRuns `
+        --summary (Join-Path $output "peer-noise.json")
+    if ($LASTEXITCODE -ne 0) {
+        throw "peer noise capture failed with exit code $LASTEXITCODE"
+    }
+}
+
+[PSCustomObject]@{
+    schema = 1
+    source = (git -C $repo rev-parse HEAD)
+    architecture = $Architecture
+    configuration = $Configuration
+    shared = $Shared
+    cmake = (cmake --version | Select-Object -First 1)
+} | ConvertTo-Json | Set-Content -Encoding ascii (Join-Path $output "environment.json")

@@ -1,6 +1,6 @@
 # PROGRESS — Platform-agnostic GGPO core and Windows build layer
 
-Status: Planned  
+Status: In progress  
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
 ## Milestones
@@ -8,6 +8,9 @@ Status: Planned
 ### M0: Freeze Windows contracts
 
 Architecture: [current build and platform status](../../architecture/Build.md#platform-status).
+
+Implementation is present on the planning branch; completion remains unchecked
+until the Windows matrix produces nonempty build, ABI, layout, and runtime evidence.
 
 - [ ] M0-T01: Build current Windows x64 Debug/Release static/shared outputs.
 - [ ] M0-T02: Record public DLL exports and public structure/callback layouts.

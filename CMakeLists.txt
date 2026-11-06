@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.2)
 # TODO: SDK Versioning.
 project(GGPO VERSION 1.0.0)
 
+include(CTest)
+
 # Remove RelWithDebInfo and MinSizeRelease build types to match the original Visual Studio Project. 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
 
@@ -32,4 +34,8 @@ if(GGPO_BUILD_VECTORWAR)
 	else()
 		message(WARNING "The Vector War app only supports Windows, skipping...")
 	endif()
+endif()
+
+if(BUILD_TESTING AND GGPO_BUILD_SDK)
+	add_subdirectory(tests)
 endif()
