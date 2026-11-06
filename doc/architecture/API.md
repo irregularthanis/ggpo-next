@@ -72,6 +72,38 @@ Every callback slot must be populated before creating a session.
 The sample implementations are in
 [`src/apps/vectorwar/vectorwar.cpp`](../../src/apps/vectorwar/vectorwar.cpp).
 
+### Vector War: save and restore rollback state
+
+Vector War treats `GameState gs` as its complete deterministic state. Its
+[`save` and `load` callbacks](../../src/apps/vectorwar/vectorwar.cpp#L123-L149)
+copy that value to and from GGPO-owned checkpoints:
+
+```cpp
+bool __cdecl
+vw_load_game_state_callback(unsigned char *buffer, int len)
+{
+   memcpy(&gs, buffer, len);
+   return true;
+}
+
+bool __cdecl
+vw_save_game_state_callback(unsigned char **buffer, int *len,
+                            int *checksum, int)
+{
+   *len = sizeof(gs);
+   *buffer = (unsigned char *)malloc(*len);
+   if (!*buffer) {
+      return false;
+   }
+   memcpy(*buffer, &gs, *len);
+   *checksum = fletcher32_checksum((short *)*buffer, *len / 2);
+   return true;
+}
+```
+
+The matching [`free_buffer` callback](../../src/apps/vectorwar/vectorwar.cpp#L190-L195)
+releases the allocation after GGPO no longer needs that checkpoint.
+
 ## Session constructors
 
 | Function | Backend | Use |
@@ -84,6 +116,34 @@ The sample implementations are in
 Each start function returns a new handle through `GGPOSession**`. A session has a
 fixed player count and input size.
 
+### Vector War: configure and start a session
+
+[`VectorWar_Init()`](../../src/apps/vectorwar/vectorwar.cpp#L209-L251) binds
+application callbacks, creates the P2P session, and registers each participant:
+
+```cpp
+GGPOSessionCallbacks cb = { 0 };
+cb.begin_game      = vw_begin_game_callback;
+cb.advance_frame   = vw_advance_frame_callback;
+cb.load_game_state = vw_load_game_state_callback;
+cb.save_game_state = vw_save_game_state_callback;
+cb.free_buffer     = vw_free_buffer;
+cb.on_event        = vw_on_event_callback;
+cb.log_game_state  = vw_log_game_state;
+
+result = ggpo_start_session(&ggpo, &cb, "vectorwar",
+                            num_players, sizeof(int), localport);
+
+for (int i = 0; i < num_players + num_spectators; i++) {
+   GGPOPlayerHandle handle;
+   result = ggpo_add_player(ggpo, players + i, &handle);
+}
+```
+
+The sample selects `ggpo_start_synctest()` at compile time when `SYNC_TEST` is
+defined. Its [spectator initializer](../../src/apps/vectorwar/vectorwar.cpp#L266-L287)
+uses the same callbacks with `ggpo_start_spectating()`.
+
 ## Frame and player operations
 
 | Function | Phase | Result |
@@ -95,6 +155,50 @@ fixed player count and input size.
 | `ggpo_advance_frame()` | After one simulation step | Advances GGPO's frame, saves state, and polls the backend |
 | `ggpo_idle()` | Regularly, usually once per frame | Gives the backend time to poll network and rollback work |
 | `ggpo_disconnect_player()` | Runtime | Marks a remote participant disconnected at a synchronized frame |
+
+### Vector War: normal and rollback frames
+
+The normal [`VectorWar_RunFrame()` path](../../src/apps/vectorwar/vectorwar.cpp#L401-L427)
+samples the keyboard, submits local input, obtains the synchronized input set,
+and advances only when both API calls succeed:
+
+```cpp
+int input = ReadInputs(hwnd);
+result = ggpo_add_local_input(ggpo, ngs.local_player_handle,
+                              &input, sizeof(input));
+
+if (GGPO_SUCCEEDED(result)) {
+   result = ggpo_synchronize_input(ggpo, (void *)inputs,
+                                   sizeof(int) * MAX_SHIPS,
+                                   &disconnect_flags);
+   if (GGPO_SUCCEEDED(result)) {
+      VectorWar_AdvanceFrame(inputs, disconnect_flags);
+   }
+}
+VectorWar_DrawCurrentFrame();
+```
+
+During rollback, GGPO instead invokes
+[`vw_advance_frame_callback()`](../../src/apps/vectorwar/vectorwar.cpp#L106-L120).
+It reuses corrected historical inputs without reading devices or drawing:
+
+```cpp
+bool __cdecl
+vw_advance_frame_callback(int)
+{
+   int inputs[MAX_SHIPS] = { 0 };
+   int disconnect_flags;
+
+   ggpo_synchronize_input(ggpo, (void *)inputs,
+                          sizeof(int) * MAX_SHIPS, &disconnect_flags);
+   VectorWar_AdvanceFrame(inputs, disconnect_flags);
+   return true;
+}
+```
+
+Both paths converge on
+[`VectorWar_AdvanceFrame()`](../../src/apps/vectorwar/vectorwar.cpp#L334-L365),
+which updates `GameState` and then calls `ggpo_advance_frame()`.
 
 ## Connection controls and statistics
 
@@ -117,6 +221,24 @@ fixed player count and input size.
 | `TIMESYNC` | Local client is sufficiently ahead to consider pausing | `timesync.frames_ahead` |
 | `CONNECTION_INTERRUPTED` | No packet within notification threshold | player and remaining timeout |
 | `CONNECTION_RESUMED` | Packets resumed before final disconnect | `connection_resumed.player` |
+
+Vector War's [`vw_on_event_callback()`](../../src/apps/vectorwar/vectorwar.cpp#L58-L99)
+maps these events to presentation-side connection state. For example:
+
+```cpp
+case GGPO_EVENTCODE_RUNNING:
+   ngs.SetConnectState(Running);
+   renderer->SetStatusText("");
+   break;
+case GGPO_EVENTCODE_CONNECTION_INTERRUPTED:
+   ngs.SetDisconnectTimeout(info->u.connection_interrupted.player,
+                            timeGetTime(),
+                            info->u.connection_interrupted.disconnect_timeout);
+   break;
+case GGPO_EVENTCODE_CONNECTION_RESUMED:
+   ngs.SetConnectState(info->u.connection_resumed.player, Running);
+   break;
+```
 
 ## Errors
 
