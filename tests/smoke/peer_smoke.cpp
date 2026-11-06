@@ -7,6 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+// One instance represents one player in the loopback test.  The Python
+// orchestrator launches two instances with opposite local/remote ports, then
+// compares their result files after real Winsock synchronization and rollback.
 static int
 InputForPlayer(int player, int frame)
 {
@@ -115,6 +118,7 @@ main(int argc, char **argv)
       }
    }
 
+   // Do not submit inputs until both GGPO peers complete their handshake.
    start_time = GetTickCount();
    while (g_smoke_metrics.running_events == 0) {
       ggpo_idle(g_smoke_session, 1);
@@ -125,6 +129,8 @@ main(int argc, char **argv)
       }
    }
 
+   // Prediction-threshold and not-synchronized responses are normal while the
+   // remote process catches up; pump GGPO and retry the same logical frame.
    start_time = GetTickCount();
    while (g_smoke_state.frame < target_frames) {
       int local_input = InputForPlayer(local_player, g_smoke_state.frame);
@@ -162,6 +168,8 @@ main(int argc, char **argv)
       }
    }
 
+   // Give late packets and callbacks a bounded drain window before recording
+   // the result and closing the session.
    for (int settle = 0; settle < 1000; settle++) {
       ggpo_idle(g_smoke_session, 1);
       Sleep(1);

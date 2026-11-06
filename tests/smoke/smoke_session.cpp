@@ -8,6 +8,9 @@ GGPOSession *g_smoke_session = NULL;
 SmokeState g_smoke_state = { 0, 0, 0 };
 SmokeMetrics g_smoke_metrics = { 0, 0, 0, 0 };
 
+// This deliberately small deterministic state is shared by SyncTest and the
+// real loopback test.  GGPO may save, restore, and replay it exactly as a game
+// would, while the tests can independently calculate and compare the result.
 void
 SmokeReset(void)
 {
@@ -86,6 +89,9 @@ SmokeFreeBuffer(void *buffer)
 static bool __cdecl
 SmokeAdvanceFrame(int)
 {
+   // GGPO invokes this callback while replaying after a restored snapshot.
+   // Consume the historical synchronized inputs and advance the same test
+   // state transition used by ordinary frames.
    int inputs[2] = { 0, 0 };
    int disconnect_flags = 0;
    GGPOErrorCode result = ggpo_synchronize_input(g_smoke_session,

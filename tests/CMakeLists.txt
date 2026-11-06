@@ -23,6 +23,7 @@ function(ggpo_configure_windows_baseline_test target)
     endif()
 endfunction()
 
+# Compile-time/public-data contracts; neither test opens a socket.
 add_executable(ggpo_windows_public_layout
     baseline/windows/public_layout.cpp
 )
@@ -35,6 +36,8 @@ add_executable(ggpo_windows_packet_layout
 ggpo_configure_windows_baseline_test(ggpo_windows_packet_layout)
 add_test(NAME windows_packet_layout COMMAND ggpo_windows_packet_layout)
 
+# Runtime contracts: SyncTest isolates rollback, while peer loopback exercises
+# the public session API through two processes and real Windows UDP sockets.
 add_executable(ggpo_windows_synctest_smoke
     smoke/synctest_smoke.cpp
     ${GGPO_WINDOWS_BASELINE_COMMON}

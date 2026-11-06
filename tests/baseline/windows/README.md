@@ -5,6 +5,20 @@ platform-boundary refactor. The executable fixtures fail on unexpected layout or
 enum drift; shared x64 builds also compare the normalized DLL exports with
 `exports-x64.txt`.
 
+## Test inventory
+
+| Test | What it does | Detects | Does not establish |
+| --- | --- | --- | --- |
+| `windows_public_layout` | Compares public type sizes, field/callback offsets, and selected enum values with the frozen Windows ABI | Source-compatible changes that silently alter consumer memory layout or constants | Every possible source/API incompatibility |
+| `windows_packet_layout` | Checks packed `UdpMsg` structures and representative payload/packet sizes | Wire-format drift caused by packing, field, or size changes | Network delivery or protocol behavior |
+| `windows_synctest_smoke` | Feeds fixed inputs into a two-player SyncTest session and compares the final state with direct simulation | Broken save/load callbacks, rollback replay, input synchronization, or frame advancement | Real sockets or cross-process timing |
+| `windows_peer_loopback` | Starts two processes on ephemeral localhost UDP ports and requires equal frame/checksum results | Windows socket, handshake, event, prediction, rollback, and cleanup failures | Internet, NAT, packet-loss, or cross-platform interoperability |
+| DLL export comparison | Normalizes `dumpbin /exports` and compares x64 symbols with `exports-x64.txt` | Missing, added, or renamed public DLL exports | Calling-convention/layout compatibility by itself |
+
+The shared [`smoke_session.cpp`](../../smoke/smoke_session.cpp) supplies the
+small deterministic state machine and GGPO callbacks used by both runtime tests.
+It is test state, not a model of a real game's simulation.
+
 Run the complete legacy recipe from a Visual Studio developer PowerShell:
 
 ```powershell
@@ -19,6 +33,10 @@ Run the complete legacy recipe from a Visual Studio developer PowerShell:
 Evidence contains the CMake cache, public and packet layout reports, normalized
 exports, artifact SHA-256 values, environment identity, and repeated loopback
 peer timings. Hashes identify artifacts; they are not an equality contract.
+
+`-NoiseRuns` repeats the loopback scenario to characterize same-build timing
+variation. It is evidence for designing later A/B comparisons, not a performance
+benchmark or pass threshold.
 
 The authoritative compatibility contract is the export/layout report plus the
 deterministic SyncTest and peer results. The compatibility matrix qualifies both x64 and

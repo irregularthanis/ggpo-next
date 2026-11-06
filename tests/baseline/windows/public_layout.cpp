@@ -3,6 +3,10 @@
 #include <stddef.h>
 #include <stdio.h>
 
+// Freeze the consumer-visible Windows ABI before platform extraction.  Each
+// record is both human-readable evidence and a hard assertion against changes
+// to public type sizes, field/callback positions, or selected enum values.
+// Exported symbol names are checked separately by the CI evidence script.
 static int failures = 0;
 
 static void

@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 
+// Exercise rollback without networking.  Fixed inputs drive both GGPO and a
+// direct reference simulation; equal final state proves replay converged, while
+// the callback counters prove save/load and replay paths actually ran.
 static int
 InputForPlayer(int player, int frame)
 {

@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Run two real GGPO peers over Windows loopback and compare their state."""
+"""Run two real GGPO peers over Windows loopback and compare their state.
+
+Each run reserves two ephemeral ports, starts one peer process per player, and
+requires both result files to report the requested frame, equal checksum, and
+one running event. Repetition measures same-build timing noise; it does not
+simulate Internet conditions or define a performance threshold.
+"""
 
 import argparse
 import json

@@ -3,6 +3,8 @@
 
 #include "ggponet.h"
 
+// Minimal game-owned state used to verify GGPO save, restore, replay, and peer
+// convergence.  It intentionally contains no renderer, input device, or I/O.
 struct SmokeState {
    int frame;
    unsigned int accumulator;

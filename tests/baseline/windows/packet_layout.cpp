@@ -3,6 +3,9 @@
 
 #include <stdio.h>
 
+// Freeze the packed UDP representation independently of socket behavior.  A
+// failure means a compiler, packing, or field change altered bytes that peers
+// exchange; the two-process loopback test separately checks delivery and use.
 // UdpMsg's inline size helpers use ASSERT for an unknown message type.  This
 // fixture exercises known types without linking GGPO's private logging object,
 // so provide the assertion logger expected by the header-only code path.
