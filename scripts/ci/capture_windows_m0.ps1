@@ -23,6 +23,31 @@ function Invoke-CapturedExecutable {
     }
 }
 
+function Find-DumpBin {
+    $command = Get-Command dumpbin.exe -ErrorAction SilentlyContinue
+    if ($command) {
+        return $command.Source
+    }
+
+    $vswhere = Join-Path ${env:ProgramFiles(x86)} `
+        "Microsoft Visual Studio/Installer/vswhere.exe"
+    if (!(Test-Path $vswhere)) {
+        throw "dumpbin.exe is not on PATH and vswhere.exe was not found"
+    }
+
+    $target = if ($Architecture -eq "x64") { "x64" } else { "x86" }
+    $matches = @(
+        & $vswhere -latest -products * `
+            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -find "VC\Tools\MSVC\**\bin\Hostx64\$target\dumpbin.exe"
+    )
+    $dumpbin = $matches | Select-Object -Last 1
+    if (!$dumpbin -or !(Test-Path $dumpbin)) {
+        throw "Unable to locate the MSVC $target dumpbin.exe"
+    }
+    return $dumpbin
+}
+
 Invoke-CapturedExecutable `
     (Join-Path $binaryDirectory "ggpo_m0_public_layout.exe") `
     (Join-Path $output "public-layout.txt")
@@ -32,7 +57,8 @@ Invoke-CapturedExecutable `
 
 if ($Shared -eq "ON") {
     $dll = Join-Path $binaryDirectory "GGPO.dll"
-    $exports = & dumpbin.exe /nologo /exports $dll
+    $dumpbin = Find-DumpBin
+    $exports = & $dumpbin /nologo /exports $dll
     if ($LASTEXITCODE -ne 0) {
         throw "dumpbin failed with exit code $LASTEXITCODE"
     }
