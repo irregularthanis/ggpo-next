@@ -1,5 +1,8 @@
 # What's GGPO?
 
+For implementation structure, build/runtime diagrams, and the source-linked API
+reference, see [`doc/architecture`](architecture/README.md).
+
 Created in 2009, the GGPO networking SDK pioneered the use of rollback networking in peer-to-peer games.  It's designed specifically to hide network latency in fast paced, twitch style games which require very precise inputs and frame perfect execution.
 
 Traditional techniques account for network transmission time by adding delay to a players input, resulting in a sluggish, laggy game-feel.  Rollback networking uses input prediction and speculative execution to send player inputs to the game immediately, providing the illusion of a zero-latency network.  Using rollback, the same timings, reactions, visual and audio queues, and muscle memory your players build up playing offline will translate directly online.  The GGPO networking SDK is designed to make incorporating rollback networking into new and existing games as easy as possible.  
