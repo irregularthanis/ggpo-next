@@ -78,6 +78,8 @@ does not create a background networking thread.
 | Platform layer | Supplies process, clock, sleep, configuration, socket, and event primitives | [`platform_windows.h`](../../src/lib/ggpo/platform_windows.h), [`platform_linux.h`](../../src/lib/ggpo/platform_linux.h) |
 | Sample application | Demonstrates callbacks, frame submission, rendering separation, spectators, and statistics | [`src/apps/vectorwar`](../../src/apps/vectorwar) |
 
+For the complete application flow, see the [Vector War walkthrough](VectorWar.md).
+
 ## Execution model
 
 ```mermaid

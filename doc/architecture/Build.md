@@ -102,6 +102,8 @@ build is Windows-specific:
 - [`ggpo_perfmon.cpp`](../../src/apps/vectorwar/ggpo_perfmon.cpp) displays
   network statistics.
 
+See [Vector War](VectorWar.md) for the end-to-end build and runtime walkthrough.
+
 ## Install layout
 
 The SDK install rules in [`src/CMakeLists.txt`](../../src/CMakeLists.txt) place:

@@ -23,6 +23,7 @@ protocol, and platform layer. Start with the [architecture overview](Overview.md
 | [Networking](Networking.md) | UDP transport, peer protocol, messages, acknowledgements, and time sync |
 | [API reference](API.md) | Public types, callbacks, events, errors, and functions |
 | [Testing](Testing.md) | SyncTest, Vector War, and the current validation gaps |
+| [Vector War](VectorWar.md) | End-to-end walkthrough of the sample application's GGPO integration |
 | [Portability](Portability.md) | Platform boundaries relevant to a multiplatform port |
 
 ## Source of truth

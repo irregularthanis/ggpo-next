@@ -59,6 +59,9 @@ The sample supplies concrete state callbacks and a fixed 60 Hz loop. Useful path
 The launch scripts under [`bin`](../../bin) cover two-to-four players and a
 spectator arrangement.
 
+The [Vector War walkthrough](VectorWar.md) traces the same sample from process
+startup through normal frames, rollback, spectators, and shutdown.
+
 ## Network validation
 
 A portable automated integration harness should run two SDK sessions over loopback
