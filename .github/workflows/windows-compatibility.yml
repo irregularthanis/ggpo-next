@@ -8,6 +8,7 @@ on:
 
 jobs:
   baseline:
+    name: Windows compatibility (${{ matrix.architecture }}, ${{ matrix.shared == 'ON' && 'shared' || 'static' }}, ${{ matrix.configuration }})
     runs-on: windows-2022
     strategy:
       fail-fast: false
