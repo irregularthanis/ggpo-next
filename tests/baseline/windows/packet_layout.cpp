@@ -3,6 +3,14 @@
 
 #include <stdio.h>
 
+// UdpMsg's inline size helpers use ASSERT for an unknown message type.  This
+// fixture exercises known types without linking GGPO's private logging object,
+// so provide the assertion logger expected by the header-only code path.
+void
+Log(const char *, ...)
+{
+}
+
 static int failures = 0;
 
 static void
