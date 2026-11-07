@@ -26,7 +26,7 @@ cmake -S $repo -B $BuildDirectory -G $Generator -A $Architecture `
     -DGGPO_BUILD_SDK=ON `
     -DGGPO_BUILD_VECTORWAR=ON `
     -DBUILD_TESTING=ON `
-    -DGGPO_WINDOWS_BUILD_LAYER=$BuildLayer
+    "-DGGPO_WINDOWS_BUILD_LAYER:STRING=$BuildLayer"
 if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
 
 cmake --build $BuildDirectory --config $Configuration --parallel
