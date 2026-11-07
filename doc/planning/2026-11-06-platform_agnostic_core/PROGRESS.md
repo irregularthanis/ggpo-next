@@ -1,6 +1,6 @@
 # PROGRESS — Platform-agnostic GGPO core and Windows build layer
 
-Status: M0 complete; M1 in validation; M2–M4 planned
+Status: M0–M1 complete; M2–M4 planned
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
 ## Milestones
@@ -24,8 +24,8 @@ Parallel with M2; owns `src/include`, API/ABI fixtures, and installed-consumer
 contracts. Architecture: [public API](../../architecture/API.md).
 
 - [x] M1-T01: Introduce portable export/call macros and C boolean support.
-- [ ] M1-T02: Preserve every M0 export, decoration, signature, enum value, callback slot, and public layout (matrix pending).
-- [ ] M1-T03: Compile and link installed-header C11 and C++98 consumers (matrix pending).
+- [x] M1-T02: Preserve every M0 export, decoration, signature, enum value, callback slot, and public layout.
+- [x] M1-T03: Compile and link installed-header C11 and C++98 consumers.
 - [x] M1-T04: Define the ABI/versioning policy for later platform packages.
 
 ### M2: Extract platform services (depends: M0)
@@ -66,4 +66,8 @@ May overlap late M1; owns CMake platform selection and Windows target wiring.
 | M0-T03 | [`synctest_smoke.cpp`](../../../tests/smoke/synctest_smoke.cpp), [`peer_smoke.cpp`](../../../tests/smoke/peer_smoke.cpp), [`packet_layout.cpp`](../../../tests/baseline/windows/packet_layout.cpp) | CTest runs SyncTest, two loopback processes, and wire-layout assertions | Every matrix lane; 180 peer frames | 4/4 tests passed in every lane; peer checksums matched at frame 180 |
 | M0-T04 | [Win32 matrix jobs](https://github.com/irregularthanis/ggpo-next/actions/runs/42296246130) | Build and test four Win32 variants | Win32 shared/static; Debug/Release | x86 is qualified for this baseline |
 | M0-T05 | [`windows_compatibility_baseline.ps1`](../../../scripts/ci/windows_compatibility_baseline.ps1), [x64 shared Release evidence](https://github.com/irregularthanis/ggpo-next/actions/runs/42296246130) | Ten sequential two-peer loopback runs after the normal CTest pass | 180 frames/run; matching checksum `0x7db6c67b` | 17,484.7–33,180.3 ms; median 32,984.7 ms; variance requires interleaved repeated A/B comparisons |
+| M1-T01 | [`ggponet.h`](../../../src/include/ggponet.h), [`1f31b0a`](https://github.com/irregularthanis/ggpo-next/commit/1f31b0a16a8dae7edfc271db6fd44d5670dc190f) | Strict local header compilation plus Windows matrix | GCC C11 and G++ C++98 with pedantic errors; MSVC x64/Win32 | Portable `GGPO_CALL`, C `bool`, and standard-C local-player declaration compile |
+| M1-T02 | [M1 matrix](https://github.com/irregularthanis/ggpo-next/actions/runs/42321026313), [`public_layout.cpp`](../../../tests/baseline/windows/public_layout.cpp), [export manifests](../../../tests/baseline/windows/README.md) | Compare layouts/enums/callback offsets and normalized exports | x64/Win32 shared/static Debug/Release | All eight lanes passed; shared builds retained all 16 exports |
+| M1-T03 | [`tests/consumer`](../../../tests/consumer/CMakeLists.txt), [consumer verifier](../../../scripts/ci/verify_installed_consumers.ps1), [M1 matrix](https://github.com/irregularthanis/ggpo-next/actions/runs/42321026313) | Install each SDK, compile and link consumers without source-tree includes | C11 and C++98; all eight Windows variants | Both installed consumers linked in every lane |
+| M1-T04 | [API language and ABI contract](../../architecture/API.md#language-and-abi-contract) | Document compatibility policy and package obligations | Public header, static/shared packages, wire protocol boundary | Patch/minor/major and cross-platform ABI rules recorded |
 

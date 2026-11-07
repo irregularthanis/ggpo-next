@@ -2,8 +2,8 @@
 
 This directory freezes the public and wire-layout expectations used before the
 platform-boundary refactor. The executable fixtures fail on unexpected layout or
-enum drift; shared x64 builds also compare the normalized DLL exports with
-`exports-x64.txt`.
+enum drift; shared builds also compare normalized DLL exports with the matching
+`exports-x64.txt` or `exports-x86.txt` manifest.
 
 ## Test inventory
 
@@ -13,7 +13,8 @@ enum drift; shared x64 builds also compare the normalized DLL exports with
 | `windows_packet_layout` | Checks packed `UdpMsg` structures and representative payload/packet sizes | Wire-format drift caused by packing, field, or size changes | Network delivery or protocol behavior |
 | `windows_synctest_smoke` | Feeds fixed inputs into a two-player SyncTest session and compares the final state with direct simulation | Broken save/load callbacks, rollback replay, input synchronization, or frame advancement | Real sockets or cross-process timing |
 | `windows_peer_loopback` | Starts two processes on ephemeral localhost UDP ports and requires equal frame/checksum results | Windows socket, handshake, event, prediction, rollback, and cleanup failures | Internet, NAT, packet-loss, or cross-platform interoperability |
-| DLL export comparison | Normalizes `dumpbin /exports` and compares x64 symbols with `exports-x64.txt` | Missing, added, or renamed public DLL exports | Calling-convention/layout compatibility by itself |
+| DLL export comparison | Normalizes `dumpbin /exports` and compares x64/Win32 symbols with the frozen manifests | Missing, added, or renamed public DLL exports | Calling-convention/layout compatibility by itself |
+| Installed consumers | Installs the SDK, then compiles and links C11 and C++98 programs using only that prefix | Non-C syntax, import/export errors, or missing consumer files | Runtime session behavior |
 
 The shared [`smoke_session.cpp`](../../smoke/smoke_session.cpp) supplies the
 small deterministic state machine and GGPO callbacks used by both runtime tests.

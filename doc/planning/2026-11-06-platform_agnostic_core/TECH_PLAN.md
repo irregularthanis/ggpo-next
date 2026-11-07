@@ -1,8 +1,10 @@
 # TECH_PLAN — Platform-agnostic GGPO core and Windows build layer
 
-Status: M0 implemented; M1 in validation; M2–M4 planned
+Status: M0–M1 implemented; M2–M4 planned
 Source: [`004ffd7`](https://github.com/irregularthanis/ggpo-next/tree/004ffd7f47603d3bae4abd1d541501d715e03279)  
 M0 implementation: [`3498899`](https://github.com/irregularthanis/ggpo-next/commit/34988996cab45c1a37a9c556fe66b192d60a547b)
+
+M1 implementation: [`1f31b0a`](https://github.com/irregularthanis/ggpo-next/commit/1f31b0a16a8dae7edfc271db6fd44d5670dc190f)
 [Product brief](PRD.md) · [Tracker](PROGRESS.md)
 
 ## Inspected facts
@@ -56,11 +58,16 @@ creating a second API. [`GGPO_CALL`](../../../src/include/ggponet.h) preserves
 Windows `__cdecl` and becomes empty on other toolchains; C gains
 `<stdbool.h>` support. Every function and callback uses the same macro.
 
-[`tests/consumer`](../../../tests/consumer) contains minimal C11 and C++98
+[`tests/consumer`](../../../tests/consumer/CMakeLists.txt) contains minimal C11 and C++98
 programs. The [Windows validation wrapper](../../../scripts/ci/verify_installed_consumers.ps1)
 installs each matrix build into a clean prefix, then compiles and links both
 programs using only that installed header and library. The M0 layout and export
 fixtures remain the hard ABI gate, now including an x86 export manifest.
+
+The [M1 Windows matrix](https://github.com/irregularthanis/ggpo-next/actions/runs/42321026313)
+passed all eight variants. Existing four-test runtime/layout coverage remained
+green; both installed consumers linked in every lane, and shared x64/Win32
+exports matched their frozen 16-symbol manifests.
 
 ## Target boundary
 
@@ -87,8 +94,8 @@ as defining `SOCKET`, `HANDLE`, or `WSAGetLastError` on every OS.
 
 | Status | File / symbol | Practical edit | Milestone |
 | --- | --- | --- | --- |
-| Implemented; validating | [`ggponet.h`](../../../src/include/ggponet.h) | Add `GGPO_CALL` and complete `GGPO_API`; include C boolean support without changing Windows signatures/layout | M1 |
-| Implemented | [Windows baseline fixtures](../../../tests/baseline/windows/README.md), [installed consumers](../../../tests/consumer) | Export/layout fixtures, SyncTest, real two-peer baseline, and installed C11/C++98 compile/link checks | M0, M1 |
+| Implemented | [`ggponet.h`](../../../src/include/ggponet.h) | Add `GGPO_CALL` and complete `GGPO_API`; include C boolean support without changing Windows signatures/layout | M1 |
+| Implemented | [Windows baseline fixtures](../../../tests/baseline/windows/README.md), [installed consumers](../../../tests/consumer/CMakeLists.txt) | Export/layout fixtures, SyncTest, real two-peer baseline, and installed C11/C++98 compile/link checks | M0, M1 |
 | Modify | [`types.h`](../../../src/lib/ggpo/types.h) | Use fixed-width internal types and include a neutral platform contract | M2 |
 | Proposed | `src/platform/common/platform.h`, `udp_socket.h` | Declare clock/wait, process/config/diagnostic, and UDP semantics | M2 |
 | Move/modify | `platform_windows.*`, [`poll.cpp`](../../../src/lib/ggpo/poll.cpp), [`udp.cpp`](../../../src/lib/ggpo/network/udp.cpp) | Implement those contracts on Windows; keep protocol/session logic in core | M2 |
