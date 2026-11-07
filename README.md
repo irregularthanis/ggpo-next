@@ -43,16 +43,17 @@ integration guidance is in the [Developer Guide](doc/DeveloperGuide.md).
 
 ## Install or build the SDK
 
-The SDK currently supports Windows builds. Linux and Apple platform adapters are
-documented follow-up work; unsupported SDK targets fail configuration explicitly.
+The SDK supports Windows and Linux builds. Vector War remains Windows-only;
+Apple and other unsupported SDK targets fail configuration explicitly.
 
 Choose either:
 
-- **Release SDK:** download a tested x64/x86 shared or static ZIP from
+- **Release SDK:** download a tested Windows ZIP or Linux x86-64 tar.gz, with
+  shared or static linkage, from
   [Releases](https://github.com/irregularthanis/ggpo-next/releases). This is the
   shortest path for application developers.
-- **Source build:** clone the repository and use CMake when changing GGPO,
-  running its tests, or selecting a configuration not distributed as a release.
+- **Source build:** use CMake directly on Windows or the repository's Ubuntu
+  24.04 Docker image on Linux when changing GGPO or running its tests.
 
 Both options provide `ggponet.h` and the `GGPO::GGPO` CMake target. Selection,
 installation, shared-library deployment, and source-build commands are in the
