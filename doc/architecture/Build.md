@@ -144,8 +144,8 @@ The install also exports `lib/cmake/GGPO/GGPOConfig.cmake`; consumers use
 
 ## Release packages
 
-Pushing a final tag such as `v0.1.0`, or a prerelease tag such as
-`v0.1.0-rc.1`, runs the
+Pushing a final tag such as `v0.2.0`, or a prerelease tag such as
+`v0.2.0-rc.1`, runs the
 [`Package release SDK`](../../.github/workflows/release-packages.yml) workflow.
 The tag must match the version declared by the root [`project()`](../../CMakeLists.txt).
 

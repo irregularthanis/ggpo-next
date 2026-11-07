@@ -68,9 +68,9 @@ make that directory available to the Windows loader.
 Install a native Linux package with the platform package manager:
 
 ```bash
-sudo apt install ./ggpo-0.1.0-linux-x86_64-shared.deb
+sudo apt install ./ggpo-0.2.0-linux-x86_64-shared.deb
 # or
-sudo dnf install ./ggpo-0.1.0-linux-x86_64-shared.rpm
+sudo dnf install ./ggpo-0.2.0-linux-x86_64-shared.rpm
 ```
 
 The DEB and RPM install under `/usr`; shared and static packages conflict by
