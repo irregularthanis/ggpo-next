@@ -4,7 +4,23 @@
 
 (日本語ドキュメントは[こちら](README.ja.md))
 
-## What's GGPO?
+## What's GGPO NEXT?
+
+This repository is a (maybe temporary?) fork of the [original GGPO](https://github.com/pond3r/ggpo) SDK lib. Everything here stands on the shoulders of those giants, so any recognition, donations etc, belongs there, not here.
+
+# Why make this?
+The reason this fork exists as it is right now is to:
+ - Document runtime, api reference and build systems.
+ - Support multi-platform, beyond Windows (WIP).
+ - Proper release pipeline.
+
+# Are you merging back to upstream?
+Maybe. Once this is mature enough we will reach out. It will depend on the original maintainer.
+
+# Is this vibe-coded
+No, bu it is AI-assisted.
+
+## What is GGPO?
 
 Traditional techniques account for network transmission time by adding delay to a players input, resulting in a sluggish, laggy game-feel.  Rollback networking uses input prediction and speculative execution to send player inputs to the game immediately, providing the illusion of a zero-latency network.  Using rollback, the same timings, reactions, visual and audio queues, and muscle memory your players build up playing offline will translate directly online.  The GGPO networking SDK is designed to make incorporating rollback networking into new and existing games as easy as possible.  
 
