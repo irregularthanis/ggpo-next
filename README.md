@@ -16,16 +16,22 @@ Architecture and API internals are documented in
 [`doc/architecture`](doc/architecture/README.md). Build, installation, and
 application integration guidance is in the [Developer Guide](doc/DeveloperGuide.md).
 
-## Building
+## Install or build the SDK
 
 The SDK currently supports Windows builds. Linux and Apple platform adapters are
 documented follow-up work; unsupported SDK targets fail configuration explicitly.
 
-### Windows
+Choose either:
 
-Windows builds require Visual Studio 2022 with the C++ workload, CMake, and
-Python 3. The tested build, installation, package-consumption, and runtime
-integration steps are in the [Developer Guide](doc/DeveloperGuide.md#install-the-sdk).
+- **Release SDK:** download a tested x64/x86 shared or static ZIP from
+  [Releases](https://github.com/irregularthanis/ggpo-next/releases). This is the
+  shortest path for application developers.
+- **Source build:** clone the repository and use CMake when changing GGPO,
+  running its tests, or selecting a configuration not distributed as a release.
+
+Both options provide `ggponet.h` and the `GGPO::GGPO` CMake target. Selection,
+installation, shared-library deployment, and source-build commands are in the
+[Developer Guide](doc/DeveloperGuide.md#install-the-sdk).
 
 ## Sample Application
 

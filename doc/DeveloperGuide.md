@@ -22,9 +22,49 @@ Each player in a GGPO networked game has a complete copy of your game running.  
 
 ## Install the SDK
 
-The currently supported SDK build is Windows. Install Visual Studio 2022 with
-the Desktop development with C++ workload, CMake, and Python 3, then run from a
-Developer PowerShell prompt:
+The currently supported SDK is Windows. Choose a prebuilt release SDK for normal
+application integration or build from source when developing GGPO itself.
+
+### Option 1: use a release SDK
+
+Download the archive matching the application's architecture and linkage from
+[GGPO Next Releases](https://github.com/irregularthanis/ggpo-next/releases):
+
+| Archive suffix | Use it when |
+| --- | --- |
+| `windows-x64-shared` | The application is 64-bit and deploys `GGPO.dll` |
+| `windows-x64-static` | The application is 64-bit and links GGPO into its executable |
+| `windows-x86-shared` | The application is 32-bit and deploys `GGPO.dll` |
+| `windows-x86-static` | The application is 32-bit and links GGPO into its executable |
+
+Extract the ZIP to a stable location such as `C:/ggpo-sdk`. Each release archive
+is an installed CMake package rather than a source tree:
+
+```text
+C:/ggpo-sdk/
+├── include/ggponet.h
+├── bin/GGPO.dll                  # shared archive only
+├── lib/GGPO.lib
+├── lib/cmake/GGPO/
+└── share/GGPO/
+```
+
+Configure the application with the extracted directory as a prefix:
+
+```powershell
+cmake -S . -B build -DCMAKE_PREFIX_PATH=C:/ggpo-sdk
+cmake --build build --config Release --parallel
+```
+
+The release page also provides `SHA256SUMS`. Compare the archive's
+`Get-FileHash -Algorithm SHA256` result before extracting it. Shared builds must
+place `C:/ggpo-sdk/bin/GGPO.dll` beside the application executable or otherwise
+make that directory available to the Windows loader.
+
+### Option 2: build and install from source
+
+Install Visual Studio 2022 with the Desktop development with C++ workload,
+CMake, and Python 3. From a Developer PowerShell prompt in the source checkout:
 
 ```powershell
 cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
@@ -35,23 +75,25 @@ cmake --build build --config Release --parallel
 cmake --install build --config Release --prefix C:/ggpo-sdk
 ```
 
-The normal build runs the six self-contained tests. Use
+Change `-A x64` to `-A Win32` for a 32-bit SDK. Set
+`BUILD_SHARED_LIBS=OFF` to build a static library. The normal build runs the six
+self-contained tests. Use
 `-DGGPO_RUN_TESTS_ON_BUILD=OFF` only when test execution must be explicit, or
-`-DBUILD_TESTING=OFF` for a consumer/packaging-only build. Set
-`BUILD_SHARED_LIBS=OFF` to produce a static library.
+`-DBUILD_TESTING=OFF` for a consumer/packaging-only build.
 
-The install contains `include/ggponet.h`, the library, and a CMake package. A
-consumer links only the installed target:
+### Link the installed package
+
+Both installation paths expose the same package. A consumer links only its
+exported target:
 
 ```cmake
 find_package(GGPO CONFIG REQUIRED)
 target_link_libraries(my_game PRIVATE GGPO::GGPO)
 ```
 
-Configure the consumer with `-DCMAKE_PREFIX_PATH=C:/ggpo-sdk`. For shared
-builds, deploy `C:/ggpo-sdk/bin/GGPO.dll` beside the game executable. See the
-[build architecture](architecture/Build.md#install-layout) for the complete
-layout.
+See the [build architecture](architecture/Build.md#install-layout) for the
+canonical layout and the [release workflow](architecture/Build.md#release-packages)
+for its validation and publication contract.
 
 ## Programming guide
 

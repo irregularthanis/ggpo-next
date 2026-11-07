@@ -10,13 +10,13 @@
 
 このリポジトリにコードやドキュメント、SDKのサンプルアプリケーションが収められています。
 
-## ビルド
+## SDKのインストールまたはビルド
 
 SDKのビルドは現在Windowsのみをサポートしています。LinuxおよびApple向けのプラットフォームアダプターは今後の作業です。
 
 ### Windows
 
-Windowsのビルドには、C++ワークロードを含むVisual Studio 2022、CMake、Python 3が必要です。現在のビルド、インストール、CMakeパッケージ、および統合手順については、英語版の[開発者ガイド](doc/DeveloperGuide.md#install-the-sdk)を参照してください。
+[Releases](https://github.com/irregularthanis/ggpo-next/releases)からテスト済みのSDK ZIPを利用する方法と、ソースからCMakeでビルドする方法があります。アーカイブの選択、インストール、CMakeパッケージ、および統合手順については、英語版の[開発者ガイド](doc/DeveloperGuide.md#install-the-sdk)を参照してください。
 
 ## サンプルアプリケーション
 
