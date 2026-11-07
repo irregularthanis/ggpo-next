@@ -72,12 +72,17 @@ Install the package matching the required linkage:
 ```bash
 # Debian or Ubuntu, shared SDK
 sudo apt install ./ggpo-0.2.0-linux-x86_64-shared.deb
+# Debian or Ubuntu, static SDK
+sudo apt install ./ggpo-0.2.0-linux-x86_64-static.deb
 
 # Fedora or another RPM-family system, shared SDK
 sudo dnf install ./ggpo-0.2.0-linux-x86_64-shared.rpm
+# Fedora or another RPM-family system, static SDK
+sudo dnf install ./ggpo-0.2.0-linux-x86_64-static.rpm
 ```
 
-Replace `shared` with `static` to link GGPO into the application executable.
+Run one command for the chosen package format and linkage, not both linkage
+variants on the same system.
 The DEB and RPM install under `/usr`; shared and static packages conflict by
 design because they own the same headers and CMake metadata. After installation,
 ordinary `find_package(GGPO CONFIG REQUIRED)` resolves the SDK without an
@@ -151,16 +156,24 @@ Install Visual Studio 2022 with the Desktop development with C++ workload,
 CMake, and Python 3. From a Developer PowerShell prompt in the source checkout:
 
 ```powershell
-cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+# Build and install the shared SDK.
+cmake -S . -B build/shared -G "Visual Studio 17 2022" -A x64 `
   -DBUILD_SHARED_LIBS=ON `
   -DGGPO_BUILD_SDK=ON `
   -DGGPO_BUILD_VECTORWAR=ON
-cmake --build build --config Release --parallel
-cmake --install build --config Release --prefix C:/ggpo-sdk
+cmake --build build/shared --config Release --parallel
+cmake --install build/shared --config Release --prefix C:/ggpo-sdk-shared
+
+# Build and install the static SDK.
+cmake -S . -B build/static -G "Visual Studio 17 2022" -A x64 `
+  -DBUILD_SHARED_LIBS=OFF `
+  -DGGPO_BUILD_SDK=ON `
+  -DGGPO_BUILD_VECTORWAR=ON
+cmake --build build/static --config Release --parallel
+cmake --install build/static --config Release --prefix C:/ggpo-sdk-static
 ```
 
-Change `-A x64` to `-A Win32` for a 32-bit SDK. Set
-`BUILD_SHARED_LIBS=OFF` to build a static library. The normal build runs the six
+Change `-A x64` to `-A Win32` for a 32-bit SDK. The normal build runs the six
 self-contained tests. Use
 `-DGGPO_RUN_TESTS_ON_BUILD=OFF` only when test execution must be explicit, or
 `-DBUILD_TESTING=OFF` for a consumer/packaging-only build.
