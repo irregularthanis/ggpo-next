@@ -47,14 +47,14 @@ ggpo_configure_platform(GGPO)
 ```mermaid
 flowchart TD
     Dockerfile["Repository<br/>Dockerfile<br/>Ubuntu 24.04 toolchain"]
-    Local["Local container<br/>build<br/>build_in_container.py"]
+    Local["Local<br/>container<br/>build<br/>build_in_<br/>container.py"]
     CI["Linux CI<br/>and release<br/>jobs"]
-    API["Unchanged<br/>public API<br/>ggponet.h"] --> Core["Portable<br/>rollback core"]
-    Core --> Win["Windows adapter<br/>Winsock<br/>and Win32"]
-    Core --> Linux["Linux adapter<br/>POSIX sockets<br/>and clock"]
-    Win --> WinPkg["Windows packages<br/>existing<br/>matrix"]
-    Linux --> LinPkg["Ubuntu 24.04<br/>packages<br/>GCC and Clang tests"]
-    WinPkg <-->|"fixed inputs<br/>and matching<br/>checkpoints"| LinPkg
+    API["Unchanged<br/>public<br/>API<br/>ggponet.h"] --> Core["Portable<br/>rollback<br/>core"]
+    Core --> Win["Windows<br/>adapter<br/>Winsock<br/>and Win32"]
+    Core --> Linux["Linux<br/>adapter<br/>POSIX<br/>sockets<br/>and clock"]
+    Win --> WinPkg["Windows<br/>packages<br/>existing<br/>matrix"]
+    Linux --> LinPkg["Ubuntu<br/>24.04<br/>packages<br/>GCC and<br/>Clang tests"]
+    WinPkg <-->|"fixed<br/>inputs<br/>and matching<br/>checkpoints"| LinPkg
     LinPkg --> Deck["SteamOS<br/>qualification<br/>real device"]
     Dockerfile --> Local --> Linux
     Dockerfile --> CI --> Linux
