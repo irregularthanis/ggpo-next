@@ -1,10 +1,16 @@
 #include "smoke_session.h"
 #include "types.h"
-#include "platform.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#if defined(_WIN32)
+#include <windows.h>
+#else
+#include <errno.h>
+#include <time.h>
+#endif
 
 // One instance represents one player in the loopback test.  The Python
 // orchestrator launches two instances with opposite local/remote ports, then
@@ -13,6 +19,36 @@ static int
 InputForPlayer(int player, int frame)
 {
    return ((frame + 1) * (player * 17 + 3)) ^ (frame << player);
+}
+
+// Read a monotonic test deadline without depending on a GGPO adapter revision.
+static uint32
+TestTimeMs()
+{
+#if defined(_WIN32)
+   return (uint32)GetTickCount();
+#else
+   struct timespec current;
+   if (clock_gettime(CLOCK_MONOTONIC, &current) != 0) {
+      return 0;
+   }
+   return (uint32)((unsigned long long)current.tv_sec * 1000ULL +
+                   (unsigned long long)current.tv_nsec / 1000000ULL);
+#endif
+}
+
+// Yield briefly while peers exchange packets, retrying interrupted POSIX waits.
+static void
+TestWaitMs(int timeout_ms)
+{
+#if defined(_WIN32)
+   Sleep((DWORD)timeout_ms);
+#else
+   struct timespec requested;
+   requested.tv_sec = timeout_ms / 1000;
+   requested.tv_nsec = (timeout_ms % 1000) * 1000000L;
+   while (nanosleep(&requested, &requested) != 0 && errno == EINTR) { }
+#endif
 }
 
 // Convert a GGPO result into a readable test failure.
@@ -116,11 +152,11 @@ main(int argc, char **argv)
    }
 
    // Do not submit inputs until both GGPO peers complete their handshake.
-   start_time = ggpo_platform::MonotonicTimeMs();
+   start_time = TestTimeMs();
    while (g_smoke_metrics.running_events == 0) {
       ggpo_idle(g_smoke_session, 1);
-      ggpo_platform::WaitMs(1);
-      if (ggpo_platform::MonotonicTimeMs() - start_time > 15000) {
+      TestWaitMs(1);
+      if (TestTimeMs() - start_time > 15000) {
          fprintf(stderr, "timed out waiting for GGPO running event\n");
          return 1;
       }
@@ -128,7 +164,7 @@ main(int argc, char **argv)
 
    // Prediction-threshold and not-synchronized responses are normal while the
    // remote process catches up; pump GGPO and retry the same logical frame.
-   start_time = ggpo_platform::MonotonicTimeMs();
+   start_time = TestTimeMs();
    while (g_smoke_state.frame < target_frames) {
       int local_input = InputForPlayer(local_player, g_smoke_state.frame);
       int synchronized_inputs[2] = { 0, 0 };
@@ -140,7 +176,7 @@ main(int argc, char **argv)
       if (result == GGPO_ERRORCODE_PREDICTION_THRESHOLD ||
           result == GGPO_ERRORCODE_NOT_SYNCHRONIZED) {
          ggpo_idle(g_smoke_session, 1);
-         ggpo_platform::WaitMs(1);
+         TestWaitMs(1);
          continue;
       }
       if (!CheckResult(result, "ggpo_add_local_input") ||
@@ -159,7 +195,7 @@ main(int argc, char **argv)
          return 1;
       }
       ggpo_idle(g_smoke_session, 0);
-      if (ggpo_platform::MonotonicTimeMs() - start_time > 30000) {
+      if (TestTimeMs() - start_time > 30000) {
          fprintf(stderr, "timed out advancing peer session\n");
          return 1;
       }
@@ -169,7 +205,7 @@ main(int argc, char **argv)
    // the result and closing the session.
    for (int settle = 0; settle < 1000; settle++) {
       ggpo_idle(g_smoke_session, 1);
-      ggpo_platform::WaitMs(1);
+      TestWaitMs(1);
    }
 
    if (!WriteResult(argv[5], local_player)) {
