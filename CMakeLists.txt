@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.2)
 
 # TODO: SDK Versioning.
-project(GGPO VERSION 1.0.0)
+project(GGPO VERSION 0.1.0)
 
 include(CTest)
 
