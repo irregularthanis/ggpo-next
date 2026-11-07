@@ -1,6 +1,6 @@
 # PROGRESS — Linux SDK support
 
-Status: Planned
+Status: In progress
 
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
@@ -28,7 +28,7 @@ Parallel with M1; owns peer-runner scripts and evidence format; integrates at M4
 
 - [x] M2-T01: Allow the peer runner to launch two distinct executable identities.
 - [x] M2-T02: Add controlled two-host coordination and machine-readable checkpoint/event output.
-- [ ] M2-T03: Prove the harness detects mismatched state, timeout, startup, and shutdown failures.
+- [x] M2-T03: Prove the harness detects mismatched state, timeout, startup, and shutdown failures.
 
 ### M3: Qualify native Linux and packages (depends: M1)
 
@@ -44,7 +44,7 @@ Parallel with M1; owns peer-runner scripts and evidence format; integrates at M4
 
 ## Evidence ledger
 
-No implementation tasks are complete yet. Completed tasks require artifact identity, command or method, environment/input, and result.
+Completed tasks require artifact identity, command or method, environment/input, and result.
 
 | Task | Commit / artifact | Command / method | Environment / input | Result |
 |---|---|---|---|---|
@@ -55,4 +55,5 @@ No implementation tasks are complete yet. Completed tasks require artifact ident
 | M1-T03 | `cf821cd` | Python syntax check and source inspection | `docker/linux/Dockerfile`, local wrapper | Shared image recipe and local GCC/Clang static/shared interface added; full image matrix remains M3 |
 | M2-T01 | [`linux-cross-binary-smoke.json`](evidence/linux-cross-binary-smoke.json) | `run_peer_smoke.py` with GCC peer A and Clang peer B | Linux loopback, 180 frames | Pass; both peers reached frame 180 and checksum `7db6c67b` |
 | M2-T02 | `cf821cd`; Testing architecture | Remote-IP peer arguments plus result comparator | Controlled-host procedure | Native-host command/evidence contract implemented; execution remains M4 |
+| M2-T03 | [`peer_runner_negative.py`](../../../tests/smoke/peer_runner_negative.py) | `ctest -R linux_peer_negative_contracts` | Linux shared build; real peer fixture with controlled faults | Pass; startup, timeout, checksum mismatch, and shutdown failures each produced the required rejection |
 | M3-T01 | `cf821cd` | Configure, build and CTest | Linux native builds | Linux SyncTest, peer loopback, fake SyncTest, and fake contract registered and passing |

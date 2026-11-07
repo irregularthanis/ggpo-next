@@ -22,6 +22,14 @@ InputForPlayer(int player, int frame)
    return ((frame + 1) * (player * 17 + 3)) ^ (frame << player);
 }
 
+// Enable one explicit fault used only by negative harness regression tests.
+static bool
+FaultEnabled(const char *expected)
+{
+   const char *fault = getenv("GGPO_SMOKE_FAULT");
+   return fault && strcmp(fault, expected) == 0;
+}
+
 // Read a monotonic test deadline without depending on a GGPO adapter revision.
 static uint32
 TestTimeMs()
@@ -127,6 +135,16 @@ main(int argc, char **argv)
    }
 #endif
 
+   if (FaultEnabled("startup")) {
+      fprintf(stderr, "fault: startup\n");
+      return 91;
+   }
+   if (FaultEnabled("timeout")) {
+      fprintf(stderr, "fault: timeout\n");
+      TestWaitMs(60000);
+      return 93;
+   }
+
    SmokeReset();
    callbacks = SmokeCallbacks();
    if (!CheckResult(ggpo_start_session(&g_smoke_session,
@@ -220,6 +238,9 @@ main(int argc, char **argv)
       TestWaitMs(1);
    }
 
+   if (FaultEnabled("mismatch")) {
+      g_smoke_state.accumulator ^= 1u;
+   }
    if (!WriteResult(argv[5], local_player)) {
       return 1;
    }
@@ -239,5 +260,9 @@ main(int argc, char **argv)
    // Balance the fixture's startup reference after GGPO closes its session.
    WSACleanup();
 #endif
+   if (FaultEnabled("shutdown")) {
+      fprintf(stderr, "fault: shutdown\n");
+      return 92;
+   }
    return 0;
 }

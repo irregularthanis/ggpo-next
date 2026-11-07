@@ -91,6 +91,16 @@ add_test(NAME ${GGPO_SMOKE_PREFIX}_peer_loopback
 )
 set_tests_properties(${GGPO_SMOKE_PREFIX}_peer_loopback PROPERTIES TIMEOUT 90)
 
+# Negative contracts prove the runner rejects lifecycle and state failures.
+add_test(NAME ${GGPO_SMOKE_PREFIX}_peer_negative_contracts
+    COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/smoke/peer_runner_negative.py
+            $<TARGET_FILE:${GGPO_PEER_TARGET}>
+)
+set_tests_properties(${GGPO_SMOKE_PREFIX}_peer_negative_contracts PROPERTIES
+    TIMEOUT 45
+)
+
 # Build the production rollback core against a deterministic adapter. This is
 # intentionally a separate static library: it proves SyncTest does not acquire
 # Win32/Winsock behavior through an accidental transitive dependency.

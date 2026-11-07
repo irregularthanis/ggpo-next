@@ -32,6 +32,7 @@ behavior-changing refactor pass.
 | Platform-free rollback | Production core linked without the Windows adapter | [`platform_fake.cpp`](../../tests/platform/fake/platform_fake.cpp), [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | Fake adapter and production rollback core |
 | Rollback behavior | Save, restore, synchronized input, replay, and deterministic final state | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | SyncTest backend without sockets |
 | Windows transport | Handshake, events, prediction, rollback, UDP delivery, and shutdown | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Two GGPO processes over localhost |
+| Negative peer contracts | Startup, timeout, checksum mismatch, and shutdown failures are rejected | [`peer_runner_negative.py`](../../tests/smoke/peer_runner_negative.py) | Fault-injected real peer processes |
 | Build compatibility | x64/Win32, shared/static, Debug/Release | [`windows-compatibility.yml`](../../.github/workflows/windows-compatibility.yml) | Eight Windows build variants |
 | Linux transport | The same peer contract through POSIX UDP | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`platform_linux.cpp`](../../src/lib/ggpo/platform_linux.cpp) | Two native Linux processes |
 | Linux package | GCC/Clang, static/shared, installed consumers and ABI ceiling | [`linux-compatibility.yml`](../../.github/workflows/linux-compatibility.yml) | Shared Ubuntu 24.04 image |
@@ -174,6 +175,15 @@ A pass establishes real platform socket and two-peer behavior on one machine.
 It does not establish Internet/NAT behavior, loss tolerance, spectators, more
 than two players, or interoperability between operating systems.
 
+### Negative peer contracts
+
+[`peer_runner_negative.py`](../../tests/smoke/peer_runner_negative.py) launches
+the real peer fixture with one controlled test-only fault at a time. It requires
+the runner to reject startup failure, bounded timeout, divergent checksums, and
+shutdown failure with the matching diagnostic. The fault variable is removed
+from ordinary peer environments, so these cases cannot weaken positive smoke
+tests.
+
 ### Native cross-host smoke
 
 Run the same smoke executable on controlled Windows and Linux hosts. Start both
@@ -200,6 +210,7 @@ layout checks plus shared smoke families. Linux registers:
 ```text
 linux_synctest_smoke
 linux_peer_loopback
+linux_peer_negative_contracts
 fake_platform_synctest
 fake_platform_contract
 ```
@@ -211,6 +222,7 @@ windows_public_layout
 windows_packet_layout
 windows_synctest_smoke
 windows_peer_loopback
+windows_peer_negative_contracts
 fake_platform_synctest
 fake_platform_contract
 ```

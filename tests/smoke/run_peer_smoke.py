@@ -9,6 +9,7 @@ simulate Internet conditions or define a performance threshold.
 
 import argparse
 import json
+import os
 import socket
 import statistics
 import subprocess
@@ -27,7 +28,8 @@ def reserve_udp_port():
 
 
 # Run one peer pair and validate its frames, events, and final checksum.
-def run_pair(executable_a, executable_b, frames, run_number):
+def run_pair(executable_a, executable_b, frames, run_number,
+             timeout_seconds=45, fault_a=None, fault_b=None):
     port_a = reserve_udp_port()
     port_b = reserve_udp_port()
     while port_b == port_a:
@@ -41,15 +43,24 @@ def run_pair(executable_a, executable_b, frames, run_number):
             [str(executable_b), "2", str(port_b), str(port_a), str(frames), str(result_b)],
         ]
         started = time.perf_counter()
+        environments = []
+        for fault in (fault_a, fault_b):
+            environment = os.environ.copy()
+            if fault:
+                environment["GGPO_SMOKE_FAULT"] = fault
+            else:
+                environment.pop("GGPO_SMOKE_FAULT", None)
+            environments.append(environment)
         processes = [
             subprocess.Popen(command, stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT, text=True)
-            for command in commands
+                             stderr=subprocess.STDOUT, text=True,
+                             env=environments[index])
+            for index, command in enumerate(commands)
         ]
         outputs = []
         try:
             for process in processes:
-                output, _ = process.communicate(timeout=45)
+                output, _ = process.communicate(timeout=timeout_seconds)
                 outputs.append(output)
         except subprocess.TimeoutExpired:
             for process in processes:
@@ -63,7 +74,8 @@ def run_pair(executable_a, executable_b, frames, run_number):
             print(outputs[index], end="")
             if process.returncode != 0:
                 raise RuntimeError(
-                    f"peer {index + 1} exited with {process.returncode}"
+                    f"peer {index + 1} exited with {process.returncode}: "
+                    f"{outputs[index].strip()}"
                 )
 
         states = [
