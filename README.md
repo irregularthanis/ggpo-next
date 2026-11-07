@@ -35,9 +35,11 @@ For more information about the history of GGPO, check out http://ggpo.net/
 
 This repository contains the code, documentation, and sample applications for the SDK.
 
-Architecture and API internals are documented in
-[`doc/architecture`](doc/architecture/README.md). Build, installation, and
-application integration guidance is in the [Developer Guide](doc/DeveloperGuide.md).
+Architecture internals are documented in
+[`doc/architecture`](doc/architecture/README.md). The
+[public API reference](doc/architecture/API.md) covers every exported function,
+callback, type, event, and result. Build, installation, and application
+integration guidance is in the [Developer Guide](doc/DeveloperGuide.md).
 
 ## Install or build the SDK
 
