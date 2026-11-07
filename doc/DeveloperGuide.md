@@ -130,14 +130,20 @@ application links and deploys GGPO.
 Install Docker, then run the same Ubuntu 24.04 image used by Linux CI:
 
 ```bash
+# Build and install the shared SDK.
 python3 scripts/linux/build_in_container.py \
   --compiler gcc --library shared --packages \
   --out build/linux-gcc-shared
+
+# Build and install the static SDK.
+python3 scripts/linux/build_in_container.py \
+  --compiler gcc --library static --packages \
+  --out build/linux-gcc-static
 ```
 
-The installed CMake package is written to `build/linux-gcc-shared/install`;
-verified DEB, RPM, and raw artifacts are written to its `packages` directory.
-Select `clang` or `static` with the corresponding arguments.
+Each installed CMake package is written to its output's `install` directory;
+verified DEB, RPM, and raw artifacts are written to `packages`. Select `clang`
+with `--compiler clang` when testing that toolchain.
 
 ### Option 3: build Windows from source
 
@@ -168,6 +174,24 @@ exported target:
 find_package(GGPO CONFIG REQUIRED)
 target_link_libraries(my_game PRIVATE GGPO::GGPO)
 ```
+
+Use separate application build directories when comparing linkage variants:
+
+```bash
+# Compile the application against the extracted shared SDK.
+cmake -S . -B build-shared \
+  -DCMAKE_PREFIX_PATH=/path/to/ggpo-0.2.0-linux-x86_64-shared
+cmake --build build-shared --parallel
+
+# Compile the same application against the extracted static SDK.
+cmake -S . -B build-static \
+  -DCMAKE_PREFIX_PATH=/path/to/ggpo-0.2.0-linux-x86_64-static
+cmake --build build-static --parallel
+```
+
+The source and `target_link_libraries` call do not change. The selected package
+makes `GGPO::GGPO` resolve to `libGGPO.so` or `libGGPO.a`. System-installed DEB
+or RPM packages need no `CMAKE_PREFIX_PATH`.
 
 See the [build architecture](architecture/Build.md#install-layout) for the
 canonical layout and the [release workflow](architecture/Build.md#release-packages)
