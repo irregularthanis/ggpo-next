@@ -84,10 +84,10 @@ Linux shared libraries receive a project-major `SOVERSION`. Hidden-by-default vi
 | Environment parity | Local wrapper and Linux CI at one revision | Same Dockerfile; recorded image identity and matching compiler/CMake/Ninja versions | Alternate CI/local dependency recipe blocks |
 | Installed package | Extract DEB, RPM, and raw tar.gz; external C11 and C++98 consumers using `find_package` | Every format compiles, links, and runs without source-tree includes | Missing format, file, transitive dependency, or export blocks |
 | ABI audit | `readelf`, `objdump`, `ldd` | SONAME/exports; max `GLIBC <= 2.39`; recorded `GLIBCXX`/`CXXABI` ceilings | Newer symbol or untracked dependency blocks |
-| Cross-host | Native Windows ↔ Ubuntu and native Windows ↔ SteamOS on a controlled LAN, 3×180 frames | Artifact SHAs, OS/toolchain identity, matching checkpoints/checksum/events, and clean exits | Unavailable evidence leaves support unqualified |
+| Cross-host follow-up | Native Windows ↔ Ubuntu and native Windows ↔ SteamOS on a controlled LAN, 3×180 frames | Artifact SHAs, OS/toolchain identity, matching checkpoints/checksum/events, and clean exits | Does not block merge or native Linux package publication; cross-OS qualification remains open |
 | Release | Tag workflow | Separate static/shared Linux x86-64 DEB, RPM, and raw archives plus checksums | No publication until every format passes extraction and consumer audits |
 
-Ordinary GitHub-hosted Windows and Linux jobs are not assumed to share a reachable LAN. The cross-host gate therefore needs controlled/self-hosted machines or a documented release qualification run. Wine is not accepted as evidence of native Windows interoperability.
+Ordinary GitHub-hosted Windows and Linux jobs are not assumed to share a reachable LAN. The cross-host follow-up therefore needs controlled/self-hosted machines or a documented qualification run. Wine is not accepted as evidence of native Windows interoperability.
 
 ## Implementation order
 
@@ -97,9 +97,9 @@ Ordinary GitHub-hosted Windows and Linux jobs are not assumed to share a reachab
 | M1 | M0 | M2 | Build the Linux adapter, shared container image, and local wrapper without core/API edits |
 | M2 | M0 | M1 | Deliver a distinct-peer local/remote runner with deterministic comparable evidence |
 | M3 | M1 | late M2 | Pass GCC/Clang × static/shared tests and installed-consumer/package audits |
-| M4 | M2, M3 | — | Pass native Windows↔Linux/SteamOS gates; enable release and docs |
+| M4 | M2, M3 | — | Follow up with native Windows↔Ubuntu and Windows↔SteamOS qualification |
 
-Critical path: M0 → M1 → M3 → M4. M2 can proceed beside M1 because it owns the runner rather than adapter files. Changes to `tests/CMakeLists.txt` are integrated in M3 to avoid concurrent edits.
+Merge and packaging path: M0 → M1 → M3. M2 can proceed beside M1 because it owns the runner rather than adapter files. M4 is post-merge cross-OS qualification. Changes to `tests/CMakeLists.txt` are integrated in M3 to avoid concurrent edits.
 
 ## Decisions / gaps
 
@@ -108,7 +108,7 @@ Critical path: M0 → M1 → M3 → M4. M2 can proceed beside M1 because it owns
 - Clang packages use Ubuntu 24.04's default C++ runtime unless a later requirement justifies a separate libc++ artifact.
 - Release artifacts come from GCC lanes only; Clang remains a build-compatibility lane. DEB and RPM install under `/usr`, while tar.gz remains prefix-local.
 - Internet/NAT traversal, loss simulation, spectators, more than two peers, and Linux Vector War are follow-ups.
-- Native Windows↔SteamOS qualification infrastructure is not yet identified; M0 must name the controlled hosts before M4 can complete.
+- Native Windows↔SteamOS qualification infrastructure is not yet identified; selecting controlled hosts remains M4 follow-up work.
 
 ## References
 
