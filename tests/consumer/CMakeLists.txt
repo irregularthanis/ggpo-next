@@ -14,7 +14,10 @@ find_library(GGPO_INSTALLED_LIBRARY GGPO
     NO_DEFAULT_PATH
 )
 if(NOT GGPO_INSTALLED_INCLUDE_DIR OR NOT GGPO_INSTALLED_LIBRARY)
-    message(FATAL_ERROR "Installed GGPO header or library was not found under GGPO_INSTALL_PREFIX")
+    message(FATAL_ERROR
+        "Installed GGPO files were not found under ${GGPO_INSTALL_PREFIX}: "
+        "header='${GGPO_INSTALLED_INCLUDE_DIR}', library='${GGPO_INSTALLED_LIBRARY}'"
+    )
 endif()
 
 function(ggpo_add_installed_consumer target source)

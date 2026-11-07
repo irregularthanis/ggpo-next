@@ -15,10 +15,11 @@ $consumerBuild = Join-Path $build "installed-consumer-build"
 
 cmake --install $build --config $Configuration --prefix $install
 if ($LASTEXITCODE -ne 0) { throw "GGPO install failed" }
+$installForCMake = $install.Replace("\", "/")
 
 cmake -S (Join-Path $repo "tests/consumer") -B $consumerBuild `
     -G $Generator -A $Architecture `
-    -DGGPO_INSTALL_PREFIX=$install `
+    "-DGGPO_INSTALL_PREFIX:PATH=$installForCMake" `
     -DGGPO_SHARED_LIB=$Shared
 if ($LASTEXITCODE -ne 0) { throw "Installed-consumer configure failed" }
 
