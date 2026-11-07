@@ -23,7 +23,7 @@ struct UdpMsg
       QualityReport = 4,
       QualityReply  = 5,
       KeepAlive     = 6,
-      InputAck      = 7,
+      InputAck      = 7
    };
 
    struct connect_status {

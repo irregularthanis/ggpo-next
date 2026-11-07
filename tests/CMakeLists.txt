@@ -32,9 +32,13 @@ add_test(NAME windows_public_layout COMMAND ggpo_windows_public_layout)
 
 add_executable(ggpo_windows_packet_layout
     baseline/windows/packet_layout.cpp
+    platform/fake/platform_fake.cpp
+    platform/fake/platform_fake.h
 )
 ggpo_configure_windows_baseline_test(ggpo_windows_packet_layout)
-target_link_libraries(ggpo_windows_packet_layout PRIVATE GGPO winmm.lib ws2_32.lib)
+target_include_directories(ggpo_windows_packet_layout PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/platform/fake
+)
 add_test(NAME windows_packet_layout COMMAND ggpo_windows_packet_layout)
 
 # Runtime contracts: SyncTest isolates rollback, while peer loopback exercises
