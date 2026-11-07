@@ -46,7 +46,7 @@ ggpo_configure_platform(GGPO)
 
 ```mermaid
 flowchart TD
-    Dockerfile["Repository<br/>Dockerfile<br/>Ubuntu 24.04 toolchain"]
+    Dockerfile["Repository<br/>Dockerfile<br/>Ubuntu 24.04<br/>toolchain"]
     Local["Local<br/>container<br/>build<br/>build_in_<br/>container.py"]
     CI["Linux CI<br/>and release<br/>jobs"]
     API["Unchanged<br/>public<br/>API<br/>ggponet.h"] --> Core["Portable<br/>rollback<br/>core"]
