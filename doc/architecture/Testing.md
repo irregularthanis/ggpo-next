@@ -13,10 +13,9 @@
 
 ## Purpose
 
-GGPO's tests freeze observable Windows behavior before the core is separated
-from platform code. They protect public ABI, packed protocol data, deterministic
-rollback, and real loopback sessions without requiring Vector War or a person
-to operate a game window.
+GGPO's tests freeze Windows compatibility while qualifying the shared core and
+Linux adapter. They protect public ABI, packed protocol data, deterministic
+rollback, and real loopback sessions without requiring Vector War.
 
 The fixtures live under [`tests`](../../tests). Their frozen values represent
 the current compatibility contract; they should not be updated merely to make a
@@ -34,6 +33,9 @@ behavior-changing refactor pass.
 | Rollback behavior | Save, restore, synchronized input, replay, and deterministic final state | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | SyncTest backend without sockets |
 | Windows transport | Handshake, events, prediction, rollback, UDP delivery, and shutdown | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Two GGPO processes over localhost |
 | Build compatibility | x64/Win32, shared/static, Debug/Release | [`windows-compatibility.yml`](../../.github/workflows/windows-compatibility.yml) | Eight Windows build variants |
+| Linux transport | The same peer contract through POSIX UDP | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`platform_linux.cpp`](../../src/lib/ggpo/platform_linux.cpp) | Two native Linux processes |
+| Linux package | GCC/Clang, static/shared, installed consumers and ABI ceiling | [`linux-compatibility.yml`](../../.github/workflows/linux-compatibility.yml) | Shared Ubuntu 24.04 image |
+| Cross-host | Native Windows and Linux peers converge | [`compare_peer_results.py`](../../tests/smoke/compare_peer_results.py) | Controlled Windows↔Ubuntu/SteamOS hosts |
 
 The shared/static lanes are both required. Shared builds additionally validate
 DLL exports and import linkage; static builds ensure consumers do not depend on
@@ -168,14 +170,23 @@ sequenceDiagram
     Runner->>Runner: Require equal<br/>frame and<br/>checksum
 ```
 
-A pass establishes real Windows socket and two-peer behavior on one machine.
+A pass establishes real platform socket and two-peer behavior on one machine.
 It does not establish Internet/NAT behavior, loss tolerance, spectators, more
 than two players, or interoperability between operating systems.
 
 ## Build and CI integration
 
-[`tests/CMakeLists.txt`](../../tests/CMakeLists.txt) registers six Windows CTest
-entries:
+[`tests/CMakeLists.txt`](../../tests/CMakeLists.txt) registers Windows-only
+layout checks plus shared smoke families. Linux registers:
+
+```text
+linux_synctest_smoke
+linux_peer_loopback
+fake_platform_synctest
+fake_platform_contract
+```
+
+Windows retains these entries:
 
 ```text
 windows_public_layout
@@ -206,8 +217,14 @@ exports and layouts, then runs both cross-revision directions: the baseline
 executable with the candidate DLL and the candidate executable with the
 baseline DLL.
 
-GCC and Clang jobs also compile the public C11 and C++98 consumers without
-linking an SDK. These are header-portability gates, not Linux runtime support.
+[`linux-compatibility.yml`](../../.github/workflows/linux-compatibility.yml)
+builds [`docker/linux/Dockerfile`](../../docker/linux/Dockerfile), then runs the
+GCC/Clang × static/shared matrix inside that image. Each lane runs CTest,
+installs the SDK, builds and executes external C11/C++98 consumers, and audits
+the installed Linux library.
+
+Windows GCC and Clang header jobs also compile the public C11 and C++98
+consumers without linking an SDK. These remain header-portability gates.
 The Clang C++ gate suppresses only `-Wextern-c-compat`: C requires the documented
 one-byte `GGPOPlayer.local` placeholder while C++ retains the frozen empty-member
 Windows ABI. All other pedantic diagnostics remain errors.
@@ -239,7 +256,9 @@ established by the frame, checksum, callback, and lifecycle assertions.
 - No malformed/truncated packet suite validates parser rejection.
 - No spectator, disconnect/resume, simulated loss, or multi-player automated
   session exists.
-- No Linux/macOS adapter, build, or cross-OS peer test exists.
+- Native Windows↔Ubuntu and Windows↔SteamOS sessions require controlled hosts;
+  ordinary isolated GitHub-hosted jobs cannot provide this network.
+- No macOS adapter or build exists.
 - No sanitizer job is configured.
 
 The platform-extraction plan tracks those additions in the

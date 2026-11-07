@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.10)
 
 # TODO: SDK Versioning.
 project(GGPO VERSION 0.1.0)
@@ -41,13 +41,21 @@ endif()
 if(BUILD_TESTING AND GGPO_BUILD_SDK)
 	add_subdirectory(tests)
 	if(GGPO_RUN_TESTS_ON_BUILD)
-		add_custom_target(ggpo_check ALL
-			COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>
-			DEPENDS
+		if(WIN32)
+			set(GGPO_PLATFORM_TEST_TARGETS
 				ggpo_windows_public_layout
 				ggpo_windows_packet_layout
 				ggpo_windows_synctest_smoke
-				ggpo_windows_peer_smoke
+				ggpo_windows_peer_smoke)
+		else()
+			set(GGPO_PLATFORM_TEST_TARGETS
+				ggpo_linux_synctest_smoke
+				ggpo_linux_peer_smoke)
+		endif()
+		add_custom_target(ggpo_check ALL
+			COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>
+			DEPENDS
+				${GGPO_PLATFORM_TEST_TARGETS}
 				ggpo_fake_core_synctest
 				ggpo_fake_platform_contract
 			USES_TERMINAL

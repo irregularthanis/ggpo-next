@@ -50,11 +50,11 @@ GameInput::desc(char *buf, size_t buf_size, bool show_frame) const
       char buf2[16];
       if (value(i)) {
          int c = snprintf(buf2, ARRAY_SIZE(buf2), "%2d ", i);
-         strncat_s(buf, remaining, buf2, ARRAY_SIZE(buf2));
+         strncat(buf, buf2, MIN(remaining - 1, (size_t)ARRAY_SIZE(buf2)));
          remaining -= c;
       }
    }
-   strncat_s(buf, remaining, ")", 1);
+   strncat(buf, ")", MIN(remaining - 1, (size_t)1));
 }
 
 void
@@ -64,7 +64,7 @@ GameInput::log(char *prefix, bool show_frame) const
    size_t c = strlen(prefix);
 	snprintf(buf, ARRAY_SIZE(buf), "%s", prefix);
 	desc(buf + c, ARRAY_SIZE(buf) - c, show_frame);
-   strncat_s(buf, ARRAY_SIZE(buf) - strlen(buf), "\n", 1);
+   strncat(buf, "\n", ARRAY_SIZE(buf) - strlen(buf) - 1);
 	Log(buf);
 }
 

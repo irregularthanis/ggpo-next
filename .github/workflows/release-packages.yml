@@ -9,6 +9,47 @@ permissions:
   contents: read
 
 jobs:
+  package-linux:
+    name: Linux x86-64 ${{ matrix.library }} SDK
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        library: [shared, static]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the shared Linux environment
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/linux/Dockerfile
+          load: true
+          tags: ggpo-linux-release:${{ matrix.library }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Build, test, install and audit the SDK
+        run: |
+          python3 scripts/linux/build_in_container.py \
+            --skip-image-build \
+            --image ggpo-linux-release:${{ matrix.library }} \
+            --compiler gcc \
+            --library ${{ matrix.library }} \
+            --out build/linux-${{ matrix.library }}
+      - name: Archive the installed SDK
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          name="ggpo-${version}-linux-x86_64-${{ matrix.library }}"
+          mv build/linux-${{ matrix.library }}/install "build/$name"
+          tar -C build -czf "build/$name.tar.gz" "$name"
+      - name: Upload packaged SDK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-package-linux-x86_64-${{ matrix.library }}
+          path: build/ggpo-*.tar.gz
+          if-no-files-found: error
+
   package-windows:
     name: Windows ${{ matrix.label }} SDK
     runs-on: windows-2022
@@ -115,7 +156,7 @@ jobs:
 
   publish-release:
     name: Publish release assets
-    needs: package-windows
+    needs: [package-windows, package-linux]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -128,7 +169,7 @@ jobs:
 
       - name: Generate checksums
         working-directory: release-assets
-        run: sha256sum ggpo-*.zip > SHA256SUMS
+        run: sha256sum ggpo-*.zip ggpo-*.tar.gz > SHA256SUMS
 
       - name: Create or update the GitHub Release
         env:
@@ -139,4 +180,4 @@ jobs:
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" --verify-tag --generate-notes --title "GGPO $TAG"
           fi
-          gh release upload "$TAG" release-assets/ggpo-*.zip release-assets/SHA256SUMS --clobber
+          gh release upload "$TAG" release-assets/ggpo-*.zip release-assets/ggpo-*.tar.gz release-assets/SHA256SUMS --clobber

@@ -43,13 +43,13 @@ SmokeChecksum(const SmokeState *state)
    return checksum;
 }
 
-static bool __cdecl
+static bool GGPO_CALL
 SmokeBeginGame(const char *)
 {
    return true;
 }
 
-static bool __cdecl
+static bool GGPO_CALL
 SmokeSaveState(unsigned char **buffer, int *len, int *checksum, int)
 {
    *len = (int)sizeof(g_smoke_state);
@@ -63,7 +63,7 @@ SmokeSaveState(unsigned char **buffer, int *len, int *checksum, int)
    return true;
 }
 
-static bool __cdecl
+static bool GGPO_CALL
 SmokeLoadState(unsigned char *buffer, int len)
 {
    if (len != (int)sizeof(g_smoke_state)) {
@@ -74,19 +74,19 @@ SmokeLoadState(unsigned char *buffer, int len)
    return true;
 }
 
-static bool __cdecl
+static bool GGPO_CALL
 SmokeLogState(char *, unsigned char *, int)
 {
    return true;
 }
 
-static void __cdecl
+static void GGPO_CALL
 SmokeFreeBuffer(void *buffer)
 {
    free(buffer);
 }
 
-static bool __cdecl
+static bool GGPO_CALL
 SmokeAdvanceFrame(int)
 {
    // GGPO invokes this callback while replaying after a restored snapshot.
@@ -106,7 +106,7 @@ SmokeAdvanceFrame(int)
    return GGPO_SUCCEEDED(ggpo_advance_frame(g_smoke_session));
 }
 
-static bool __cdecl
+static bool GGPO_CALL
 SmokeOnEvent(GGPOEvent *info)
 {
    if (info->code == GGPO_EVENTCODE_RUNNING) {

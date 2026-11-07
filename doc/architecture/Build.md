@@ -4,6 +4,7 @@
 
 - [Build outputs](#build-outputs)
 - [Build graph](#build-graph)
+- [Linux container](#linux-container)
 - [Configuration options](#configuration-options)
 - [SDK source composition](#sdk-source-composition)
 - [Vector War](#vector-war)
@@ -34,7 +35,8 @@ flowchart TD
     Core["Backends,<br/>sync, input,<br/>poll and UDP<br/>sources"]
     Platform{"Supported<br/>platform layer?"}
     Windows["platform/windows/<br/>Platform.cmake<br/>Windows source,<br/>defines and libs"]
-    Unsupported["Configuration error<br/>Linux and Apple<br/>follow-up required"]
+    Linux["platform/linux/<br/>Platform.cmake<br/>POSIX source<br/>and flags"]
+    Unsupported["Configuration<br/>error<br/>unsupported<br/>platform"]
     Library["GGPO library<br/>shared or<br/>static"]
     SampleList["Vector War<br/>CMakeLists.txt<br/>Windows only"]
     Sample["VectorWar<br/>executable"]
@@ -45,17 +47,34 @@ flowchart TD
     Sources --> Core
     Sources --> Platform
     Platform -->|"Windows"| Windows
+    Platform -->|"Linux"| Linux
     Platform -->|"Other"| Unsupported
     Public --> Library
     Core --> Library
     Windows --> Library
+    Linux --> Library
     Root -->|"GGPO_BUILD_<br/>VECTORWAR<br/>and WIN32"| SampleList
     SampleList --> Library
     SampleList --> Sample
 ```
 
 The root selects exactly one supported platform layer. The incomplete legacy
-Unix source is no longer selected implicitly. See [Portability](Portability.md).
+Unix source was replaced by the Linux adapter. See [Portability](Portability.md).
+
+## Linux container
+
+[`docker/linux/Dockerfile`](../../docker/linux/Dockerfile) is the Linux build
+environment source of truth for developers, CI, and release packaging.
+[`build_in_container.py`](../../scripts/linux/build_in_container.py) builds that
+image locally and runs configure, build, CTest, install-consumer, and ABI audits.
+
+```bash
+python3 scripts/linux/build_in_container.py \
+  --compiler clang --library shared --out build/linux-clang-shared
+```
+
+CI builds the same Dockerfile with layer caching; it does not maintain a second
+package/toolchain recipe.
 
 ## Configuration options
 
@@ -80,7 +99,7 @@ The generated solution is described in the root [README](../../README.md).
 | Core | Inputs, queues, saved state, polling, logging, and time synchronization | [`sync.cpp`](../../src/lib/ggpo/sync.cpp), [`input_queue.cpp`](../../src/lib/ggpo/input_queue.cpp), [`timesync.cpp`](../../src/lib/ggpo/timesync.cpp) |
 | Network | UDP socket, wire messages, reliability, and peer state | [`udp.cpp`](../../src/lib/ggpo/network/udp.cpp), [`udp_proto.cpp`](../../src/lib/ggpo/network/udp_proto.cpp), [`udp_msg.h`](../../src/lib/ggpo/network/udp_msg.h) |
 | Backends | Peer-to-peer, spectator, and deterministic sync-test sessions | [`backends`](../../src/lib/ggpo/backends) |
-| Platform | Selected separately from the portable inventory | [Windows platform layer](../../src/platform/windows/Platform.cmake), [`platform_windows.cpp`](../../src/lib/ggpo/platform_windows.cpp) |
+| Platform | Selected separately from the portable inventory | [Windows](../../src/platform/windows/Platform.cmake), [Linux](../../src/platform/linux/Platform.cmake) |
 | Public | C-compatible integration contract | [`ggponet.h`](../../src/include/ggponet.h) |
 
 Only `src/include` is public. Internal headers remain private to the SDK target.
@@ -113,6 +132,8 @@ The SDK install rules in [`src/CMakeLists.txt`](../../src/CMakeLists.txt) place:
 ├── include/ggponet.h
 ├── bin/GGPO.dll                  # shared build
 ├── lib/GGPO.lib                  # import or static library
+├── lib/libGGPO.so.0              # Linux shared build
+├── lib/libGGPO.a                 # Linux static build
 ├── lib/cmake/GGPO/               # CMake package and target export
 └── share/GGPO/                   # license and README
 ```
@@ -126,8 +147,11 @@ Pushing a version tag such as `v0.1.0` runs the
 [`Package release SDK`](../../.github/workflows/release-packages.yml) workflow.
 The tag must match the version declared by the root [`project()`](../../CMakeLists.txt).
 
-The workflow builds and tests Release SDKs for x64 and x86, with shared and
-static linkage. Each installed SDK is archived, extracted into a clean prefix,
+The workflow builds Windows x64/x86 and Linux x86-64 SDKs with shared and
+static linkage. Each installed SDK is archived into ZIP or tar.gz, then
+validated through external C11 and C++98 consumers. The Linux archive is also
+audited for its SONAME, exports, dependencies, and glibc symbol ceiling.
+Each installed SDK is extracted into a clean prefix,
 and used to build and run the external C11 and C++98 consumers before its ZIP
 and the combined `SHA256SUMS` file are attached to the GitHub Release.
 
@@ -136,7 +160,7 @@ and the combined `SHA256SUMS` file are attached to the GitHub Release.
 | Platform | Current build status | Main blockers |
 | --- | --- | --- |
 | Windows | Supported SDK and Vector War build | Existing reference platform |
-| Linux | Explicitly rejected until a Linux platform layer exists | Adapter, CI, sample/frontend, and packaging remain |
+| Linux | SDK supported through the Ubuntu 24.04 container | Vector War/frontend remains Windows-only |
 | macOS | Explicitly rejected until an Apple platform layer exists | Adapter, CI, lifecycle/frontend, and packaging remain |
 | Mobile and consoles | No build target | Platform services, lifecycle, socket policy, packaging, and validation absent |
 

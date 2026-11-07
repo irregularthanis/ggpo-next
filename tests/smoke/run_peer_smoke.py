@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run two real GGPO peers over Windows loopback and compare their state.
+"""Run two real GGPO peers over loopback and compare their state.
 
 Each run reserves two ephemeral ports, starts one peer process per player, and
 requires both result files to report the requested frame, equal checksum, and
@@ -25,7 +25,7 @@ def reserve_udp_port():
     return port
 
 
-def run_pair(executable, frames, run_number):
+def run_pair(executable_a, executable_b, frames, run_number):
     port_a = reserve_udp_port()
     port_b = reserve_udp_port()
     while port_b == port_a:
@@ -35,8 +35,8 @@ def run_pair(executable, frames, run_number):
         result_a = Path(directory) / "peer-a.json"
         result_b = Path(directory) / "peer-b.json"
         commands = [
-            [str(executable), "1", str(port_a), str(port_b), str(frames), str(result_a)],
-            [str(executable), "2", str(port_b), str(port_a), str(frames), str(result_b)],
+            [str(executable_a), "1", str(port_a), str(port_b), str(frames), str(result_a)],
+            [str(executable_b), "2", str(port_b), str(port_a), str(frames), str(result_b)],
         ]
         started = time.perf_counter()
         processes = [
@@ -92,19 +92,23 @@ def run_pair(executable, frames, run_number):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("executable", type=Path)
+    parser.add_argument("--peer-b", type=Path,
+                        help="optional second peer executable")
     parser.add_argument("--frames", type=int, default=180)
     parser.add_argument("--runs", type=int, default=1)
     parser.add_argument("--summary", type=Path)
     args = parser.parse_args()
 
+    executable_a = args.executable.resolve()
+    executable_b = (args.peer_b or args.executable).resolve()
     results = [
-        run_pair(args.executable.resolve(), args.frames, run_number + 1)
+        run_pair(executable_a, executable_b, args.frames, run_number + 1)
         for run_number in range(args.runs)
     ]
     elapsed = [result["elapsed_ms"] for result in results]
     summary = {
         "schema": 1,
-        "executable": args.executable.name,
+        "executables": [executable_a.name, executable_b.name],
         "runs": results,
         "elapsed_ms": {
             "minimum": min(elapsed),

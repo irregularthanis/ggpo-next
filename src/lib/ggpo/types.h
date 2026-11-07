@@ -25,7 +25,9 @@
  *   4389 - '!=' : signed/unsigned mismatch
  *   4800 - 'int' : forcing value to bool 'true' or 'false' (performance warning)
  */
-#pragma warning(disable: 4018 4100 4127 4201 4389 4800)
+#ifdef _MSC_VER
+#  pragma warning(disable: 4018 4100 4127 4201 4389 4800)
+#endif
 
 /*
  * Simple types

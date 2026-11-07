@@ -1,7 +1,6 @@
-#include <winsock2.h>
-#include <windows.h>
-
 #include "smoke_session.h"
+#include "types.h"
+#include "platform.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,8 +28,8 @@ CheckResult(GGPOErrorCode result, const char *operation)
 static bool
 WriteResult(const char *path, int player)
 {
-   FILE *output = NULL;
-   if (fopen_s(&output, path, "w") != 0 || !output) {
+   FILE *output = fopen(path, "w");
+   if (!output) {
       fprintf(stderr, "could not open result file: %s\n", path);
       return false;
    }
@@ -54,16 +53,16 @@ main(int argc, char **argv)
 {
    GGPOSessionCallbacks callbacks;
    GGPOPlayerHandle local_handle = GGPO_INVALID_HANDLE;
-   WSADATA winsock_data;
    int local_player;
    int local_port;
    int remote_port;
    int target_frames;
-   DWORD start_time;
+   uint32 start_time;
 
-   if (argc != 6) {
+   if (argc != 6 && argc != 7) {
       fprintf(stderr,
-              "usage: %s PLAYER LOCAL_PORT REMOTE_PORT FRAMES RESULT.json\n",
+              "usage: %s PLAYER LOCAL_PORT REMOTE_PORT FRAMES RESULT.json "
+              "[REMOTE_IP]\n",
               argv[0]);
       return 2;
    }
@@ -77,16 +76,11 @@ main(int argc, char **argv)
       return 2;
    }
 
-   if (WSAStartup(MAKEWORD(2, 2), &winsock_data) != 0) {
-      fprintf(stderr, "WSAStartup failed\n");
-      return 1;
-   }
-
    SmokeReset();
    callbacks = SmokeCallbacks();
    if (!CheckResult(ggpo_start_session(&g_smoke_session,
                                        &callbacks,
-                                       "ggpo-windows-peer-smoke",
+                                       "ggpo-peer-smoke",
                                        2,
                                        (int)sizeof(int),
                                        (unsigned short)local_port),
@@ -104,9 +98,9 @@ main(int argc, char **argv)
          player.type = GGPO_PLAYERTYPE_LOCAL;
       } else {
          player.type = GGPO_PLAYERTYPE_REMOTE;
-         strcpy_s(player.u.remote.ip_address,
-                  sizeof(player.u.remote.ip_address),
-                  "127.0.0.1");
+         const char *remote_ip = argc == 7 ? argv[6] : "127.0.0.1";
+         snprintf(player.u.remote.ip_address,
+                  sizeof(player.u.remote.ip_address), "%s", remote_ip);
          player.u.remote.port = (unsigned short)remote_port;
       }
       if (!CheckResult(ggpo_add_player(g_smoke_session, &player, &handle),
@@ -119,11 +113,11 @@ main(int argc, char **argv)
    }
 
    // Do not submit inputs until both GGPO peers complete their handshake.
-   start_time = GetTickCount();
+   start_time = ggpo_platform::MonotonicTimeMs();
    while (g_smoke_metrics.running_events == 0) {
       ggpo_idle(g_smoke_session, 1);
-      Sleep(1);
-      if (GetTickCount() - start_time > 15000) {
+      ggpo_platform::WaitMs(1);
+      if (ggpo_platform::MonotonicTimeMs() - start_time > 15000) {
          fprintf(stderr, "timed out waiting for GGPO running event\n");
          return 1;
       }
@@ -131,7 +125,7 @@ main(int argc, char **argv)
 
    // Prediction-threshold and not-synchronized responses are normal while the
    // remote process catches up; pump GGPO and retry the same logical frame.
-   start_time = GetTickCount();
+   start_time = ggpo_platform::MonotonicTimeMs();
    while (g_smoke_state.frame < target_frames) {
       int local_input = InputForPlayer(local_player, g_smoke_state.frame);
       int synchronized_inputs[2] = { 0, 0 };
@@ -143,7 +137,7 @@ main(int argc, char **argv)
       if (result == GGPO_ERRORCODE_PREDICTION_THRESHOLD ||
           result == GGPO_ERRORCODE_NOT_SYNCHRONIZED) {
          ggpo_idle(g_smoke_session, 1);
-         Sleep(1);
+         ggpo_platform::WaitMs(1);
          continue;
       }
       if (!CheckResult(result, "ggpo_add_local_input") ||
@@ -162,7 +156,7 @@ main(int argc, char **argv)
          return 1;
       }
       ggpo_idle(g_smoke_session, 0);
-      if (GetTickCount() - start_time > 30000) {
+      if (ggpo_platform::MonotonicTimeMs() - start_time > 30000) {
          fprintf(stderr, "timed out advancing peer session\n");
          return 1;
       }
@@ -172,7 +166,7 @@ main(int argc, char **argv)
    // the result and closing the session.
    for (int settle = 0; settle < 1000; settle++) {
       ggpo_idle(g_smoke_session, 1);
-      Sleep(1);
+      ggpo_platform::WaitMs(1);
    }
 
    if (!WriteResult(argv[5], local_player)) {
@@ -190,6 +184,5 @@ main(int argc, char **argv)
       return 1;
    }
    g_smoke_session = NULL;
-   WSACleanup();
    return 0;
 }
