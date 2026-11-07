@@ -1,6 +1,6 @@
 # PROGRESS — Platform-agnostic GGPO core and Windows build layer
 
-Status: Windows compatibility baseline and M1–M3 complete; M4 implemented and awaiting final qualification
+Status: Complete — Windows compatibility baseline and M1–M4 qualified
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
 ## Milestones
@@ -51,11 +51,11 @@ May overlap late M1; owns CMake platform selection and Windows target wiring.
 
 ### M4: Integrate and qualify (depends: M1, M2, M3)
 
-- [ ] M4-T01: Run the compatibility matrix, agnostic smoke, Windows conformance, SyncTest, and local-peer gates in CI.
-- [ ] M4-T02: Verify header-only GCC/Clang consumers without claiming a Unix SDK port.
-- [ ] M4-T03: Update Build, Portability, API, and Testing architecture pages.
-- [ ] M4-T04: Publish complete evidence and the contract for Linux/Apple follow-ups.
-- [ ] M4-T05: Run final A-vs-C qualification and remove the temporary legacy entry after all gates pass.
+- [x] M4-T01: Run the compatibility matrix, agnostic smoke, Windows conformance, SyncTest, and local-peer gates in CI.
+- [x] M4-T02: Verify header-only GCC/Clang consumers without claiming a Unix SDK port.
+- [x] M4-T03: Update Build, Portability, API, and Testing architecture pages.
+- [x] M4-T04: Publish complete evidence and the contract for Linux/Apple follow-ups.
+- [x] M4-T05: Run final baseline-to-candidate qualification and remove the temporary legacy entry after all gates pass.
 
 ## Evidence ledger
 
@@ -80,4 +80,9 @@ May overlap late M1; owns CMake platform selection and Windows target wiring.
 | M3-T03 | [`src/CMakeLists.txt`](../../../src/CMakeLists.txt), [`tests/consumer`](../../../tests/consumer/CMakeLists.txt) | Install package; consume with `find_package(GGPO CONFIG REQUIRED)` and `GGPO::GGPO` | C11 and C++98 consumers in all eight Windows lanes | Public header only; installed consumers compiled and linked |
 | M3-T04 | [Build-layer equivalence job](https://github.com/irregularthanis/ggpo-next/actions/runs/42342130890/job/128311912480), [qualified verifier at `79fb6aa`](https://github.com/irregularthanis/ggpo-next/blob/79fb6aa2c4ae7506ce31beb14e6827338cfa3071/scripts/ci/verify_windows_build_layers.ps1) | Build identical source through `LEGACY` and `LAYERED`; compare contracts | x64 shared Release; six CTests and installed consumers per entry | Exports, public layout, packet layout, runtime tests, and consumers matched; temporary entry was then removed in M4 |
 | M3-T05 | [M3 Windows matrix](https://github.com/irregularthanis/ggpo-next/actions/runs/42342130890), [`ggpo_check`](../../../CMakeLists.txt) | Build/install x64 and Win32, shared/static, Debug/Release with tests enabled by default | Nine jobs: eight compatibility lanes plus build-layer equivalence | All jobs passed; 6/6 CTests passed in each compatibility build |
+| M4-T01 | [Final qualification run](https://github.com/irregularthanis/ggpo-next/actions/runs/42345071445) | Run eight Windows compatibility lanes with default tests and installed consumers | x64/Win32; shared/static; Debug/Release | All Windows jobs passed; adapter, SyncTest, and local-peer coverage remained green |
+| M4-T02 | [GCC and Clang jobs](https://github.com/irregularthanis/ggpo-next/actions/runs/42345071445) | Compile public consumers as C11 and C++98 without linking an SDK | Ubuntu 24.04; GCC and Clang | Both compiler jobs passed; this establishes header portability only |
+| M4-T03 | [Architecture index](../../architecture/README.md), [`458a039`](https://github.com/irregularthanis/ggpo-next/commit/458a039) | Review Build, Portability, API, and Testing against shipped targets and gates | Final candidate source and installed package contract | Pages describe the layered Windows build, private internals, tests, and explicit unsupported-platform behavior |
+| M4-T04 | [Follow-up platform contract](../../architecture/Portability.md#follow-up-platform-contract) | Define adapter, package, conformance, loopback, and interoperability requirements | Linux and Apple follow-up scope | Follow-up work has a stable shared-core and qualification boundary without a runtime-support claim |
+| M4-T05 | [Final compatibility job](https://github.com/irregularthanis/ggpo-next/actions/runs/42345071445), [`verify_windows_compatibility.ps1`](../../../scripts/ci/verify_windows_compatibility.ps1) | Compare baseline/current exports and layouts; run both DLL/executable directions | Frozen Windows baseline and final x64 shared Release candidate | Contracts matched, both 180-frame cross-revision loopbacks passed, and the temporary legacy entry was removed |
 

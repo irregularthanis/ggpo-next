@@ -1,6 +1,6 @@
 # TECH_PLAN — Platform-agnostic GGPO core and Windows build layer
 
-Status: Windows compatibility baseline and M1–M3 complete; M4 implemented and awaiting final qualification
+Status: Complete — Windows compatibility baseline and M1–M4 qualified
 Source: [`004ffd7`](https://github.com/irregularthanis/ggpo-next/tree/004ffd7f47603d3bae4abd1d541501d715e03279)  
 Windows baseline implementation: [`3498899`](https://github.com/irregularthanis/ggpo-next/commit/34988996cab45c1a37a9c556fe66b192d60a547b)
 
