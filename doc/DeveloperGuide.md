@@ -65,18 +65,43 @@ The release page also provides `SHA256SUMS`. Compare the archive's
 place `C:/ggpo-sdk/bin/GGPO.dll` beside the application executable or otherwise
 make that directory available to the Windows loader.
 
-Install a native Linux package with the platform package manager:
+#### Linux DEB and RPM
+
+Install the package matching the required linkage:
 
 ```bash
+# Debian or Ubuntu, shared SDK
 sudo apt install ./ggpo-0.2.0-linux-x86_64-shared.deb
-# or
+
+# Fedora or another RPM-family system, shared SDK
 sudo dnf install ./ggpo-0.2.0-linux-x86_64-shared.rpm
 ```
 
+Replace `shared` with `static` to link GGPO into the application executable.
 The DEB and RPM install under `/usr`; shared and static packages conflict by
-design because they own the same headers and CMake metadata. For an
-unprivileged or application-local SDK, extract the raw archive and pass its
-directory through `CMAKE_PREFIX_PATH`.
+design because they own the same headers and CMake metadata. After installation,
+ordinary `find_package(GGPO CONFIG REQUIRED)` resolves the SDK without an
+additional prefix.
+
+#### Linux raw SDK
+
+Use the raw archive for an unprivileged, application-local, or CI installation:
+
+```bash
+tar -xzf ggpo-0.2.0-linux-x86_64-shared.tar.gz
+cmake -S . -B build \
+  -DCMAKE_PREFIX_PATH="$PWD/ggpo-0.2.0-linux-x86_64-shared"
+cmake --build build --parallel
+```
+
+The shared archive contains `lib/libGGPO.so.0`; deploy that library with the
+application and make its directory available to the loader, for example with
+an application-relative RPATH. The static archive contains `lib/libGGPO.a` and
+does not require a GGPO runtime library.
+
+All Linux release formats contain the same public header and CMake target. The
+package format controls installation; `shared` versus `static` controls how the
+application links and deploys GGPO.
 
 ### Option 2: build Linux with the CI container
 
