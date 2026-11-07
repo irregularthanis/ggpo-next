@@ -22,8 +22,8 @@ Each player in a GGPO networked game has a complete copy of your game running.  
 
 ## Install the SDK
 
-The currently supported SDK is Windows. Choose a prebuilt release SDK for normal
-application integration or build from source when developing GGPO itself.
+The SDK supports Windows and Linux. Choose a prebuilt release SDK for normal
+application integration or use the repository container when developing Linux.
 
 ### Option 1: use a release SDK
 
@@ -36,6 +36,10 @@ Download the archive matching the application's architecture and linkage from
 | `windows-x64-static` | The application is 64-bit and links GGPO into its executable |
 | `windows-x86-shared` | The application is 32-bit and deploys `GGPO.dll` |
 | `windows-x86-static` | The application is 32-bit and links GGPO into its executable |
+| `linux-x86_64-shared.deb` / `.rpm` | Install the shared SDK system-wide on a Debian- or RPM-family distribution |
+| `linux-x86_64-static.deb` / `.rpm` | Install the static SDK system-wide on a Debian- or RPM-family distribution |
+| `linux-x86_64-shared.tar.gz` | Extract a relocatable shared SDK without a package manager |
+| `linux-x86_64-static.tar.gz` | Extract a relocatable static SDK without a package manager |
 
 Extract the ZIP to a stable location such as `C:/ggpo-sdk`. Each release archive
 is an installed CMake package rather than a source tree:
@@ -61,7 +65,34 @@ The release page also provides `SHA256SUMS`. Compare the archive's
 place `C:/ggpo-sdk/bin/GGPO.dll` beside the application executable or otherwise
 make that directory available to the Windows loader.
 
-### Option 2: build and install from source
+Install a native Linux package with the platform package manager:
+
+```bash
+sudo apt install ./ggpo-0.2.0-linux-x86_64-shared.deb
+# or
+sudo dnf install ./ggpo-0.2.0-linux-x86_64-shared.rpm
+```
+
+The DEB and RPM install under `/usr`; shared and static packages conflict by
+design because they own the same headers and CMake metadata. For an
+unprivileged or application-local SDK, extract the raw archive and pass its
+directory through `CMAKE_PREFIX_PATH`.
+
+### Option 2: build Linux with the CI container
+
+Install Docker, then run the same Ubuntu 24.04 image used by Linux CI:
+
+```bash
+python3 scripts/linux/build_in_container.py \
+  --compiler gcc --library shared --packages \
+  --out build/linux-gcc-shared
+```
+
+The installed CMake package is written to `build/linux-gcc-shared/install`;
+verified DEB, RPM, and raw artifacts are written to its `packages` directory.
+Select `clang` or `static` with the corresponding arguments.
+
+### Option 3: build Windows from source
 
 Install Visual Studio 2022 with the Desktop development with C++ workload,
 CMake, and Python 3. From a Developer PowerShell prompt in the source checkout:

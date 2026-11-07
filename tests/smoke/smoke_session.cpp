@@ -19,6 +19,7 @@ SmokeReset(void)
    g_smoke_session = NULL;
 }
 
+// Apply one deterministic frame transition from both players' inputs.
 void
 SmokeApplyInputs(SmokeState *state, const int inputs[2], int disconnect_flags)
 {
@@ -30,6 +31,7 @@ SmokeApplyInputs(SmokeState *state, const int inputs[2], int disconnect_flags)
    state->frame++;
 }
 
+// Hash the complete guest-visible test state for peer comparison.
 unsigned int
 SmokeChecksum(const SmokeState *state)
 {
@@ -43,13 +45,15 @@ SmokeChecksum(const SmokeState *state)
    return checksum;
 }
 
-static bool __cdecl
+// Accept GGPO's legacy begin-game notification for the fixture.
+static bool GGPO_CALL
 SmokeBeginGame(const char *)
 {
    return true;
 }
 
-static bool __cdecl
+// Snapshot deterministic state so rollback can restore it later.
+static bool GGPO_CALL
 SmokeSaveState(unsigned char **buffer, int *len, int *checksum, int)
 {
    *len = (int)sizeof(g_smoke_state);
@@ -63,7 +67,8 @@ SmokeSaveState(unsigned char **buffer, int *len, int *checksum, int)
    return true;
 }
 
-static bool __cdecl
+// Restore a previously captured rollback snapshot.
+static bool GGPO_CALL
 SmokeLoadState(unsigned char *buffer, int len)
 {
    if (len != (int)sizeof(g_smoke_state)) {
@@ -74,19 +79,22 @@ SmokeLoadState(unsigned char *buffer, int len)
    return true;
 }
 
-static bool __cdecl
+// Satisfy the optional state-logging callback without producing fixture logs.
+static bool GGPO_CALL
 SmokeLogState(char *, unsigned char *, int)
 {
    return true;
 }
 
-static void __cdecl
+// Release snapshot storage allocated by SmokeSaveState.
+static void GGPO_CALL
 SmokeFreeBuffer(void *buffer)
 {
    free(buffer);
 }
 
-static bool __cdecl
+// Replay one synchronized frame after GGPO restores a snapshot.
+static bool GGPO_CALL
 SmokeAdvanceFrame(int)
 {
    // GGPO invokes this callback while replaying after a restored snapshot.
@@ -106,7 +114,8 @@ SmokeAdvanceFrame(int)
    return GGPO_SUCCEEDED(ggpo_advance_frame(g_smoke_session));
 }
 
-static bool __cdecl
+// Record when the peer session becomes ready to accept gameplay input.
+static bool GGPO_CALL
 SmokeOnEvent(GGPOEvent *info)
 {
    if (info->code == GGPO_EVENTCODE_RUNNING) {
@@ -115,6 +124,7 @@ SmokeOnEvent(GGPOEvent *info)
    return true;
 }
 
+// Assemble the callback contract shared by the smoke-test sessions.
 GGPOSessionCallbacks
 SmokeCallbacks(void)
 {

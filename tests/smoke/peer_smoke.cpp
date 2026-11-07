@@ -1,11 +1,17 @@
-#include <winsock2.h>
-#include <windows.h>
-
 #include "smoke_session.h"
+#include "types.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#if defined(_WIN32)
+#include <winsock2.h>
+#include <windows.h>
+#else
+#include <errno.h>
+#include <time.h>
+#endif
 
 // One instance represents one player in the loopback test.  The Python
 // orchestrator launches two instances with opposite local/remote ports, then
@@ -16,6 +22,45 @@ InputForPlayer(int player, int frame)
    return ((frame + 1) * (player * 17 + 3)) ^ (frame << player);
 }
 
+// Enable one explicit fault used only by negative harness regression tests.
+static bool
+FaultEnabled(const char *expected)
+{
+   const char *fault = getenv("GGPO_SMOKE_FAULT");
+   return fault && strcmp(fault, expected) == 0;
+}
+
+// Read a monotonic test deadline without depending on a GGPO adapter revision.
+static uint32
+TestTimeMs()
+{
+#if defined(_WIN32)
+   return (uint32)GetTickCount();
+#else
+   struct timespec current;
+   if (clock_gettime(CLOCK_MONOTONIC, &current) != 0) {
+      return 0;
+   }
+   return (uint32)((unsigned long long)current.tv_sec * 1000ULL +
+                   (unsigned long long)current.tv_nsec / 1000000ULL);
+#endif
+}
+
+// Yield briefly while peers exchange packets, retrying interrupted POSIX waits.
+static void
+TestWaitMs(int timeout_ms)
+{
+#if defined(_WIN32)
+   Sleep((DWORD)timeout_ms);
+#else
+   struct timespec requested;
+   requested.tv_sec = timeout_ms / 1000;
+   requested.tv_nsec = (timeout_ms % 1000) * 1000000L;
+   while (nanosleep(&requested, &requested) != 0 && errno == EINTR) { }
+#endif
+}
+
+// Convert a GGPO result into a readable test failure.
 static bool
 CheckResult(GGPOErrorCode result, const char *operation)
 {
@@ -26,11 +71,12 @@ CheckResult(GGPOErrorCode result, const char *operation)
    return true;
 }
 
+// Persist the final peer state for independent cross-host comparison.
 static bool
 WriteResult(const char *path, int player)
 {
-   FILE *output = NULL;
-   if (fopen_s(&output, path, "w") != 0 || !output) {
+   FILE *output = fopen(path, "w");
+   if (!output) {
       fprintf(stderr, "could not open result file: %s\n", path);
       return false;
    }
@@ -49,21 +95,25 @@ WriteResult(const char *path, int player)
    return true;
 }
 
+// Run one native peer through handshake, synchronized frames, and shutdown.
 int
 main(int argc, char **argv)
 {
    GGPOSessionCallbacks callbacks;
    GGPOPlayerHandle local_handle = GGPO_INVALID_HANDLE;
+#if defined(_WIN32)
    WSADATA winsock_data;
+#endif
    int local_player;
    int local_port;
    int remote_port;
    int target_frames;
-   DWORD start_time;
+   uint32 start_time;
 
-   if (argc != 6) {
+   if (argc != 6 && argc != 7) {
       fprintf(stderr,
-              "usage: %s PLAYER LOCAL_PORT REMOTE_PORT FRAMES RESULT.json\n",
+              "usage: %s PLAYER LOCAL_PORT REMOTE_PORT FRAMES RESULT.json "
+              "[REMOTE_IP]\n",
               argv[0]);
       return 2;
    }
@@ -77,16 +127,40 @@ main(int argc, char **argv)
       return 2;
    }
 
+   if (FaultEnabled("startup")) {
+      fprintf(stderr, "fault: startup\n");
+      return 91;
+   }
+   if (FaultEnabled("timeout")) {
+      fprintf(stderr, "fault: timeout\n");
+      TestWaitMs(60000);
+      return 93;
+   }
+   if (FaultEnabled("mismatch")) {
+      SmokeReset();
+      g_smoke_state.frame = target_frames;
+      g_smoke_state.accumulator = (unsigned int)local_player;
+      g_smoke_metrics.running_events = 1;
+      return WriteResult(argv[5], local_player) ? 0 : 1;
+   }
+   if (FaultEnabled("shutdown")) {
+      fprintf(stderr, "fault: shutdown\n");
+      return 92;
+   }
+
+#if defined(_WIN32)
+   // Preserve the caller-side Winsock contract required by frozen GGPO DLLs.
    if (WSAStartup(MAKEWORD(2, 2), &winsock_data) != 0) {
       fprintf(stderr, "WSAStartup failed\n");
       return 1;
    }
+#endif
 
    SmokeReset();
    callbacks = SmokeCallbacks();
    if (!CheckResult(ggpo_start_session(&g_smoke_session,
                                        &callbacks,
-                                       "ggpo-windows-peer-smoke",
+                                       "ggpo-peer-smoke",
                                        2,
                                        (int)sizeof(int),
                                        (unsigned short)local_port),
@@ -104,9 +178,9 @@ main(int argc, char **argv)
          player.type = GGPO_PLAYERTYPE_LOCAL;
       } else {
          player.type = GGPO_PLAYERTYPE_REMOTE;
-         strcpy_s(player.u.remote.ip_address,
-                  sizeof(player.u.remote.ip_address),
-                  "127.0.0.1");
+         const char *remote_ip = argc == 7 ? argv[6] : "127.0.0.1";
+         snprintf(player.u.remote.ip_address,
+                  sizeof(player.u.remote.ip_address), "%s", remote_ip);
          player.u.remote.port = (unsigned short)remote_port;
       }
       if (!CheckResult(ggpo_add_player(g_smoke_session, &player, &handle),
@@ -119,11 +193,11 @@ main(int argc, char **argv)
    }
 
    // Do not submit inputs until both GGPO peers complete their handshake.
-   start_time = GetTickCount();
+   start_time = TestTimeMs();
    while (g_smoke_metrics.running_events == 0) {
       ggpo_idle(g_smoke_session, 1);
-      Sleep(1);
-      if (GetTickCount() - start_time > 15000) {
+      TestWaitMs(1);
+      if (TestTimeMs() - start_time > 15000) {
          fprintf(stderr, "timed out waiting for GGPO running event\n");
          return 1;
       }
@@ -131,7 +205,7 @@ main(int argc, char **argv)
 
    // Prediction-threshold and not-synchronized responses are normal while the
    // remote process catches up; pump GGPO and retry the same logical frame.
-   start_time = GetTickCount();
+   start_time = TestTimeMs();
    while (g_smoke_state.frame < target_frames) {
       int local_input = InputForPlayer(local_player, g_smoke_state.frame);
       int synchronized_inputs[2] = { 0, 0 };
@@ -143,7 +217,7 @@ main(int argc, char **argv)
       if (result == GGPO_ERRORCODE_PREDICTION_THRESHOLD ||
           result == GGPO_ERRORCODE_NOT_SYNCHRONIZED) {
          ggpo_idle(g_smoke_session, 1);
-         Sleep(1);
+         TestWaitMs(1);
          continue;
       }
       if (!CheckResult(result, "ggpo_add_local_input") ||
@@ -162,7 +236,7 @@ main(int argc, char **argv)
          return 1;
       }
       ggpo_idle(g_smoke_session, 0);
-      if (GetTickCount() - start_time > 30000) {
+      if (TestTimeMs() - start_time > 30000) {
          fprintf(stderr, "timed out advancing peer session\n");
          return 1;
       }
@@ -172,7 +246,7 @@ main(int argc, char **argv)
    // the result and closing the session.
    for (int settle = 0; settle < 1000; settle++) {
       ggpo_idle(g_smoke_session, 1);
-      Sleep(1);
+      TestWaitMs(1);
    }
 
    if (!WriteResult(argv[5], local_player)) {
@@ -190,6 +264,9 @@ main(int argc, char **argv)
       return 1;
    }
    g_smoke_session = NULL;
+#if defined(_WIN32)
+   // Balance the fixture's startup reference after GGPO closes its session.
    WSACleanup();
+#endif
    return 0;
 }

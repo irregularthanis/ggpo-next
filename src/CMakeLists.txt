@@ -15,15 +15,14 @@ target_include_directories(GGPO
 	${CMAKE_CURRENT_SOURCE_DIR}/lib/ggpo
 )
 
-if(NOT WIN32)
-	message(FATAL_ERROR
-		"The GGPO SDK currently supports only the Windows platform layer. "
-		"Linux and Apple adapters are planned follow-up work.")
-
-else()
+if(WIN32)
 	include(platform/windows/Platform.cmake)
-	ggpo_configure_platform(GGPO)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+	include(platform/linux/Platform.cmake)
+else()
+	message(FATAL_ERROR "Unsupported GGPO platform: ${CMAKE_SYSTEM_NAME}")
 endif()
+ggpo_configure_platform(GGPO)
 
 set_target_properties(GGPO PROPERTIES VERSION ${PROJECT_VERSION})
 

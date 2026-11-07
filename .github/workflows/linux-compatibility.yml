@@ -1,0 +1,59 @@
+name: Linux compatibility
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  sdk:
+    name: Linux ${{ matrix.compiler }} ${{ matrix.library }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+        library: [shared, static]
+
+    steps:
+      - name: Check out the tested source
+        uses: actions/checkout@v4
+
+      - name: Enable cached container builds
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build the shared Linux environment
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/linux/Dockerfile
+          load: true
+          tags: ggpo-linux-ci:${{ matrix.compiler }}-${{ matrix.library }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build, test, install and audit the SDK
+        run: |
+          package_args=()
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            package_args=(--packages)
+          fi
+          python3 scripts/linux/build_in_container.py \
+            --skip-image-build \
+            --image ggpo-linux-ci:${{ matrix.compiler }}-${{ matrix.library }} \
+            --compiler ${{ matrix.compiler }} \
+            --library ${{ matrix.library }} \
+            --out build/linux-${{ matrix.compiler }}-${{ matrix.library }} \
+            "${package_args[@]}"
+
+      - name: Upload Linux evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.compiler }}-${{ matrix.library }}
+          path: |
+            build/linux-${{ matrix.compiler }}-${{ matrix.library }}/install
+            build/linux-${{ matrix.compiler }}-${{ matrix.library }}/build/Testing
+            build/linux-${{ matrix.compiler }}-${{ matrix.library }}/packages
+          if-no-files-found: error

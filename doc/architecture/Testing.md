@@ -13,10 +13,9 @@
 
 ## Purpose
 
-GGPO's tests freeze observable Windows behavior before the core is separated
-from platform code. They protect public ABI, packed protocol data, deterministic
-rollback, and real loopback sessions without requiring Vector War or a person
-to operate a game window.
+GGPO's tests freeze Windows compatibility while qualifying the shared core and
+Linux adapter. They protect public ABI, packed protocol data, deterministic
+rollback, and real loopback sessions without requiring Vector War.
 
 The fixtures live under [`tests`](../../tests). Their frozen values represent
 the current compatibility contract; they should not be updated merely to make a
@@ -33,7 +32,11 @@ behavior-changing refactor pass.
 | Platform-free rollback | Production core linked without the Windows adapter | [`platform_fake.cpp`](../../tests/platform/fake/platform_fake.cpp), [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | Fake adapter and production rollback core |
 | Rollback behavior | Save, restore, synchronized input, replay, and deterministic final state | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | SyncTest backend without sockets |
 | Windows transport | Handshake, events, prediction, rollback, UDP delivery, and shutdown | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Two GGPO processes over localhost |
+| Negative peer contracts | Startup, timeout, checksum mismatch, and shutdown failures are rejected | [`peer_runner_negative.py`](../../tests/smoke/peer_runner_negative.py) | Fault-injected real peer processes |
 | Build compatibility | x64/Win32, shared/static, Debug/Release | [`windows-compatibility.yml`](../../.github/workflows/windows-compatibility.yml) | Eight Windows build variants |
+| Linux transport | The same peer contract through POSIX UDP | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`platform_linux.cpp`](../../src/lib/ggpo/platform_linux.cpp) | Two native Linux processes |
+| Linux package | GCC/Clang, static/shared, installed consumers and ABI ceiling | [`linux-compatibility.yml`](../../.github/workflows/linux-compatibility.yml) | Shared Ubuntu 24.04 image |
+| Cross-host | Native Windows and Linux peers converge | [`compare_peer_results.py`](../../tests/smoke/compare_peer_results.py) | Controlled Windows↔Ubuntu/SteamOS hosts |
 
 The shared/static lanes are both required. Shared builds additionally validate
 DLL exports and import linkage; static builds ensure consumers do not depend on
@@ -168,20 +171,58 @@ sequenceDiagram
     Runner->>Runner: Require equal<br/>frame and<br/>checksum
 ```
 
-A pass establishes real Windows socket and two-peer behavior on one machine.
+A pass establishes real platform socket and two-peer behavior on one machine.
 It does not establish Internet/NAT behavior, loss tolerance, spectators, more
 than two players, or interoperability between operating systems.
 
+### Negative peer contracts
+
+[`peer_runner_negative.py`](../../tests/smoke/peer_runner_negative.py) launches
+the real peer fixture with one controlled test-only fault at a time. It requires
+the runner to reject startup failure, bounded timeout, divergent checksums, and
+shutdown failure with the matching diagnostic. The fault variable is removed
+from ordinary peer environments, so these cases cannot weaken positive smoke
+tests.
+
+### Native cross-host smoke
+
+Run the same smoke executable on controlled Windows and Linux hosts. Start both
+commands together, using each host's reachable LAN address:
+
+```text
+# Windows
+ggpo_windows_peer_smoke.exe 1 7000 7001 180 windows.json LINUX_IP
+
+# Ubuntu or SteamOS
+./ggpo_linux_peer_smoke 2 7001 7000 180 linux.json WINDOWS_IP
+```
+
+Copy both result files to one machine and validate them with
+[`compare_peer_results.py`](../../tests/smoke/compare_peer_results.py). Record
+both artifact hashes, OS versions, commands, and the validator output. Wine is
+not native Windows interoperability evidence.
+
 ## Build and CI integration
 
-[`tests/CMakeLists.txt`](../../tests/CMakeLists.txt) registers six Windows CTest
-entries:
+[`tests/CMakeLists.txt`](../../tests/CMakeLists.txt) registers Windows-only
+layout checks plus shared smoke families. Linux registers:
+
+```text
+linux_synctest_smoke
+linux_peer_loopback
+linux_peer_negative_contracts
+fake_platform_synctest
+fake_platform_contract
+```
+
+Windows retains these entries:
 
 ```text
 windows_public_layout
 windows_packet_layout
 windows_synctest_smoke
 windows_peer_loopback
+windows_peer_negative_contracts
 fake_platform_synctest
 fake_platform_contract
 ```
@@ -206,8 +247,14 @@ exports and layouts, then runs both cross-revision directions: the baseline
 executable with the candidate DLL and the candidate executable with the
 baseline DLL.
 
-GCC and Clang jobs also compile the public C11 and C++98 consumers without
-linking an SDK. These are header-portability gates, not Linux runtime support.
+[`linux-compatibility.yml`](../../.github/workflows/linux-compatibility.yml)
+builds [`docker/linux/Dockerfile`](../../docker/linux/Dockerfile), then runs the
+GCC/Clang × static/shared matrix inside that image. Each lane runs CTest,
+installs the SDK, builds and executes external C11/C++98 consumers, and audits
+the installed Linux library.
+
+The GCC and Clang portable-header jobs also compile the public C11 and C++98
+consumers without linking an SDK. These remain header-portability gates.
 The Clang C++ gate suppresses only `-Wextern-c-compat`: C requires the documented
 one-byte `GGPOPlayer.local` placeholder while C++ retains the frozen empty-member
 Windows ABI. All other pedantic diagnostics remain errors.
@@ -239,7 +286,9 @@ established by the frame, checksum, callback, and lifecycle assertions.
 - No malformed/truncated packet suite validates parser rejection.
 - No spectator, disconnect/resume, simulated loss, or multi-player automated
   session exists.
-- No Linux/macOS adapter, build, or cross-OS peer test exists.
+- Native Windows↔Ubuntu and Windows↔SteamOS sessions require controlled hosts;
+  ordinary isolated GitHub-hosted jobs cannot provide this network.
+- No macOS adapter or build exists.
 - No sanitizer job is configured.
 
 The platform-extraction plan tracks those additions in the

@@ -15,25 +15,21 @@
 The core consumes semantic services declared by
 [`platform.h`](../../src/lib/ggpo/platform.h). The Windows implementation in
 [`platform_windows.cpp`](../../src/lib/ggpo/platform_windows.cpp) owns Win32,
-Winsock, native error mapping, and socket representation.
-
-This is a source boundary, not Linux support. The checked-in legacy
-[`platform_linux.cpp`](../../src/lib/ggpo/platform_linux.cpp) remains incomplete;
-platform selection and build-layer separation are implemented by the Windows
-platform module; Linux and Apple implementations remain follow-up work.
+Winsock, native error mapping, and socket representation. The Linux
+implementation in [`platform_linux.cpp`](../../src/lib/ggpo/platform_linux.cpp)
+provides the same contracts with POSIX facilities. Platform CMake modules own
+their native source and build inputs; Apple remains follow-up work.
 
 ## Platform dependencies
 
-| Concern | Core contract | Windows implementation |
-| --- | --- | --- |
-| UDP sockets | `UdpSocket` with `ok`, `would_block`, and `error` results | Winsock startup, bind, send/receive, and close |
-| Addresses | `UdpEndpoint` with four IPv4 octets and host-order port | `sockaddr_in` conversion and text formatting |
-| Polling | Computed deadline plus `WaitMs()` | `Sleep()`; unused native-handle registration was removed |
-| Time | Wrapping `MonotonicTimeMs()` | `timeGetTime()` |
-| Configuration | Integer/boolean lookup with explicit fallback | Windows environment lookup |
-| Filesystem and diagnostics | Directory creation and assertion reporting | `CreateDirectoryA` and Windows diagnostic UI |
-| Network lifetime | Balanced startup/shutdown contract | `WSAStartup()` and `WSACleanup()` |
-| Shared-library lifecycle | Public ABI macros remain in [`ggponet.h`](../../src/include/ggponet.h) | `DllMain` is isolated in the Windows adapter |
+| Concern | Core contract | Windows | Linux |
+| --- | --- | --- | --- |
+| UDP sockets | `ok`, `would_block`, or `error` | Winsock | Nonblocking POSIX UDP |
+| Addresses | IPv4 octets and host-order port | `sockaddr_in` | `sockaddr_in` |
+| Wait and time | `WaitMs()`, monotonic milliseconds | `Sleep`, `timeGetTime` | `nanosleep`, `clock_gettime` |
+| Configuration | Value with explicit fallback | Environment | Environment |
+| Filesystem/diagnostics | Directory and assertion services | Win32/UI | `mkdir`/stderr |
+| Network lifetime | Balanced startup/shutdown | Winsock startup/cleanup | No-op process service |
 | Sample UI | Win32 messages, GDI/OpenGL, keyboard polling | [`src/apps/vectorwar`](../../src/apps/vectorwar) |
 
 ## Portable core
@@ -93,9 +89,8 @@ Compilation on another OS is insufficient without cross-platform peer tests.
 
 ## Follow-up platform contract
 
-A Linux or Apple follow-up adds one platform module implementing the semantic
-services in [`platform.h`](../../src/lib/ggpo/platform.h); portable core sources
-and the public header remain shared.
+Each supported platform adds one module implementing [`platform.h`](../../src/lib/ggpo/platform.h);
+portable core sources and the public header remain shared.
 
 | Required artifact | Qualification before support is claimed |
 | --- | --- |
@@ -104,7 +99,7 @@ and the public header remain shared.
 | Fake-adapter suite | Existing rollback, failure, and cleanup tests remain green |
 | Native conformance | Adapter contract and local two-peer UDP loopback pass |
 | Public package | C11/C++98 consumers link only `GGPO::GGPO` and installed headers |
-| Interoperability | Same-platform peers pass first; Windows-to-new-platform wire compatibility follows |
+| Interoperability | Same-platform peers and native Windows-to-platform sessions pass |
 
 The Windows [compatibility workflow](../../.github/workflows/windows-compatibility.yml)
 remains required while another adapter is introduced.
@@ -113,7 +108,7 @@ remains required while another adapter is introduced.
 
 1. Freeze current Windows behavior with unit and loopback integration tests.
 2. Define clock, sleep, configuration, diagnostics, socket, and poll contracts.
-3. Build the SDK on Linux while retaining Windows CI.
+3. Build the SDK on Linux through the repository container while retaining Windows CI.
 4. Validate two Linux peers, then Windows-to-Linux interoperability.
 5. Add macOS adapters and cross-OS protocol tests.
 6. Replace the Win32-only Vector War host with a portable frontend while reusing
