@@ -20,6 +20,18 @@ jobs:
     steps:
       - name: Check out the tagged source
         uses: actions/checkout@v4
+      - name: Verify tag and project versions agree
+        shell: bash
+        run: |
+          version=$(sed -n 's/^project(GGPO VERSION \([0-9][0-9.]*\)).*/\1/p' CMakeLists.txt)
+          expected="v${version}"
+          rc_prefix="${expected}-rc."
+          rc_number="${GITHUB_REF_NAME#"${rc_prefix}"}"
+          if [[ "${GITHUB_REF_NAME}" != "${expected}" &&
+                !( "${GITHUB_REF_NAME}" == "${rc_prefix}"* && "${rc_number}" =~ ^[0-9]+$ ) ]]; then
+            echo "Release tag ${GITHUB_REF_NAME} does not match ${expected} or ${expected}-rc.N" >&2
+            exit 1
+          fi
       - name: Enable cached container builds
         uses: docker/setup-buildx-action@v3
       - name: Build the shared Linux environment
@@ -88,8 +100,10 @@ jobs:
             throw "Could not read the GGPO project version"
           }
           $expectedTag = "v$($Matches[1])"
-          if ("${{ github.ref_name }}" -ne $expectedTag) {
-            throw "Release tag ${{ github.ref_name }} does not match project version $expectedTag"
+          $actualTag = "${{ github.ref_name }}"
+          $releaseCandidate = "^$([regex]::Escape($expectedTag))-rc\.[0-9]+$"
+          if ($actualTag -ne $expectedTag -and $actualTag -notmatch $releaseCandidate) {
+            throw "Release tag $actualTag does not match $expectedTag or $expectedTag-rc.N"
           }
 
       - name: Configure the SDK
@@ -177,6 +191,10 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --verify-tag --generate-notes --title "GGPO $TAG"
+            prerelease_args=()
+            if [[ "$TAG" == *-rc.* ]]; then
+              prerelease_args=(--prerelease)
+            fi
+            gh release create "$TAG" --verify-tag --generate-notes --title "GGPO $TAG" "${prerelease_args[@]}"
           fi
           gh release upload "$TAG" release-assets/ggpo-*.zip release-assets/ggpo-*.tar.gz release-assets/ggpo-*.deb release-assets/ggpo-*.rpm release-assets/SHA256SUMS --clobber
