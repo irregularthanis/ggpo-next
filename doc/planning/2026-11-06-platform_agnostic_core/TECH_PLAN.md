@@ -142,7 +142,7 @@ field offset/order, union layout, callback slot/order, library name, or existing
 consumer behavior. Failing any comparison blocks the change; a version bump is
 not an escape hatch within this work.
 
-| Surface | Proposed contract | Compatibility gate |
+| Surface | Implemented contract | Compatibility gate |
 | --- | --- | --- |
 | Linkage | All functions retain C linkage | C and C++ consumers resolve the same exported names |
 | Visibility | `GGPO_API` maps build/import/export visibility per toolchain | Baseline Windows DLL export manifest is unchanged |
@@ -151,7 +151,7 @@ not an escape hatch within this work.
 | Public data | Existing integer, enum, union, and array declarations remain unchanged | `sizeof` and `offsetof` report matches the Windows baseline |
 | Versioning | ABI-breaking cleanup is deferred to a separate future proposal; this work is compatibility-preserving | CI rejects every export/layout drift |
 
-**Proposed declaration pattern:**
+**Implemented declaration pattern:**
 
 ```c
 #ifndef __cplusplus
@@ -187,8 +187,7 @@ Win32 `HANDLE`, Winsock `SOCKET`, `sockaddr_in`, or WSA error number.
 | Endpoint | `UdpEndpoint` stores four IPv4 octets and a host-order port | adapter converts to/from `sockaddr_in` | UDP protocol, queues, backend callbacks |
 | UDP socket | bind with retry, nonblocking send/receive, close, address formatting, and explicit `ok`/`would_block`/`error` results | Winsock socket and error mapping | `Udp`; no native handle leaves the adapter |
 
-**Proposed C++98-compatible shape** (names may be refined during M2, semantics
-are the contract):
+**Implemented C++98-compatible excerpt:**
 
 ```cpp
 namespace ggpo_platform {
@@ -201,14 +200,19 @@ enum IoResult { IO_OK, IO_WOULD_BLOCK, IO_ERROR };
 
 uint32 MonotonicTimeMs();
 void WaitMs(int timeout_ms);
-int ProcessId();
+uint32 ProcessId();
 int GetConfigInt(const char *name, int fallback);
 bool GetConfigBool(const char *name, bool fallback);
 void AssertFailed(const char *message);
 bool EnsureDirectory(const char *path);
+bool ParseUdpEndpoint(const char *address, uint16 port, UdpEndpoint *endpoint);
+bool NetworkStartup();
+void NetworkShutdown();
 
 class UdpSocket {
 public:
+   UdpSocket();
+   ~UdpSocket();
    bool OpenAndBind(uint16 requested_port, int retries, uint16 *bound_port);
    IoResult Send(const void *data, int bytes, const UdpEndpoint &to);
    IoResult Receive(void *data, int capacity, int *bytes, UdpEndpoint *from);
@@ -221,7 +225,8 @@ public:
 `sockaddr_in` fields and callbacks with `UdpEndpoint`. Packet payloads are not
 changed. `Poll` retains scheduling and callback ownership; only OS waiting moves
 behind `WaitMs()`. The unused native-handle registration path is removed only if
-The Windows baseline confirms no required behavior.
+the Windows baseline confirms no required behavior; that gate passed before its
+removal.
 
 MSVC secure-CRT calls are a separate concern: bounded formatting, copying, and
 file opening become portable internal helpers rather than fake platform APIs.
@@ -237,7 +242,7 @@ flowchart TD
     CoreSuite["Platform-agnostic<br/>smoke suite"]
     Fake["Deterministic fake adapter<br/>virtual time, memory UDP,<br/>temp files"]
     Core["GGPO portable<br/>core"]
-    ContractSuite["Shared platform<br/>conformance suite"]
+    ContractSuite["Windows compatibility<br/>fixtures"]
     Windows["Real Windows adapter<br/>Win32 and Winsock"]
     Full["Public API and<br/>two-peer smoke"]
 
@@ -252,27 +257,27 @@ flowchart TD
 | Core startup | Link core with the fake adapter; create and close SyncTest sessions repeatedly | No OS symbols, leaks, or stale adapter state | Real socket/timer behavior |
 | Core frames | Submit fixed inputs, save/load, force rollback, and compare checksums | Expected frame count and identical restored state | Cross-process networking |
 | Core failures | Script `would_block`, send error, directory failure, and clock wrap in the fake adapter | Stable documented error/cleanup path | Windows error-code mapping |
-| Platform contract | Run monotonic clock, zero/bounded wait, config fallback, assertion hook, and temporary-directory cases | Windows obeys every shared semantic contract | GGPO session correctness |
-| UDP adapter | Startup, bind ephemeral loopback ports, exchange payloads, observe `would_block`, close, and restart | Exact payload/source endpoint; clean lifecycle | Internet/NAT behavior |
+| Fake platform contract | Run virtual clock/wait, config fallback, endpoint/socket results, failure, and cleanup cases | Semantic services behave deterministically without OS calls | Windows error mapping or real I/O |
+| Windows UDP adapter | Start sessions, bind loopback ports, exchange GGPO traffic, and close | Two peer processes reach the same frame and checksum | Internet/NAT behavior |
 | Full platform | Run public C/C++ consumers, SyncTest, and two local GGPO peers | Fixed frames complete with matching checksums | Linux or Apple support |
 
 The fake adapter is selected only by test targets and is never installed. It
 uses virtual time and in-memory packet queues, so core tests contain no sleeps,
-ports, or machine-dependent timing. The platform conformance source is shared:
-every later `ggpo_configure_platform(target)` implementation must compile and
-pass it before that platform is called supported.
+ports, or machine-dependent timing. A future adapter must retain the fake-core
+tests and add equivalent native contract and loopback coverage before that
+platform is called supported.
 
-**Proposed CMake shape:**
+**Implemented CMake shape:**
 
 ```cmake
-add_library(GGPOTestPlatform STATIC tests/platform/fake/platform_fake.cpp)
-add_executable(ggpo_core_smoke ${GGPO_CORE_SOURCES}
-                               tests/smoke/core/core_smoke.cpp)
-target_link_libraries(ggpo_core_smoke PRIVATE GGPOTestPlatform)
-
-add_executable(ggpo_platform_smoke tests/smoke/platform/contract_smoke.cpp)
-ggpo_configure_platform(ggpo_platform_smoke)
-add_test(NAME ggpo_platform_smoke COMMAND ggpo_platform_smoke)
+add_library(ggpo_fake_core STATIC
+  ${GGPO_FAKE_CORE_SOURCES}
+  platform/fake/platform_fake.cpp)
+add_executable(ggpo_fake_core_synctest smoke/synctest_smoke.cpp)
+target_link_libraries(ggpo_fake_core_synctest PRIVATE ggpo_fake_core)
+add_executable(ggpo_fake_platform_contract
+  platform/fake/platform_fake_test.cpp)
+target_link_libraries(ggpo_fake_platform_contract PRIVATE ggpo_fake_core)
 ```
 
 Tests use unique temporary directories and ephemeral loopback ports, clean them
@@ -292,19 +297,19 @@ option(GGPO_RUN_TESTS_ON_BUILD "Run GGPO tests as part of the default build" ON)
 
 if(BUILD_TESTING AND GGPO_RUN_TESTS_ON_BUILD)
   add_custom_target(ggpo_check ALL
-    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
-            -C $<CONFIG> -LE cross-revision
-    DEPENDS ggpo_core_smoke ggpo_platform_smoke ggpo_api_smoke
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>
+    DEPENDS ggpo_windows_public_layout ggpo_windows_packet_layout
+            ggpo_windows_synctest_smoke ggpo_windows_peer_smoke
+            ggpo_fake_core_synctest ggpo_fake_platform_contract
     USES_TERMINAL)
 endif()
 ```
 
 `BUILD_TESTING=OFF` is the explicit consumer/packaging opt-out. Setting only
 `GGPO_RUN_TESTS_ON_BUILD=OFF` still builds tests but requires an explicit
-`ctest`. Cross-compilation must provide `CMAKE_CROSSCOMPILING_EMULATOR` or
-explicitly disable execution; configuration fails instead of silently claiming
-tests ran. Cross-revision old/new DLL checks carry the `cross-revision` label and
-remain mandatory in CI, where the frozen Windows baseline artifacts are available.
+`ctest`. Unsupported SDK platforms fail configuration instead of silently
+claiming tests ran. Cross-revision old/new DLL checks run in the dedicated final
+compatibility CI job against the frozen Windows baseline.
 
 ### Build toolchain: before
 

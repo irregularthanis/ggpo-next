@@ -68,9 +68,9 @@ flowchart TD
 ## Build and launch
 
 [`src/apps/vectorwar/CMakeLists.txt`](../../src/apps/vectorwar/CMakeLists.txt)
-builds the `VectorWar` Windows executable and links it to `GGPO`, `winmm`, and
-`ws2_32`. The root build adds it only when `GGPO_BUILD_VECTORWAR` and `WIN32` are
-both true.
+builds the `VectorWar` Windows executable and links it to `GGPO::GGPO`. The SDK's
+Windows platform layer carries `winmm` and `ws2_32` transitively. The root build
+adds Vector War only when `GGPO_BUILD_VECTORWAR` and `WIN32` are both true.
 
 The command line is parsed by [`wWinMain`](../../src/apps/vectorwar/main.cpp):
 
@@ -371,8 +371,9 @@ For frame 120:
 - Raw `memcpy` serialization is not versioned and is unsuitable for pointers or
   dynamic containers.
 - The sample uses a full peer mesh rather than an authoritative server.
-- There is no automated integration test; validation requires interactive
-  multi-process runs.
+- Vector War's window, renderer, and input path still require interactive
+  validation. Automated SDK tests separately cover SyncTest and two Windows
+  processes exchanging inputs over loopback UDP.
 
 Continue with the general [Runtime](Runtime.md), [Synchronization](Synchronization.md),
 and [API reference](API.md).

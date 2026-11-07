@@ -74,8 +74,9 @@ does not create a background networking thread.
 | Input queue | Applies frame delay and tracks confirmed versus predicted input | [`input_queue.h`](../../src/lib/ggpo/input_queue.h), [`input_queue.cpp`](../../src/lib/ggpo/input_queue.cpp) |
 | Peer protocol | Performs handshake, input compression, ACKs, quality reports, disconnect detection, and time sync | [`udp_proto.h`](../../src/lib/ggpo/network/udp_proto.h), [`udp_proto.cpp`](../../src/lib/ggpo/network/udp_proto.cpp) |
 | UDP transport | Owns the bound non-blocking socket and datagram dispatch | [`udp.h`](../../src/lib/ggpo/network/udp.h), [`udp.cpp`](../../src/lib/ggpo/network/udp.cpp) |
-| Poll loop | Invokes loop, periodic, message, and handle sinks | [`poll.h`](../../src/lib/ggpo/poll.h), [`poll.cpp`](../../src/lib/ggpo/poll.cpp) |
-| Platform layer | Supplies process, clock, sleep, configuration, socket, and event primitives | [`platform_windows.h`](../../src/lib/ggpo/platform_windows.h), [`platform_linux.h`](../../src/lib/ggpo/platform_linux.h) |
+| Poll loop | Invokes loop, periodic, and message sinks until the computed deadline | [`poll.h`](../../src/lib/ggpo/poll.h), [`poll.cpp`](../../src/lib/ggpo/poll.cpp) |
+| Platform contract | Defines clock, wait, configuration, diagnostics, filesystem, and UDP services | [`platform.h`](../../src/lib/ggpo/platform.h) |
+| Windows platform layer | Implements the contract with Win32 and Winsock | [`platform_windows.cpp`](../../src/lib/ggpo/platform_windows.cpp), [`Platform.cmake`](../../src/platform/windows/Platform.cmake) |
 | Sample application | Demonstrates callbacks, frame submission, rendering separation, spectators, and statistics | [`src/apps/vectorwar`](../../src/apps/vectorwar) |
 
 For the complete application flow, see the [Vector War walkthrough](VectorWar.md).

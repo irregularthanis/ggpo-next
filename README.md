@@ -18,7 +18,8 @@ application integration guidance is in the [Developer Guide](doc/DeveloperGuide.
 
 ## Building
 
-Building GGPO is currently only available on Windows, however efforts are being made to port it to other platforms.
+The SDK currently supports Windows builds. Linux and Apple platform adapters are
+documented follow-up work; unsupported SDK targets fail configuration explicitly.
 
 ### Windows
 

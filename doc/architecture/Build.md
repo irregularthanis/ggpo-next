@@ -110,8 +110,9 @@ The SDK install rules in [`src/CMakeLists.txt`](../../src/CMakeLists.txt) place:
 ```text
 <prefix>/
 ├── include/ggponet.h
-├── bin/<shared library on Windows>
-└── lib/<static library or Unix shared library>
+├── bin/GGPO.dll                  # shared build
+├── lib/GGPO.lib                  # import or static library
+└── lib/cmake/GGPO/               # CMake package and target export
 ```
 
 The install also exports `lib/cmake/GGPO/GGPOConfig.cmake`; consumers use
@@ -119,7 +120,7 @@ The install also exports `lib/cmake/GGPO/GGPOConfig.cmake`; consumers use
 
 ## Platform status
 
-| Platform | Upstream build status | Main blockers |
+| Platform | Current build status | Main blockers |
 | --- | --- | --- |
 | Windows | Supported SDK and Vector War build | Existing reference platform |
 | Linux | Explicitly rejected until a Linux platform layer exists | Adapter, CI, sample/frontend, and packaging remain |

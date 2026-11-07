@@ -68,7 +68,10 @@ The P2P backend orchestrates a game between players.  It is created by the ggpo_
 
 ## Poll Object
 
-(not pictured).  The poll object is a registration mechanism used by the other objects in the code.  It delivers timers and notifications when waitable objects become ready.  For example, the UDP backend uses the Poll object to receive notifications when new packets arrive. 
+(not pictured). The poll object drives registered loop, periodic, and message
+callbacks until the nearest computed deadline. The application advances this
+work through `ggpo_idle()` and `ggpo_advance_frame()`; the current core does not
+register native waitable handles or create a background networking thread.
 
 ## Sync Object
 

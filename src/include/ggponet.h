@@ -64,7 +64,7 @@ typedef enum {
  *
  * type: One of the GGPOPlayerType values describing how inputs should be handled
  *       Local players must have their inputs updated every frame via
- *       ggpo_add_local_inputs.  Remote players values will come over the
+ *       ggpo_add_local_input.  Remote player values will come over the
  *       network.
  *
  * player_num: The player number.  Should be between 1 and the number of players
@@ -150,7 +150,7 @@ typedef enum {
  * peer has finished.
  *
  * GGPO_EVENTCODE_RUNNING - All the clients have synchronized.  You may begin
- * sending inputs with ggpo_synchronize_inputs.
+ * sending inputs with ggpo_synchronize_input.
  *
  * GGPO_EVENTCODE_DISCONNECTED_FROM_PEER - The network connection on 
  * the other end of the network has closed.
@@ -317,7 +317,7 @@ typedef struct GGPONetworkStats {
 /*
  * ggpo_start_session --
  *
- * Used to being a new GGPO.net session.  The ggpo object returned by ggpo_start_session
+ * Starts a new GGPO.net session.  The ggpo object returned by ggpo_start_session
  * uniquely identifies the state for this session and should be passed to all other
  * functions.
  *
@@ -364,7 +364,7 @@ GGPO_API GGPOErrorCode GGPO_CALL ggpo_add_player(GGPOSession *session,
 /*
  * ggpo_start_synctest --
  *
- * Used to being a new GGPO.net sync test session.  During a sync test, every
+ * Starts a new GGPO.net sync test session.  During a sync test, every
  * frame of execution is run twice: once in prediction mode and once again to
  * verify the result of the prediction.  If the checksums of your save states
  * do not match, the test is aborted.
@@ -464,7 +464,7 @@ GGPO_API GGPOErrorCode GGPO_CALL ggpo_idle(GGPOSession *,
  * all player of type GGPO_PLAYERTYPE_LOCAL.
  *
  * player - The player handle returned for this player when you called
- * ggpo_add_local_player.
+ * ggpo_add_player.
  *
  * values - The controller inputs for this player.
  *
