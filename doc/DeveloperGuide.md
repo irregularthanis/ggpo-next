@@ -38,8 +38,8 @@ Download the archive matching the application's architecture and linkage from
 | `windows-x86-static` | The application is 32-bit and links GGPO into its executable |
 | `linux-x86_64-shared.deb` / `.rpm` | Install the shared SDK system-wide on a Debian- or RPM-family distribution |
 | `linux-x86_64-static.deb` / `.rpm` | Install the static SDK system-wide on a Debian- or RPM-family distribution |
-| `linux-x86_64-shared.tar.gz` | Extract a relocatable shared SDK without a package manager |
-| `linux-x86_64-static.tar.gz` | Extract a relocatable static SDK without a package manager |
+| [`linux-x86_64-shared.tar.gz`](#linux-raw-sdk-targz) | Extract a relocatable shared SDK without a package manager |
+| [`linux-x86_64-static.tar.gz`](#linux-raw-sdk-targz) | Extract a relocatable static SDK without a package manager |
 
 Extract the ZIP to a stable location such as `C:/ggpo-sdk`. Each release archive
 is an installed CMake package rather than a source tree:
@@ -65,32 +65,90 @@ The release page also provides `SHA256SUMS`. Compare the archive's
 place `C:/ggpo-sdk/bin/GGPO.dll` beside the application executable or otherwise
 make that directory available to the Windows loader.
 
-Install a native Linux package with the platform package manager:
+#### Linux DEB and RPM
+
+Install the package matching the required linkage:
 
 ```bash
+# Debian or Ubuntu, shared SDK
 sudo apt install ./ggpo-0.2.0-linux-x86_64-shared.deb
-# or
+# Debian or Ubuntu, static SDK
+sudo apt install ./ggpo-0.2.0-linux-x86_64-static.deb
+
+# Fedora or another RPM-family system, shared SDK
 sudo dnf install ./ggpo-0.2.0-linux-x86_64-shared.rpm
+# Fedora or another RPM-family system, static SDK
+sudo dnf install ./ggpo-0.2.0-linux-x86_64-static.rpm
 ```
 
+Run one command for the chosen package format and linkage, not both linkage
+variants on the same system.
 The DEB and RPM install under `/usr`; shared and static packages conflict by
-design because they own the same headers and CMake metadata. For an
-unprivileged or application-local SDK, extract the raw archive and pass its
-directory through `CMAKE_PREFIX_PATH`.
+design because they own the same headers and CMake metadata. After installation,
+ordinary `find_package(GGPO CONFIG REQUIRED)` resolves the SDK without an
+additional prefix.
+
+Their installed files mirror the raw SDK below under `/usr`: the public header
+in `/usr/include`, libraries and CMake metadata in `/usr/lib`, and license/readme
+files in `/usr/share/GGPO`.
+
+#### Linux raw SDK (`tar.gz`)
+
+Use the raw archive for an unprivileged, application-local, or CI installation:
+
+```bash
+sha256sum --check SHA256SUMS --ignore-missing
+tar -xzf ggpo-0.2.0-linux-x86_64-shared.tar.gz
+cmake -S . -B build \
+  -DCMAKE_PREFIX_PATH="$PWD/ggpo-0.2.0-linux-x86_64-shared"
+cmake --build build --parallel
+```
+
+The extracted shared SDK contains:
+
+```text
+ggpo-0.2.0-linux-x86_64-shared/
+├── include/ggponet.h
+├── lib/libGGPO.so -> libGGPO.so.0
+├── lib/libGGPO.so.0 -> libGGPO.so.0.2.0
+├── lib/libGGPO.so.0.2.0
+├── lib/cmake/GGPO/
+└── share/GGPO/
+    ├── LICENSE
+    └── README.md
+```
+
+The static archive has the same layout and consumer metadata, but replaces the
+three shared-library entries with `lib/libGGPO.a`.
+
+The shared archive contains `lib/libGGPO.so.0`; deploy that library with the
+application and make its directory available to the loader, for example with
+an application-relative RPATH. The static archive contains `lib/libGGPO.a` and
+does not require a GGPO runtime library.
+
+All Linux release formats contain the same public header and CMake target. The
+package format controls installation; `shared` versus `static` controls how the
+application links and deploys GGPO.
 
 ### Option 2: build Linux with the CI container
 
 Install Docker, then run the same Ubuntu 24.04 image used by Linux CI:
 
 ```bash
+# Build and install the shared SDK.
 python3 scripts/linux/build_in_container.py \
   --compiler gcc --library shared --packages \
   --out build/linux-gcc-shared
+
+# Build and install the static SDK.
+python3 scripts/linux/build_in_container.py \
+  --compiler gcc --library static --packages \
+  --out build/linux-gcc-static
 ```
 
-The installed CMake package is written to `build/linux-gcc-shared/install`;
-verified DEB, RPM, and raw artifacts are written to its `packages` directory.
-Select `clang` or `static` with the corresponding arguments.
+Each installed CMake package is written to its output's `install` directory;
+verified DEB, RPM, and raw artifacts are written to `packages`. Select `clang`
+with `--compiler clang` when testing that toolchain.
 
 ### Option 3: build Windows from source
 
@@ -98,29 +156,88 @@ Install Visual Studio 2022 with the Desktop development with C++ workload,
 CMake, and Python 3. From a Developer PowerShell prompt in the source checkout:
 
 ```powershell
-cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+# Build and install the shared SDK.
+cmake -S . -B build/shared -G "Visual Studio 17 2022" -A x64 `
   -DBUILD_SHARED_LIBS=ON `
   -DGGPO_BUILD_SDK=ON `
   -DGGPO_BUILD_VECTORWAR=ON
-cmake --build build --config Release --parallel
-cmake --install build --config Release --prefix C:/ggpo-sdk
+cmake --build build/shared --config Release --parallel
+cmake --install build/shared --config Release --prefix C:/ggpo-sdk-shared
+
+# Build and install the static SDK.
+cmake -S . -B build/static -G "Visual Studio 17 2022" -A x64 `
+  -DBUILD_SHARED_LIBS=OFF `
+  -DGGPO_BUILD_SDK=ON `
+  -DGGPO_BUILD_VECTORWAR=ON
+cmake --build build/static --config Release --parallel
+cmake --install build/static --config Release --prefix C:/ggpo-sdk-static
 ```
 
-Change `-A x64` to `-A Win32` for a 32-bit SDK. Set
-`BUILD_SHARED_LIBS=OFF` to build a static library. The normal build runs the six
+Change `-A x64` to `-A Win32` for a 32-bit SDK. The normal build runs the six
 self-contained tests. Use
 `-DGGPO_RUN_TESTS_ON_BUILD=OFF` only when test execution must be explicit, or
 `-DBUILD_TESTING=OFF` for a consumer/packaging-only build.
 
-### Link the installed package
+### Use the installed SDK from an application
 
-Both installation paths expose the same package. A consumer links only its
-exported target:
+For an application named `application_x`, include the public header in source:
+
+```cpp
+#include <ggponet.h>
+
+int main()
+{
+    GGPOSession *session = 0;
+    (void)session;
+    return 0;
+}
+```
+
+Then consume the installed CMake package in the application's `CMakeLists.txt`:
 
 ```cmake
+cmake_minimum_required(VERSION 3.10)
+project(application_x LANGUAGES CXX)
+
 find_package(GGPO CONFIG REQUIRED)
-target_link_libraries(my_game PRIVATE GGPO::GGPO)
+add_executable(application_x main.cpp)
+target_link_libraries(application_x PRIVATE GGPO::GGPO)
 ```
+
+For a DEB or RPM installation, configure normally because GGPO is under `/usr`:
+
+```bash
+cmake -S . -B build
+cmake --build build --parallel
+```
+
+For an extracted tarball or a source-built SDK, identify its install prefix:
+
+```bash
+# Compile the application against the extracted shared SDK.
+cmake -S . -B build-shared \
+  -DCMAKE_PREFIX_PATH=/path/to/ggpo-0.2.0-linux-x86_64-shared
+cmake --build build-shared --parallel
+
+# Compile the same application against the extracted static SDK.
+cmake -S . -B build-static \
+  -DCMAKE_PREFIX_PATH=/path/to/ggpo-0.2.0-linux-x86_64-static
+cmake --build build-static --parallel
+```
+
+The application source and CMake target do not change. The selected prefix makes
+`GGPO::GGPO` resolve to `libGGPO.so` or `libGGPO.a` and supplies required system
+link dependencies. With the raw shared SDK during development, expose its
+runtime library when launching:
+
+```bash
+LD_LIBRARY_PATH=/path/to/ggpo-0.2.0-linux-x86_64-shared/lib \
+  ./build-shared/application_x
+```
+
+For distribution, ship `libGGPO.so.0` with a shared application and configure
+an application-relative RPATH, or use the static SDK so GGPO is incorporated
+into `application_x` and no GGPO runtime library is required.
 
 See the [build architecture](architecture/Build.md#install-layout) for the
 canonical layout and the [release workflow](architecture/Build.md#release-packages)
