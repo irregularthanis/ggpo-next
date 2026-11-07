@@ -70,7 +70,8 @@ image locally and runs configure, build, CTest, install-consumer, and ABI audits
 
 ```bash
 python3 scripts/linux/build_in_container.py \
-  --compiler clang --library shared --out build/linux-clang-shared
+  --compiler gcc --library shared --packages \
+  --out build/linux-gcc-shared
 ```
 
 CI builds the same Dockerfile with layer caching; it does not maintain a second
@@ -148,10 +149,19 @@ Pushing a version tag such as `v0.1.0` runs the
 The tag must match the version declared by the root [`project()`](../../CMakeLists.txt).
 
 The workflow builds Windows x64/x86 and Linux x86-64 SDKs with shared and
-static linkage. Each installed SDK is archived into ZIP or tar.gz, then
-validated through external C11 and C++98 consumers. The Linux archive is also
-audited for its SONAME, exports, dependencies, and glibc symbol ceiling.
-The archives and combined `SHA256SUMS` file are attached to the GitHub Release.
+static linkage. Windows publishes ZIP files. Linux publishes:
+
+| Format | Install shape | Validation |
+| --- | --- | --- |
+| DEB | `/usr` SDK for Debian-family systems | Extract, run C11/C++98 consumers, ABI audit |
+| RPM | `/usr` SDK for RPM-family systems | Extract, run C11/C++98 consumers, ABI audit |
+| tar.gz | Prefix-local raw SDK | Extract, run C11/C++98 consumers, ABI audit |
+
+[`package_linux_sdk.py`](../../scripts/ci/package_linux_sdk.py) creates and
+validates all three formats from one installed SDK. Shared and static packages
+use distinct names and conflict metadata because they own the same headers and
+CMake files. All artifacts and the combined `SHA256SUMS` file are attached to
+the GitHub Release.
 
 ## Platform status
 

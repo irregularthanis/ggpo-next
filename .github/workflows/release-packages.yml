@@ -38,18 +38,13 @@ jobs:
             --image ggpo-linux-release:${{ matrix.library }} \
             --compiler gcc \
             --library ${{ matrix.library }} \
-            --out build/linux-${{ matrix.library }}
-      - name: Archive the installed SDK
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          name="ggpo-${version}-linux-x86_64-${{ matrix.library }}"
-          mv build/linux-${{ matrix.library }}/install "build/$name"
-          tar -C build -czf "build/$name.tar.gz" "$name"
+            --out build/linux-${{ matrix.library }} \
+            --packages
       - name: Upload packaged SDK
         uses: actions/upload-artifact@v4
         with:
           name: release-package-linux-x86_64-${{ matrix.library }}
-          path: build/ggpo-*.tar.gz
+          path: build/linux-${{ matrix.library }}/packages/ggpo-*
           if-no-files-found: error
 
   package-windows:
@@ -173,7 +168,7 @@ jobs:
 
       - name: Generate checksums
         working-directory: release-assets
-        run: sha256sum ggpo-*.zip ggpo-*.tar.gz > SHA256SUMS
+        run: sha256sum ggpo-*.zip ggpo-*.tar.gz ggpo-*.deb ggpo-*.rpm > SHA256SUMS
 
       - name: Create or update the GitHub Release
         env:
@@ -184,4 +179,4 @@ jobs:
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" --verify-tag --generate-notes --title "GGPO $TAG"
           fi
-          gh release upload "$TAG" release-assets/ggpo-*.zip release-assets/ggpo-*.tar.gz release-assets/SHA256SUMS --clobber
+          gh release upload "$TAG" release-assets/ggpo-*.zip release-assets/ggpo-*.tar.gz release-assets/ggpo-*.deb release-assets/ggpo-*.rpm release-assets/SHA256SUMS --clobber

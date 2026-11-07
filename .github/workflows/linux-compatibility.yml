@@ -35,12 +35,17 @@ jobs:
 
       - name: Build, test, install and audit the SDK
         run: |
+          package_args=()
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            package_args=(--packages)
+          fi
           python3 scripts/linux/build_in_container.py \
             --skip-image-build \
             --image ggpo-linux-ci:${{ matrix.compiler }}-${{ matrix.library }} \
             --compiler ${{ matrix.compiler }} \
             --library ${{ matrix.library }} \
-            --out build/linux-${{ matrix.compiler }}-${{ matrix.library }}
+            --out build/linux-${{ matrix.compiler }}-${{ matrix.library }} \
+            "${package_args[@]}"
 
       - name: Upload Linux evidence
         if: always()
@@ -50,4 +55,5 @@ jobs:
           path: |
             build/linux-${{ matrix.compiler }}-${{ matrix.library }}/install
             build/linux-${{ matrix.compiler }}-${{ matrix.library }}/build/Testing
+            build/linux-${{ matrix.compiler }}-${{ matrix.library }}/packages
           if-no-files-found: error

@@ -48,8 +48,8 @@ Apple and other unsupported SDK targets fail configuration explicitly.
 
 Choose either:
 
-- **Release SDK:** download a tested Windows ZIP or Linux x86-64 tar.gz, with
-  shared or static linkage, from
+- **Release SDK:** download a tested Windows ZIP or Linux x86-64 DEB, RPM, or
+  raw tar.gz package, with shared or static linkage, from
   [Releases](https://github.com/irregularthanis/ggpo-next/releases). This is the
   shortest path for application developers.
 - **Source build:** use CMake directly on Windows or the repository's Ubuntu

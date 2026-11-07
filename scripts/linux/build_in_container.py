@@ -23,6 +23,8 @@ def main():
     parser.add_argument("--out", type=Path)
     parser.add_argument("--image", default="ggpo-linux-ci:local")
     parser.add_argument("--skip-image-build", action="store_true")
+    parser.add_argument("--packages", action="store_true",
+                        help="create and verify raw, DEB, and RPM SDK packages")
     parser.add_argument("--jobs", type=int, default=max(1, os.cpu_count() or 1))
     args = parser.parse_args()
 
@@ -50,7 +52,7 @@ def main():
     cc, cxx = (("gcc", "g++") if args.compiler == "gcc"
                else ("clang", "clang++"))
     shared = "ON" if args.library == "shared" else "OFF"
-    container_command = " && ".join([
+    commands = [
         f"cmake -S /src -B /out/build -G Ninja "
         f"-DCMAKE_C_COMPILER={cc} -DCMAKE_CXX_COMPILER={cxx} "
         f"-DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS={shared} "
@@ -70,7 +72,15 @@ def main():
         f"{cc} --version | head -n 1",
         "cmake --version | head -n 1",
         "ninja --version",
-    ])
+    ]
+    if args.packages:
+        commands.append(
+            "python3 /src/scripts/ci/package_linux_sdk.py "
+            "--build /out/build --install /out/install "
+            "--out /out/packages --source /src "
+            f"--cc {cc} --cxx {cxx} --jobs {args.jobs}"
+        )
+    container_command = " && ".join(commands)
     run([
         "docker", "run", "--rm",
         "--user", f"{os.getuid()}:{os.getgid()}",
@@ -82,6 +92,8 @@ def main():
     ])
     print(f"Linux build output: {output}")
     print(f"Installed SDK: {output / 'install'}")
+    if args.packages:
+        print(f"Verified packages: {output / 'packages'}")
 
 
 if __name__ == "__main__":

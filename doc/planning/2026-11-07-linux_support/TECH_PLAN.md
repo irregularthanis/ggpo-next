@@ -27,6 +27,7 @@ Source: `2c339c056c4a210638d88b55083e641e78370ca9`
 | Modify | `tests/CMakeLists.txt`, smoke fixtures | Separate shared tests from Windows-only layout checks; add Linux matrix | M3 | [Testing](../../architecture/Testing.md) |
 | Modify | `tests/smoke/run_peer_smoke.py`; add cross-host runner if needed | Accept distinct peers and emit comparable machine-readable evidence | M2 | [Testing](../../architecture/Testing.md) |
 | Add/modify | Linux CI, release workflows, and install docs | Build the same Dockerfile, run the matrix inside it, and package Ubuntu 24.04 x86-64 archives | M3/M4 | [Build](../../architecture/Build.md) |
+| Add | `src/cmake/linux_packaging.cmake`, `scripts/ci/package_linux_sdk.py` | Generate DEB/RPM metadata and a raw archive, then extract-test every format | M3 | [Build](../../architecture/Build.md#release-packages) |
 
 ## Contracts and flow
 
@@ -65,7 +66,7 @@ The Dockerfile is the build-environment source of truth. The local wrapper and C
 ```bash
 # Proposed local interface; all compilation and tests execute in the shared image.
 python3 scripts/linux/build_in_container.py \
-  --compiler clang --library shared --out build/linux-clang-shared
+  --compiler gcc --library shared --packages --out build/linux-gcc-shared
 ```
 
 The wrapper must support ordinary clones and worktrees, explicit external output directories, host UID/GID ownership, clear missing-Docker/daemon failures, and cleanup of temporary containers. The Docker build context excludes build outputs and credentials.
@@ -81,10 +82,10 @@ Linux shared libraries receive a project-major `SOVERSION`. Hidden-by-default vi
 | Source/API | Header hash/diff against v0.1.0; Windows matrix | Identical public header; all existing Windows lanes green | Any header/Windows regression blocks |
 | Linux native | Ubuntu 24.04, GCC/Clang, static/shared; CTest | Four passing lanes, fake adapter, SyncTest, two-peer loopback | Any configuration failure blocks |
 | Environment parity | Local wrapper and Linux CI at one revision | Same Dockerfile; recorded image identity and matching compiler/CMake/Ninja versions | Alternate CI/local dependency recipe blocks |
-| Installed package | Extract archive; external C11 and C++98 consumers using `find_package` | Compile, link, run without source-tree includes | Missing transitive dependency/export blocks |
+| Installed package | Extract DEB, RPM, and raw tar.gz; external C11 and C++98 consumers using `find_package` | Every format compiles, links, and runs without source-tree includes | Missing format, file, transitive dependency, or export blocks |
 | ABI audit | `readelf`, `objdump`, `ldd` | SONAME/exports; max `GLIBC <= 2.39`; recorded `GLIBCXX`/`CXXABI` ceilings | Newer symbol or untracked dependency blocks |
 | Cross-host | Native Windows ↔ Ubuntu and native Windows ↔ SteamOS on a controlled LAN, 3×180 frames | Artifact SHAs, OS/toolchain identity, matching checkpoints/checksum/events, and clean exits | Unavailable evidence leaves support unqualified |
-| Release | Tag workflow | Separate static/shared Linux x86-64 archives plus manifests | No publication until required gates pass |
+| Release | Tag workflow | Separate static/shared Linux x86-64 DEB, RPM, and raw archives plus checksums | No publication until every format passes extraction and consumer audits |
 
 Ordinary GitHub-hosted Windows and Linux jobs are not assumed to share a reachable LAN. The cross-host gate therefore needs controlled/self-hosted machines or a documented release qualification run. Wine is not accepted as evidence of native Windows interoperability.
 
@@ -105,6 +106,7 @@ Critical path: M0 → M1 → M3 → M4. M2 can proceed beside M1 because it owns
 - Ubuntu 24.04 is the build baseline because its glibc 2.39 ceiling is older than current SteamOS 3.9.5 glibc 2.43. This is forward compatibility by symbol requirement, not ABI identity.
 - The repository Dockerfile is the reproducibility boundary. Ubuntu package repositories are not snapshot-pinned initially; image identity, installed versions, and the source revision are recorded with evidence.
 - Clang packages use Ubuntu 24.04's default C++ runtime unless a later requirement justifies a separate libc++ artifact.
+- Release artifacts come from GCC lanes only; Clang remains a build-compatibility lane. DEB and RPM install under `/usr`, while tar.gz remains prefix-local.
 - Internet/NAT traversal, loss simulation, spectators, more than two peers, and Linux Vector War are follow-ups.
 - Native Windows↔SteamOS qualification infrastructure is not yet identified; M0 must name the controlled hosts before M4 can complete.
 

@@ -62,3 +62,8 @@ if(BUILD_TESTING AND GGPO_BUILD_SDK)
 		)
 	endif()
 endif()
+
+# Generate native Linux SDK packages from the same install rules as consumers.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND GGPO_BUILD_SDK)
+	include(src/cmake/linux_packaging.cmake)
+endif()

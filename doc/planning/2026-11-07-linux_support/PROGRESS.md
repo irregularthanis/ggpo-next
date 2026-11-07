@@ -34,7 +34,7 @@ Parallel with M1; owns peer-runner scripts and evidence format; integrates at M4
 
 - [x] M3-T01: Refactor CTest registration into shared, Windows-only, and Linux-specific families.
 - [ ] M3-T02: Make Linux CI build and use the repository Dockerfile, then pass GCC/Clang × static/shared rollback, fake-adapter, and Linux loopback tests inside it.
-- [ ] M3-T03: Audit extracted packages, consumers, exports, SONAME, dependencies, and ABI symbol ceilings.
+- [x] M3-T03: Generate and extract-test shared/static DEB, RPM, and raw packages; audit consumers, exports, SONAME, dependencies, and ABI symbol ceilings.
 
 ### M4: Qualify cross-OS support and release (depends: M2, M3)
 
@@ -57,3 +57,4 @@ Completed tasks require artifact identity, command or method, environment/input,
 | M2-T02 | `cf821cd`; Testing architecture | Remote-IP peer arguments plus result comparator | Controlled-host procedure | Native-host command/evidence contract implemented; execution remains M4 |
 | M2-T03 | [`peer_runner_negative.py`](../../../tests/smoke/peer_runner_negative.py) | `ctest -R linux_peer_negative_contracts` | Linux shared build; real peer fixture with controlled faults | Pass; startup, timeout, checksum mismatch, and shutdown failures each produced the required rejection |
 | M3-T01 | `cf821cd` | Configure, build and CTest | Linux native builds | Linux SyncTest, peer loopback, fake SyncTest, and fake contract registered and passing |
+| M3-T03 | Local shared/static package outputs | `build_in_container.py --compiler gcc --library <shared|static> --packages`; extract and test every format | Ubuntu 24.04 repository image; DEB, RPM, and raw tar.gz | Pass; all six artifacts built C11/C++98 consumers and passed ABI audit; shared maximum requirement is GLIBC 2.38 against the 2.39 ceiling |

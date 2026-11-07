@@ -9,9 +9,11 @@ RUN apt-get update \
         ca-certificates \
         clang \
         cmake \
+        cpio \
         git \
         ninja-build \
         python3 \
+        rpm \
     && rm -rf /var/lib/apt/lists/*
 
 ENV HOME=/tmp
