@@ -5,3 +5,5 @@ out
 *.user
 *.suo
 *.swp
+__pycache__
+*.py[cod]

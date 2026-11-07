@@ -174,6 +174,24 @@ A pass establishes real platform socket and two-peer behavior on one machine.
 It does not establish Internet/NAT behavior, loss tolerance, spectators, more
 than two players, or interoperability between operating systems.
 
+### Native cross-host smoke
+
+Run the same smoke executable on controlled Windows and Linux hosts. Start both
+commands together, using each host's reachable LAN address:
+
+```text
+# Windows
+ggpo_windows_peer_smoke.exe 1 7000 7001 180 windows.json LINUX_IP
+
+# Ubuntu or SteamOS
+./ggpo_linux_peer_smoke 2 7001 7000 180 linux.json WINDOWS_IP
+```
+
+Copy both result files to one machine and validate them with
+[`compare_peer_results.py`](../../tests/smoke/compare_peer_results.py). Record
+both artifact hashes, OS versions, commands, and the validator output. Wine is
+not native Windows interoperability evidence.
+
 ## Build and CI integration
 
 [`tests/CMakeLists.txt`](../../tests/CMakeLists.txt) registers Windows-only

@@ -1,0 +1,21 @@
+{
+  "artifacts": {
+    "peer_a": "GCC shared; SHA-256 5ed8dbaf5faf968fadaf0d311ba16ea9af49cc25d4eebfc67d22a0340d15187c",
+    "peer_b": "Clang 22 shared; SHA-256 dffed883014aea28b38dfe5437a03940d7950604bcd68f419a31c377a5f54fc2"
+  },
+  "checksum": "7db6c67b",
+  "frames": 180,
+  "method": "tests/smoke/run_peer_smoke.py --peer-b",
+  "peer_a": {
+    "loads": 13,
+    "replay_frames": 92,
+    "running_events": 1
+  },
+  "peer_b": {
+    "loads": 14,
+    "replay_frames": 96,
+    "running_events": 1
+  },
+  "result": "pass",
+  "schema": 1
+}
