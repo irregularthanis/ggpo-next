@@ -46,22 +46,54 @@ jobs:
           path: build/windows-compatibility-evidence
           if-no-files-found: error
 
-  build-layer-equivalence:
-    name: Windows legacy/layered build equivalence
+  final-m0-qualification:
+    name: Final M0/candidate compatibility
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
-      - name: Compare the temporary legacy and layered build entries
+      - uses: actions/checkout@v4
+        with:
+          ref: 34988996cab45c1a37a9c556fe66b192d60a547b
+          path: m0
+      - name: Compare frozen M0 and candidate contracts
         shell: pwsh
         run: |
-          ./scripts/ci/verify_windows_build_layers.ps1 `
+          ./scripts/ci/verify_windows_against_m0.ps1 `
+            -M0Source "m0" `
             -Generator "Visual Studio 17 2022" `
-            -BuildRoot "build/windows-build-layers" `
-            -EvidenceRoot "build/windows-build-layer-evidence"
-      - name: Upload build-layer comparison evidence
+            -BuildRoot "build/windows-final-qualification" `
+            -EvidenceRoot "build/windows-final-evidence"
+      - name: Upload final compatibility evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: windows-build-layer-equivalence
-          path: build/windows-build-layer-evidence
+          name: windows-final-m0-qualification
+          path: build/windows-final-evidence
           if-no-files-found: error
+
+  portable-header:
+    name: Portable public header (${{ matrix.compiler }})
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile C11 and C++98 consumers without linking an SDK
+        shell: bash
+        run: |
+          if [ "${{ matrix.compiler }}" = gcc ]; then
+            cc=gcc
+            cxx=g++
+            cxx_extra=()
+          else
+            cc=clang
+            cxx=clang++
+            # C needs a byte in GGPOPlayer.local because it forbids empty
+            # structs; C++ retains the frozen empty-member ABI.
+            cxx_extra=(-Wno-extern-c-compat)
+          fi
+          "$cc" -std=c11 -pedantic-errors -Werror -Isrc/include \
+            -c tests/consumer/consumer.c -o /tmp/ggpo-consumer-c.o
+          "$cxx" -std=c++98 -pedantic-errors -Werror "${cxx_extra[@]}" -Isrc/include \
+            -c tests/consumer/consumer.cpp -o /tmp/ggpo-consumer-cpp.o

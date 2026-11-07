@@ -15,31 +15,14 @@ target_include_directories(GGPO
 	${CMAKE_CURRENT_SOURCE_DIR}/lib/ggpo
 )
 
-set(GGPO_WINDOWS_BUILD_LAYER "LAYERED" CACHE STRING
-	"Windows build composition used for temporary legacy/layered qualification")
-set_property(CACHE GGPO_WINDOWS_BUILD_LAYER PROPERTY STRINGS LAYERED LEGACY)
-
 if(NOT WIN32)
 	message(FATAL_ERROR
 		"The GGPO SDK currently supports only the Windows platform layer. "
 		"Linux and Apple adapters are planned follow-up work.")
-elseif(GGPO_WINDOWS_BUILD_LAYER STREQUAL "LAYERED")
+
+else()
 	include(platform/windows/Platform.cmake)
 	ggpo_configure_platform(GGPO)
-elseif(GGPO_WINDOWS_BUILD_LAYER STREQUAL "LEGACY")
-	# Test-only same-source entry retained until the M3 B-vs-C gate passes.
-	target_sources(GGPO PRIVATE lib/ggpo/platform_windows.cpp)
-	target_compile_options(GGPO PRIVATE "/W4" "/WX")
-	target_compile_definitions(GGPO PRIVATE _CRT_SECURE_NO_WARNINGS)
-	target_link_libraries(GGPO PUBLIC winmm.lib ws2_32.lib)
-	if(BUILD_SHARED_LIBS)
-		target_compile_definitions(GGPO PUBLIC GGPO_SHARED_LIB)
-		target_compile_definitions(GGPO PRIVATE GGPO_SDK_EXPORT)
-	endif()
-else()
-	message(FATAL_ERROR
-		"GGPO_WINDOWS_BUILD_LAYER must be LAYERED or LEGACY, got "
-		"'${GGPO_WINDOWS_BUILD_LAYER}'")
 endif()
 
 set_target_properties(GGPO PROPERTIES VERSION ${PROJECT_VERSION})

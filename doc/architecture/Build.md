@@ -66,7 +66,6 @@ Declared in the [root build file](../../CMakeLists.txt):
 | `GGPO_BUILD_VECTORWAR` | `ON` | Adds Vector War only when `WIN32` is true |
 | `BUILD_SHARED_LIBS` | `ON` | Chooses a shared library instead of a static library |
 | `GGPO_RUN_TESTS_ON_BUILD` | `ON` | Runs the six self-contained CTests in the default build |
-| `GGPO_WINDOWS_BUILD_LAYER` | `LAYERED` | Selects the shipped Windows layer; `LEGACY` is temporary qualification-only input |
 
 Current Windows setup uses [`configure_windows.cmd`](../../configure_windows.cmd).
 The generated solution is described in the root [README](../../README.md).

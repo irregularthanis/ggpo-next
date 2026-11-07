@@ -18,8 +18,8 @@
 
 The complete public declaration is [`src/include/ggponet.h`](../../src/include/ggponet.h),
 implemented by [`src/lib/ggpo/main.cpp`](../../src/lib/ggpo/main.cpp). Include it
-from C11 or C++98 and link the `GGPO` library. Both language paths resolve the
-same C-linkage exports.
+from C11 or C++98 and link `GGPO::GGPO` from the installed CMake package. Both
+language paths resolve the same C-linkage exports.
 
 This page reflects the source; the older [Developer Guide](../DeveloperGuide.md)
 contains useful integration guidance but some example names differ from the header.

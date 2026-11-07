@@ -200,10 +200,16 @@ across this matrix:
 | x64 | Shared and static | Debug and Release |
 | Win32 | Shared and static | Debug and Release |
 
-The separate [build-layer verifier](../../scripts/ci/verify_windows_build_layers.ps1)
-builds the same refactored source through the temporary `LEGACY` entry and the
-default `LAYERED` entry. Both must pass all tests and installed consumers, then
-produce identical export, public-layout, and packet-layout evidence.
+The final [M0 verifier](../../scripts/ci/verify_windows_against_m0.ps1) builds
+the frozen M0 source and the current candidate. It compares exports and layouts,
+then runs both cross-revision directions: the M0 executable with the candidate
+DLL and the candidate executable with the M0 DLL.
+
+GCC and Clang jobs also compile the public C11 and C++98 consumers without
+linking an SDK. These are header-portability gates, not Linux runtime support.
+The Clang C++ gate suppresses only `-Wextern-c-compat`: C requires the documented
+one-byte `GGPOPlayer.local` placeholder while C++ retains the frozen empty-member
+Windows ABI. All other pedantic diagnostics remain errors.
 
 [`appveyor.yml`](../../appveyor.yml) also runs CTest and captures evidence for
 its existing x64 Windows builds. Unsupported SDK platforms now fail CMake

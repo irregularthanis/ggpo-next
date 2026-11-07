@@ -1,6 +1,6 @@
 # PROGRESS — Platform-agnostic GGPO core and Windows build layer
 
-Status: M0–M3 complete; M4 planned
+Status: M0–M3 complete; M4 implemented and awaiting final qualification
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
 ## Milestones
@@ -78,6 +78,6 @@ May overlap late M1; owns CMake platform selection and Windows target wiring.
 | M3-T01 | [`Platform.cmake`](../../../src/platform/windows/Platform.cmake), [`79fb6aa`](https://github.com/irregularthanis/ggpo-next/commit/79fb6aa) | Configure the default layered Windows target | Windows native source, definitions, `winmm`, and `ws2_32` | Platform inputs are owned by the Windows layer |
 | M3-T02 | [`CMakeSources.cmake`](../../../src/CMakeSources.cmake), [M3 matrix](https://github.com/irregularthanis/ggpo-next/actions/runs/42342130890) | Remove implicit Unix selection; configure supported and unsupported targets | Portable source inventory and non-Windows configuration | Portable inventory contains no OS source; unsupported SDK platforms fail explicitly |
 | M3-T03 | [`src/CMakeLists.txt`](../../../src/CMakeLists.txt), [`tests/consumer`](../../../tests/consumer/CMakeLists.txt) | Install package; consume with `find_package(GGPO CONFIG REQUIRED)` and `GGPO::GGPO` | C11 and C++98 consumers in all eight Windows lanes | Public header only; installed consumers compiled and linked |
-| M3-T04 | [Build-layer equivalence job](https://github.com/irregularthanis/ggpo-next/actions/runs/42342130890/job/128311912480), [`verify_windows_build_layers.ps1`](../../../scripts/ci/verify_windows_build_layers.ps1) | Build identical source through `LEGACY` and `LAYERED`; compare contracts | x64 shared Release; six CTests and installed consumers per entry | Exports, public layout, packet layout, runtime tests, and consumers matched |
+| M3-T04 | [Build-layer equivalence job](https://github.com/irregularthanis/ggpo-next/actions/runs/42342130890/job/128311912480), [qualified verifier at `79fb6aa`](https://github.com/irregularthanis/ggpo-next/blob/79fb6aa2c4ae7506ce31beb14e6827338cfa3071/scripts/ci/verify_windows_build_layers.ps1) | Build identical source through `LEGACY` and `LAYERED`; compare contracts | x64 shared Release; six CTests and installed consumers per entry | Exports, public layout, packet layout, runtime tests, and consumers matched; temporary entry was then removed in M4 |
 | M3-T05 | [M3 Windows matrix](https://github.com/irregularthanis/ggpo-next/actions/runs/42342130890), [`ggpo_check`](../../../CMakeLists.txt) | Build/install x64 and Win32, shared/static, Debug/Release with tests enabled by default | Nine jobs: eight compatibility lanes plus build-layer equivalence | All jobs passed; 6/6 CTests passed in each compatibility build |
 

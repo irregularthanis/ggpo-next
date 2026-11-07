@@ -2,7 +2,6 @@ param(
     [ValidateSet("x64", "Win32")][string]$Architecture = "x64",
     [ValidateSet("ON", "OFF")][string]$Shared = "ON",
     [ValidateSet("Debug", "Release")][string]$Configuration = "Release",
-    [ValidateSet("LAYERED", "LEGACY")][string]$BuildLayer = "LAYERED",
     [string]$Generator = "Visual Studio 16 2019",
     [string]$BuildDirectory,
     [string]$EvidenceDirectory,
@@ -25,8 +24,7 @@ cmake -S $repo -B $BuildDirectory -G $Generator -A $Architecture `
     -DBUILD_SHARED_LIBS=$Shared `
     -DGGPO_BUILD_SDK=ON `
     -DGGPO_BUILD_VECTORWAR=ON `
-    -DBUILD_TESTING=ON `
-    "-DGGPO_WINDOWS_BUILD_LAYER:STRING=$BuildLayer"
+    -DBUILD_TESTING=ON
 if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
 
 cmake --build $BuildDirectory --config $Configuration --parallel

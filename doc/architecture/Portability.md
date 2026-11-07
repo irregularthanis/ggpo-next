@@ -7,6 +7,7 @@
 - [Portable core](#portable-core)
 - [Required adapter contracts](#required-adapter-contracts)
 - [Protocol considerations](#protocol-considerations)
+- [Follow-up platform contract](#follow-up-platform-contract)
 - [Recommended port sequence](#recommended-port-sequence)
 
 ## Current boundary
@@ -89,6 +90,24 @@ The current wire format transmits a packed native C++ structure defined by
 - compatibility/version behavior when protocol structures change.
 
 Compilation on another OS is insufficient without cross-platform peer tests.
+
+## Follow-up platform contract
+
+A Linux or Apple follow-up adds one platform module implementing the semantic
+services in [`platform.h`](../../src/lib/ggpo/platform.h); portable core sources
+and the public header remain shared.
+
+| Required artifact | Qualification before support is claimed |
+| --- | --- |
+| Platform CMake module | Owns native sources, private definitions, and system libraries |
+| Platform adapter | Implements time, wait, configuration, diagnostics, filesystem, network lifetime, endpoints, and nonblocking UDP |
+| Fake-adapter suite | Existing rollback, failure, and cleanup tests remain green |
+| Native conformance | Adapter contract and local two-peer UDP loopback pass |
+| Public package | C11/C++98 consumers link only `GGPO::GGPO` and installed headers |
+| Interoperability | Same-platform peers pass first; Windows-to-new-platform wire compatibility follows |
+
+The Windows [compatibility workflow](../../.github/workflows/windows-compatibility.yml)
+remains required while another adapter is introduced.
 
 ## Recommended port sequence
 

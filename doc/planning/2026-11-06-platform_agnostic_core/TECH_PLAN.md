@@ -1,6 +1,6 @@
 # TECH_PLAN — Platform-agnostic GGPO core and Windows build layer
 
-Status: M0–M3 complete; M4 planned
+Status: M0–M3 complete; M4 implemented and awaiting final qualification
 Source: [`004ffd7`](https://github.com/irregularthanis/ggpo-next/tree/004ffd7f47603d3bae4abd1d541501d715e03279)  
 M0 implementation: [`3498899`](https://github.com/irregularthanis/ggpo-next/commit/34988996cab45c1a37a9c556fe66b192d60a547b)
 
@@ -89,8 +89,8 @@ the production SyncTest runs against it without Windows services.
 The [M2 Windows matrix](https://github.com/irregularthanis/ggpo-next/actions/runs/42340436948)
 passed all eight variants and all six CTest entries. Existing ABI exports,
 packet layout, deterministic rollback, and two-process Windows UDP behavior
-remain qualified. This does not qualify Linux or Apple; M3 still owns platform
-selection and build-layer separation.
+remain qualified. This does not qualify Linux or Apple; the Windows layer is the
+reference implementation for their follow-up platform modules.
 
 ## Target boundary
 
@@ -123,7 +123,7 @@ as defining `SOCKET`, `HANDLE`, or `WSAGetLastError` on every OS.
 | Implemented | [`platform_windows.cpp`](../../../src/lib/ggpo/platform_windows.cpp), [`poll.cpp`](../../../src/lib/ggpo/poll.cpp), [`udp.cpp`](../../../src/lib/ggpo/network/udp.cpp) | Keep Win32/Winsock implementation and native representation behind the adapter | M2 |
 | Implemented | [fake platform tests](../../../tests/platform/fake/platform_fake_test.cpp), [core SyncTest wiring](../../../tests/CMakeLists.txt) | Run production rollback core with deterministic time/config/filesystem/UDP outcomes and failure/cleanup checks | M2 |
 | Added | [`src/platform/windows/Platform.cmake`](../../../src/platform/windows/Platform.cmake) | Own Windows sources, definitions, `winmm`, and `ws2_32` | M3 |
-| Proposed | `tests/smoke/platform/` | Reusable adapter conformance and two-peer loopback tests, first instantiated for Windows | M3 |
+| Added | [`tests/platform/fake`](../../../tests/platform/fake), [`tests/smoke`](../../../tests/smoke) | Deterministic adapter contract plus Windows two-peer loopback tests | M2–M3 |
 | Modified | Root and [`src` CMake](../../../src/CMakeLists.txt) | Build portable `GGPO`, select one platform target, install `GGPO::GGPO`, and make internal includes private | M3 |
 | Modify | [`appveyor.yml`](../../../appveyor.yml), architecture docs | Run compatibility gates and document the extension point | M4 |
 
@@ -353,7 +353,7 @@ The root selects exactly one platform layer. Unsupported platforms fail during
 configuration until their follow-up layer exists; they do not fall through to an
 incomplete implementation.
 
-**Proposed platform build entry:**
+**Implemented platform build entry:**
 
 ```cmake
 # src/platform/windows/Platform.cmake
@@ -420,8 +420,8 @@ Binary hashes are recorded for identity, not equality: compiler metadata, PDBs,
 paths, and timestamps can differ. Export/layout reports and deterministic runtime
 evidence are the equality contracts.
 
-The legacy entry point is test-only, never installed, and deleted after B-vs-C
-passes. If refactored sources cannot be built through it without changing flags
+The legacy entry point was test-only, never installed, and was deleted after
+B-vs-C passed. If refactored sources cannot be built through it without changing flags
 or behavior, the gap is recorded and the build-system effect remains
 inconclusive rather than being attributed to the layered build.
 
@@ -508,8 +508,8 @@ depend on the same frozen contract.
   existing ABI and add a separate compatible declaration layer or defer C mode.
 - Remove or replace the unused handle-registration path only after M0 runtime
   evidence; absence of current callers is not alone proof of external use.
-- The current repository has no automated test suite. M0/M1 fixtures are required
-  work, not evidence that already exists.
+- The automated suite guards ABI, layout, rollback, adapter behavior, installed
+  consumers, and local Windows UDP behavior; broader protocol cases remain follow-up work.
 - Win32/x86 qualification is conditional on establishing a working baseline.
 - Linux and Apple build files, event loops, packages, and runtime claims are
   explicitly deferred.
