@@ -13,7 +13,7 @@ SpectatorBackend::SpectatorBackend(GGPOSessionCallbacks *cb,
                                    int num_players,
                                    int input_size,
                                    char *hostip,
-                                   u_short hostport) :
+                                   uint16 hostport) :
    _num_players(num_players),
    _input_size(input_size),
    _next_input_to_send(0)

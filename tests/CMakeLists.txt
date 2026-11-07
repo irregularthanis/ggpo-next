@@ -34,6 +34,7 @@ add_executable(ggpo_windows_packet_layout
     baseline/windows/packet_layout.cpp
 )
 ggpo_configure_windows_baseline_test(ggpo_windows_packet_layout)
+target_link_libraries(ggpo_windows_packet_layout PRIVATE GGPO winmm.lib ws2_32.lib)
 add_test(NAME windows_packet_layout COMMAND ggpo_windows_packet_layout)
 
 # Runtime contracts: SyncTest isolates rollback, while peer loopback exercises
@@ -68,6 +69,7 @@ set_tests_properties(windows_peer_loopback PROPERTIES TIMEOUT 90)
 # Build the production rollback core against a deterministic adapter. This is
 # intentionally a separate static library: it proves SyncTest does not acquire
 # Win32/Winsock behavior through an accidental transitive dependency.
+include(${PROJECT_SOURCE_DIR}/src/CMakeSources.cmake)
 set(GGPO_FAKE_CORE_RELATIVE_SOURCES ${GGPO_LIB_SRC})
 list(REMOVE_ITEM GGPO_FAKE_CORE_RELATIVE_SOURCES
     "lib/ggpo/platform_windows.cpp"
@@ -85,6 +87,7 @@ add_library(ggpo_fake_core STATIC
 )
 add_common_flags(ggpo_fake_core)
 target_compile_options(ggpo_fake_core PRIVATE "/W4" "/WX")
+target_compile_definitions(ggpo_fake_core PRIVATE _CRT_SECURE_NO_WARNINGS)
 target_include_directories(ggpo_fake_core PRIVATE
     ${PROJECT_SOURCE_DIR}/src/include
     ${PROJECT_SOURCE_DIR}/src/lib/ggpo
