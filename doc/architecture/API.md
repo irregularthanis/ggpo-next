@@ -27,11 +27,11 @@ contains useful integration guidance but some example names differ from the head
 
 ```mermaid
 flowchart TD
-    Callbacks["Populate all<br/>callbacks"]
-    Start["Start P2P, spectator,<br/>or SyncTest session"]
+    Callbacks["Populate<br/>all callbacks"]
+    Start["Start P2P,<br/>spectator,<br/>or SyncTest<br/>session"]
     Players["Add every<br/>player"]
-    Loop["Submit input, synchronize,<br/>advance, idle"]
-    Events["Handle asynchronous<br/>events"]
+    Loop["Submit input,<br/>synchronize,<br/>advance, idle"]
+    Events["Handle<br/>asynchronous<br/>events"]
     Close["Close session"]
 
     Callbacks --> Start --> Players --> Loop

@@ -37,8 +37,8 @@ flowchart TD
     P2PBackend["Peer2Peer<br/>Backend"]
     SpectatorBackend["Spectator<br/>Backend"]
     SyncTestBackend["SyncTest<br/>Backend"]
-    Callbacks["Copy application<br/>callbacks"]
-    Queues["Create Sync and<br/>input queues"]
+    Callbacks["Copy<br/>application<br/>callbacks"]
+    Queues["Create Sync<br/>and input<br/>queues"]
     Socket["Bind local<br/>UDP socket"]
 
     Start --> P2P --> P2PBackend
@@ -69,18 +69,18 @@ sequenceDiagram
     participant Sync as Sync<br/>core
     participant Peer as Remote<br/>peer
 
-    Input->>App: current local controls
-    App->>P2P: ggpo_add_local_input()
-    P2P->>Sync: assign current frame<br/>and queue input
+    Input->>App: current local<br/>controls
+    App->>P2P: ggpo_add_<br/>local_input()
+    P2P->>Sync: assign current<br/>frame and<br/>queue input
     P2P->>Peer: send pending<br/>input history
-    App->>P2P: ggpo_synchronize_input()
-    P2P->>Sync: inputs for current frame
-    Sync-->>App: confirmed or<br/>predicted values
-    App->>App: advance deterministic<br/>game state
-    App->>P2P: ggpo_advance_frame()
-    P2P->>Sync: increment and save state
-    P2P->>Peer: poll protocol events
-    App->>App: render current state
+    App->>P2P: ggpo_<br/>synchronize_<br/>input()
+    P2P->>Sync: inputs for<br/>current frame
+    Sync-->>App: confirmed<br/>or predicted<br/>values
+    App->>App: advance<br/>deterministic<br/>game state
+    App->>P2P: ggpo_<br/>advance_<br/>frame()
+    P2P->>Sync: increment and<br/>save state
+    P2P->>Peer: poll protocol<br/>events
+    App->>App: render current<br/>state
 ```
 
 `ggpo_add_local_input()` can return `GGPO_ERRORCODE_PREDICTION_THRESHOLD` when
@@ -94,13 +94,13 @@ incorrect frame and runs [`AdjustSimulation`](../../src/lib/ggpo/sync.cpp):
 
 ```mermaid
 flowchart TD
-    Detect["InputQueue reports first<br/>incorrect predicted frame"]
-    Load["Load saved state through<br/>load_game_state callback"]
-    Reset["Reset queue predictions<br/>at restored frame"]
-    Replay["Call advance_frame once<br/>for each missing frame"]
-    Inputs["Application calls<br/>ggpo_synchronize_input"]
-    Advance["Application advances<br/>state and calls<br/>ggpo_advance_frame"]
-    CaughtUp["Original frame reached;<br/>leave rollback mode"]
+    Detect["InputQueue<br/>reports first<br/>incorrect<br/>predicted<br/>frame"]
+    Load["Load saved<br/>state<br/>through<br/>load_game_<br/>state<br/>callback"]
+    Reset["Reset queue<br/>predictions at<br/>restored frame"]
+    Replay["Call<br/>advance_frame<br/>once for each<br/>missing frame"]
+    Inputs["Application<br/>calls<br/>ggpo_<br/>synchronize_<br/>input"]
+    Advance["Application<br/>advances<br/>state and<br/>calls<br/>ggpo_<br/>advance_<br/>frame"]
+    CaughtUp["Original frame<br/>reached;<br/>leave rollback<br/>mode"]
 
     Detect --> Load --> Reset --> Replay
     Replay --> Inputs --> Advance

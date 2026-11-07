@@ -41,12 +41,12 @@ DLL-only definitions or lifecycle behavior.
 ```mermaid
 flowchart TD
     Configure["Configure<br/>Windows<br/>build<br/>tests enabled"]
-    Build["Build GGPO,<br/>Vector War<br/>and compatibility<br/>fixtures"]
+    Build["Build GGPO,<br/>Vector War<br/>and<br/>compatibility<br/>fixtures"]
     Layout["Public and<br/>packet<br/>layout checks"]
     Sync["Deterministic<br/>SyncTest smoke"]
     Peers["Two-process<br/>Windows<br/>UDP loopback<br/>smoke"]
-    Capture["Capture<br/>exports,<br/>layouts, hashes<br/>and environment"]
-    Noise{"Repeated timing<br/>requested?"}
+    Capture["Capture<br/>exports,<br/>layouts,<br/>hashes<br/>and<br/>environment"]
+    Noise{"Repeated<br/>timing<br/>requested?"}
     Repeat["Repeat<br/>peer pair<br/>and summarize<br/>duration"]
     Evidence["Upload<br/>compatibility<br/>evidence"]
 
@@ -144,13 +144,13 @@ sequenceDiagram
     A->>B: GGPO sync<br/>request<br/>over UDP
     B->>A: GGPO sync<br/>reply<br/>over UDP
     loop Until frame 180
-        A->>B: Local input<br/>and acknowledgements
-        B->>A: Local input<br/>and acknowledgements
-        A->>A: Predict,<br/>restore and<br/>replay as needed
-        B->>B: Predict,<br/>restore and<br/>replay as needed
+        A->>B: Local input<br/>and acknow<br/>ledgements
+        B->>A: Local input<br/>and acknow<br/>ledgements
+        A->>A: Predict,<br/>restore and<br/>replay as<br/>needed
+        B->>B: Predict,<br/>restore and<br/>replay as<br/>needed
     end
-    A-->>Runner: Frame,<br/>checksum and<br/>callback counts
-    B-->>Runner: Frame,<br/>checksum and<br/>callback counts
+    A-->>Runner: Frame,<br/>checksum and<br/>callback<br/>counts
+    B-->>Runner: Frame,<br/>checksum and<br/>callback<br/>counts
     Runner->>Runner: Require equal<br/>frame and<br/>checksum
 ```
 

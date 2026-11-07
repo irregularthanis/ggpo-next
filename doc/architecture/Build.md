@@ -26,19 +26,19 @@ builds the Windows sample.
 
 ```mermaid
 flowchart TD
-    Root["Root CMakeLists.txt<br/>options and<br/>project"]
-    SDKList["src/CMakeLists.txt<br/>GGPO library target"]
-    Sources["src/CMakeSources.cmake<br/>SDK source inventory"]
-    Public["src/include/ggponet.h<br/>public API"]
-    Core["Backends, sync, input,<br/>poll and UDP sources"]
-    Platform{"Selected platform"}
-    Windows["platform_windows.cpp<br/>Winsock and<br/>Win32 services"]
-    Unix["platform_linux.cpp<br/>incomplete Unix path"]
-    Library["GGPO library<br/>shared or static"]
+    Root["Root<br/>CMakeLists.txt<br/>options and<br/>project"]
+    SDKList["src/<br/>CMakeLists.txt<br/>GGPO library<br/>target"]
+    Sources["src/<br/>CMakeSources<br/>.cmake<br/>SDK source<br/>inventory"]
+    Public["src/include/<br/>ggponet.h<br/>public API"]
+    Core["Backends,<br/>sync, input,<br/>poll and UDP<br/>sources"]
+    Platform{"Selected<br/>platform"}
+    Windows["platform_<br/>windows.cpp<br/>Winsock and<br/>Win32 services"]
+    Unix["platform_<br/>linux.cpp<br/>incomplete<br/>Unix path"]
+    Library["GGPO library<br/>shared or<br/>static"]
     SampleList["Vector War<br/>CMakeLists.txt<br/>Windows only"]
-    Sample["VectorWar executable"]
+    Sample["VectorWar<br/>executable"]
 
-    Root -->|"GGPO_BUILD_SDK"| SDKList
+    Root -->|"GGPO_BUILD_<br/>SDK"| SDKList
     SDKList --> Sources
     Sources --> Public
     Sources --> Core
@@ -49,7 +49,7 @@ flowchart TD
     Core --> Library
     Windows --> Library
     Unix --> Library
-    Root -->|"GGPO_BUILD_VECTORWAR<br/>and WIN32"| SampleList
+    Root -->|"GGPO_BUILD_<br/>VECTORWAR<br/>and WIN32"| SampleList
     SampleList --> Library
     SampleList --> Sample
 ```

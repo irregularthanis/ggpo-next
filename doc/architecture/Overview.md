@@ -38,14 +38,14 @@ See the existing [Developer Guide](../DeveloperGuide.md) for integration advice.
 
 ```mermaid
 flowchart LR
-    Game["Game application<br/>simulation, input,<br/>presentation"]
+    Game["Game<br/>application<br/>simulation,<br/>input,<br/>presentation"]
     API["Public C API<br/>ggponet.h"]
-    Backend["Session backend<br/>P2P, spectator,<br/>or SyncTest"]
-    Sync["Rollback synchronization<br/>saved states and<br/>input queues"]
-    Protocol["Peer protocol<br/>input, ACK, quality<br/>and sync messages"]
-    UDP["UDP transport<br/>non-blocking socket"]
-    Peer["Remote GGPO peer"]
-    Platform["Platform services<br/>time, sleep,<br/>configuration"]
+    Backend["Session<br/>backend<br/>P2P,<br/>spectator,<br/>or SyncTest"]
+    Sync["Rollback<br/>synchroni<br/>zation<br/>saved states<br/>and input<br/>queues"]
+    Protocol["Peer protocol<br/>input, ACK,<br/>quality and<br/>sync messages"]
+    UDP["UDP transport<br/>non-blocking<br/>socket"]
+    Peer["Remote<br/>GGPO peer"]
+    Platform["Platform<br/>services<br/>time, sleep,<br/>configuration"]
 
     Game <-->|"calls and<br/>callbacks"| API
     API --> Backend
@@ -86,23 +86,23 @@ For the complete application flow, see the [Vector War walkthrough](VectorWar.md
 sequenceDiagram
     participant App as Game<br/>application
     participant GGPO as Session<br/>backend
-    participant Sync as Synchronization<br/>core
+    participant Sync as Synchroni<br/>zation<br/>core
     participant Net as UDP<br/>peer protocol
 
-    App->>GGPO: ggpo_add_local_input()
-    GGPO->>Sync: queue local input
-    GGPO->>Net: send input to peers
-    App->>GGPO: ggpo_synchronize_input()
-    GGPO->>Sync: obtain confirmed or<br/>predicted inputs
-    Sync-->>App: all players' inputs
-    App->>App: advance deterministic<br/>simulation
-    App->>GGPO: ggpo_advance_frame()
-    GGPO->>Sync: save new state and<br/>advance frame
-    GGPO->>Net: poll messages and<br/>acknowledgements
+    App->>GGPO: ggpo_add_<br/>local_input()
+    GGPO->>Sync: queue local<br/>input
+    GGPO->>Net: send input<br/>to peers
+    App->>GGPO: ggpo_<br/>synchronize_<br/>input()
+    GGPO->>Sync: obtain<br/>confirmed or<br/>predicted<br/>inputs
+    Sync-->>App: all players'<br/>inputs
+    App->>App: advance<br/>deterministic<br/>simulation
+    App->>GGPO: ggpo_<br/>advance_<br/>frame()
+    GGPO->>Sync: save new state<br/>and advance<br/>frame
+    GGPO->>Net: poll messages<br/>and acknow<br/>ledgements
     alt late input differs<br/>from prediction
-        Sync->>App: load_game_state callback
+        Sync->>App: load_game_<br/>state<br/>callback
         loop each replayed frame
-            Sync->>App: advance_frame callback
+            Sync->>App: advance_frame<br/>callback
         end
     end
 ```

@@ -27,13 +27,13 @@ to peers by the current protocol.
 
 ```mermaid
 flowchart LR
-    Device["Local controls"]
-    Submit["AddLocalInput"]
-    LocalQueue["Local InputQueue<br/>confirmed<br/>input"]
+    Device["Local<br/>controls"]
+    Submit["AddLocal<br/>Input"]
+    LocalQueue["Local<br/>InputQueue<br/>confirmed<br/>input"]
     Network["UDP input<br/>message"]
-    RemoteQueue["Remote InputQueue<br/>confirmed or<br/>predicted"]
-    Sync["SynchronizeInputs"]
-    Composite["All players' inputs<br/>for current frame"]
+    RemoteQueue["Remote<br/>InputQueue<br/>confirmed or<br/>predicted"]
+    Sync["Synchronize<br/>Inputs"]
+    Composite["All players'<br/>inputs for<br/>current frame"]
     Game["Deterministic<br/>frame step"]
 
     Device --> Submit --> LocalQueue
@@ -89,16 +89,16 @@ sequenceDiagram
     participant Sync as Sync
     participant Host as Game<br/>callbacks
 
-    Queue-->>Sync: earliest incorrect<br/>frame N
-    Sync->>Sync: find checkpoint N
-    Sync->>Host: load_game_state(checkpoint N)
-    Sync->>Queue: reset predictions at N
-    loop N through previous current frame - 1
-        Sync->>Host: advance_frame(0)
-        Host->>Sync: synchronize input<br/>and advance frame
-        Host->>Sync: ggpo_advance_frame()
+    Queue-->>Sync: earliest<br/>incorrect<br/>frame N
+    Sync->>Sync: find<br/>checkpoint N
+    Sync->>Host: load_game_<br/>state<br/>(checkpoint N)
+    Sync->>Queue: reset<br/>predictions<br/>at N
+    loop N through previous<br/>current frame - 1
+        Sync->>Host: advance_<br/>frame(0)
+        Host->>Sync: synchronize<br/>input and<br/>advance frame
+        Host->>Sync: ggpo_<br/>advance_<br/>frame()
     end
-    Sync->>Sync: leave rollback mode
+    Sync->>Sync: leave rollback<br/>mode
 ```
 
 The callback recursively re-enters the normal synchronization API. During this

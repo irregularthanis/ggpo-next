@@ -48,12 +48,12 @@ The rollback algorithms are largely OS-independent:
 
 ```mermaid
 flowchart LR
-    Core["GGPO portable<br/>core"]
-    Clock["Monotonic clock<br/>and sleep"]
-    Socket["Non-blocking UDP<br/>and error mapping"]
+    Core["GGPO<br/>portable core"]
+    Clock["Monotonic<br/>clock and<br/>sleep"]
+    Socket["Non-blocking<br/>UDP and<br/>error mapping"]
     Poll["Polling and<br/>wakeups"]
-    Config["Configuration<br/>and diagnostics"]
-    Files["Directories and<br/>debug output"]
+    Config["Configuration<br/>and<br/>diagnostics"]
+    Files["Directories<br/>and debug<br/>output"]
 
     Core --> Clock
     Core --> Socket
