@@ -1,0 +1,40 @@
+name: Fork owner approval policy
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  pull_request_review:
+    types: [submitted, dismissed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  owner-approval:
+    name: Fork owner approval
+    runs-on: ubuntu-24.04
+    steps:
+      # Let the fork owner merge their own PR; require that owner's active
+      # approval for every PR authored by another account.
+      - name: Enforce fork-owner approval
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          if [ "$PR_AUTHOR" = "irregularthanis" ]; then
+            echo "Fork owner authored this PR; no self-review is required."
+            exit 0
+          fi
+
+          approvals=$(gh api --paginate --slurp \
+            "repos/$REPOSITORY/pulls/$PR_NUMBER/reviews" \
+            --jq '[.[][] | select(.user.login == "irregularthanis" and .state == "APPROVED")] | length')
+          if [ "$approvals" -lt 1 ]; then
+            echo "PRs from $PR_AUTHOR require an active approval from irregularthanis." >&2
+            exit 1
+          fi
+
+          echo "Active approval from irregularthanis found."
