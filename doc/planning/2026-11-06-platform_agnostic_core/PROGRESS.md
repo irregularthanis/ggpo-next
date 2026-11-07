@@ -1,6 +1,6 @@
 # PROGRESS — Platform-agnostic GGPO core and Windows build layer
 
-Status: M0–M2 complete; M3–M4 planned
+Status: M0–M2 complete; M3 implemented and awaiting Windows qualification; M4 planned
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
 ## Milestones

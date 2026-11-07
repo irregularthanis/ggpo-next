@@ -22,6 +22,7 @@ endif()
 option(GGPO_BUILD_SDK "Enable the build of the GGPO SDK" ON)
 option(GGPO_BUILD_VECTORWAR "Enable the build of the Vector War example app" ON)
 option(BUILD_SHARED_LIBS "Enable the build of shared libraries (.dll/.so) instead of static ones (.lib/.a)" ON)
+option(GGPO_RUN_TESTS_ON_BUILD "Run self-contained GGPO tests during the default build" ON)
 
 if(GGPO_BUILD_SDK)
 	add_subdirectory(src)
@@ -38,4 +39,17 @@ endif()
 
 if(BUILD_TESTING AND GGPO_BUILD_SDK)
 	add_subdirectory(tests)
+	if(GGPO_RUN_TESTS_ON_BUILD)
+		add_custom_target(ggpo_check ALL
+			COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>
+			DEPENDS
+				ggpo_windows_public_layout
+				ggpo_windows_packet_layout
+				ggpo_windows_synctest_smoke
+				ggpo_windows_peer_smoke
+				ggpo_fake_core_synctest
+				ggpo_fake_platform_contract
+			USES_TERMINAL
+		)
+	endif()
 endif()

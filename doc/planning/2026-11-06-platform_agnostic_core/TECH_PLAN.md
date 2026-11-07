@@ -1,6 +1,6 @@
 # TECH_PLAN — Platform-agnostic GGPO core and Windows build layer
 
-Status: M0–M2 implemented; M3–M4 planned
+Status: M0–M2 complete; M3 implemented and awaiting Windows qualification; M4 planned
 Source: [`004ffd7`](https://github.com/irregularthanis/ggpo-next/tree/004ffd7f47603d3bae4abd1d541501d715e03279)  
 M0 implementation: [`3498899`](https://github.com/irregularthanis/ggpo-next/commit/34988996cab45c1a37a9c556fe66b192d60a547b)
 
@@ -122,9 +122,9 @@ as defining `SOCKET`, `HANDLE`, or `WSAGetLastError` on every OS.
 | Implemented | [`types.h`](../../../src/lib/ggpo/types.h), [`platform.h`](../../../src/lib/ggpo/platform.h) | Include neutral clock/wait, process/config/diagnostic, filesystem, endpoint, and UDP contracts | M2 |
 | Implemented | [`platform_windows.cpp`](../../../src/lib/ggpo/platform_windows.cpp), [`poll.cpp`](../../../src/lib/ggpo/poll.cpp), [`udp.cpp`](../../../src/lib/ggpo/network/udp.cpp) | Keep Win32/Winsock implementation and native representation behind the adapter | M2 |
 | Implemented | [fake platform tests](../../../tests/platform/fake/platform_fake_test.cpp), [core SyncTest wiring](../../../tests/CMakeLists.txt) | Run production rollback core with deterministic time/config/filesystem/UDP outcomes and failure/cleanup checks | M2 |
-| Proposed | `src/platform/windows/Platform.cmake` | Own Windows sources, definitions, `winmm`, and `ws2_32` | M3 |
+| Added | [`src/platform/windows/Platform.cmake`](../../../src/platform/windows/Platform.cmake) | Own Windows sources, definitions, `winmm`, and `ws2_32` | M3 |
 | Proposed | `tests/smoke/platform/` | Reusable adapter conformance and two-peer loopback tests, first instantiated for Windows | M3 |
-| Modify | Root and [`src` CMake](../../../src/CMakeLists.txt) | Build portable `GGPO`, select one platform target, install `GGPO::GGPO`, and make internal includes private | M3 |
+| Modified | Root and [`src` CMake](../../../src/CMakeLists.txt) | Build portable `GGPO`, select one platform target, install `GGPO::GGPO`, and make internal includes private | M3 |
 | Modify | [`appveyor.yml`](../../../appveyor.yml), architecture docs | Run compatibility gates and document the extension point | M4 |
 
 ## Contracts and examples

@@ -18,7 +18,8 @@ Winsock, native error mapping, and socket representation.
 
 This is a source boundary, not Linux support. The checked-in legacy
 [`platform_linux.cpp`](../../src/lib/ggpo/platform_linux.cpp) remains incomplete;
-platform selection and build-layer separation are the next milestone.
+platform selection and build-layer separation are implemented by the Windows
+platform module; Linux and Apple implementations remain follow-up work.
 
 ## Platform dependencies
 

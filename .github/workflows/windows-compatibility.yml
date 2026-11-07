@@ -45,3 +45,23 @@ jobs:
           name: windows-compatibility-${{ matrix.architecture }}-${{ matrix.shared }}-${{ matrix.configuration }}
           path: build/windows-compatibility-evidence
           if-no-files-found: error
+
+  build-layer-equivalence:
+    name: Windows legacy/layered build equivalence
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare the temporary legacy and layered build entries
+        shell: pwsh
+        run: |
+          ./scripts/ci/verify_windows_build_layers.ps1 `
+            -Generator "Visual Studio 17 2022" `
+            -BuildRoot "build/windows-build-layers" `
+            -EvidenceRoot "build/windows-build-layer-evidence"
+      - name: Upload build-layer comparison evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build-layer-equivalence
+          path: build/windows-build-layer-evidence
+          if-no-files-found: error

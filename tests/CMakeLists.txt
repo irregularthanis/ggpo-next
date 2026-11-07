@@ -48,7 +48,7 @@ add_executable(ggpo_windows_synctest_smoke
     ${GGPO_WINDOWS_BASELINE_COMMON}
 )
 ggpo_configure_windows_baseline_test(ggpo_windows_synctest_smoke)
-target_link_libraries(ggpo_windows_synctest_smoke PRIVATE GGPO winmm.lib ws2_32.lib)
+target_link_libraries(ggpo_windows_synctest_smoke PRIVATE GGPO::GGPO)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/synctest)
 add_test(NAME windows_synctest_smoke COMMAND ggpo_windows_synctest_smoke)
 set_tests_properties(windows_synctest_smoke PROPERTIES
@@ -61,7 +61,7 @@ add_executable(ggpo_windows_peer_smoke
     ${GGPO_WINDOWS_BASELINE_COMMON}
 )
 ggpo_configure_windows_baseline_test(ggpo_windows_peer_smoke)
-target_link_libraries(ggpo_windows_peer_smoke PRIVATE GGPO winmm.lib ws2_32.lib)
+target_link_libraries(ggpo_windows_peer_smoke PRIVATE GGPO::GGPO)
 add_test(NAME windows_peer_loopback
     COMMAND ${PYTHON_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/smoke/run_peer_smoke.py

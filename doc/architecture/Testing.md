@@ -186,6 +186,10 @@ fake_platform_synctest
 fake_platform_contract
 ```
 
+With `BUILD_TESTING=ON` and the default `GGPO_RUN_TESTS_ON_BUILD=ON`, the
+`ggpo_check` target runs these tests as part of the normal build. Packaging or
+consumer-only builds can disable execution explicitly.
+
 [`windows_compatibility_baseline.ps1`](../../scripts/ci/windows_compatibility_baseline.ps1)
 configures, builds, runs CTest, installs the SDK, compiles and links the two
 consumer fixtures, and calls the evidence collector. GitHub Actions runs it
@@ -196,10 +200,14 @@ across this matrix:
 | x64 | Shared and static | Debug and Release |
 | Win32 | Shared and static | Debug and Release |
 
+The separate [build-layer verifier](../../scripts/ci/verify_windows_build_layers.ps1)
+builds the same refactored source through the temporary `LEGACY` entry and the
+default `LAYERED` entry. Both must pass all tests and installed consumers, then
+produce identical export, public-layout, and packet-layout evidence.
+
 [`appveyor.yml`](../../appveyor.yml) also runs CTest and captures evidence for
-its existing x64 Windows builds. On non-Windows hosts, CMake reports that these
-compatibility fixtures are Windows-only; portable and platform-conformance test
-layers are planned separately.
+its existing x64 Windows builds. Unsupported SDK platforms now fail CMake
+configuration explicitly instead of selecting the incomplete legacy Unix file.
 
 ## Evidence and interpretation
 

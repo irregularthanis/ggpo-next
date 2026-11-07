@@ -19,8 +19,7 @@ $installForCMake = $install.Replace("\", "/")
 
 cmake -S (Join-Path $repo "tests/consumer") -B $consumerBuild `
     -G $Generator -A $Architecture `
-    "-DGGPO_INSTALL_PREFIX:PATH=$installForCMake" `
-    -DGGPO_SHARED_LIB=$Shared
+    "-DCMAKE_PREFIX_PATH:PATH=$installForCMake"
 if ($LASTEXITCODE -ne 0) { throw "Installed-consumer configure failed" }
 
 cmake --build $consumerBuild --config $Configuration --parallel

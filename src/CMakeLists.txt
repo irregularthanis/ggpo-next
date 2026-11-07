@@ -3,23 +3,43 @@ include(CMakeSources.cmake)
 add_library(GGPO
 	${GGPO_LIB_SRC}
 )
+add_library(GGPO::GGPO ALIAS GGPO)
 
 add_common_flags(GGPO)
 
-target_include_directories(GGPO PUBLIC
+target_include_directories(GGPO
+	PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/ggpo>
+	$<INSTALL_INTERFACE:include>
+	PRIVATE
+	${CMAKE_CURRENT_SOURCE_DIR}/lib/ggpo
 )
 
-if(WIN32)
+set(GGPO_WINDOWS_BUILD_LAYER "LAYERED" CACHE STRING
+	"Windows build composition used for temporary legacy/layered qualification")
+set_property(CACHE GGPO_WINDOWS_BUILD_LAYER PROPERTY STRINGS LAYERED LEGACY)
+
+if(NOT WIN32)
+	message(FATAL_ERROR
+		"The GGPO SDK currently supports only the Windows platform layer. "
+		"Linux and Apple adapters are planned follow-up work.")
+elseif(GGPO_WINDOWS_BUILD_LAYER STREQUAL "LAYERED")
+	include(platform/windows/Platform.cmake)
+	ggpo_configure_platform(GGPO)
+elseif(GGPO_WINDOWS_BUILD_LAYER STREQUAL "LEGACY")
+	# Test-only same-source entry retained until the M3 B-vs-C gate passes.
+	target_sources(GGPO PRIVATE lib/ggpo/platform_windows.cpp)
 	target_compile_options(GGPO PRIVATE "/W4" "/WX")
 	target_compile_definitions(GGPO PRIVATE _CRT_SECURE_NO_WARNINGS)
+	target_link_libraries(GGPO PUBLIC winmm.lib ws2_32.lib)
 	if(BUILD_SHARED_LIBS)
-		# Link to Multimedia API and Winsocks during a shared build.
-		target_link_libraries(GGPO PUBLIC winmm.lib ws2_32.lib)
-		add_definitions(-DGGPO_SHARED_LIB)
-		add_definitions(-DGGPO_SDK_EXPORT)
+		target_compile_definitions(GGPO PUBLIC GGPO_SHARED_LIB)
+		target_compile_definitions(GGPO PRIVATE GGPO_SDK_EXPORT)
 	endif()
+else()
+	message(FATAL_ERROR
+		"GGPO_WINDOWS_BUILD_LAYER must be LAYERED or LEGACY, got "
+		"'${GGPO_WINDOWS_BUILD_LAYER}'")
 endif()
 
 set_target_properties(GGPO PROPERTIES VERSION ${PROJECT_VERSION})
@@ -35,10 +55,35 @@ install(
 
 install(
 	TARGETS GGPO
-	EXPORT ggpo
+	EXPORT GGPOTargets
 	RUNTIME DESTINATION bin
 	LIBRARY DESTINATION lib
 	ARCHIVE DESTINATION lib
+	INCLUDES DESTINATION include
+)
+
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+	${CMAKE_CURRENT_SOURCE_DIR}/cmake/GGPOConfig.cmake.in
+	${CMAKE_CURRENT_BINARY_DIR}/GGPOConfig.cmake
+	INSTALL_DESTINATION lib/cmake/GGPO
+)
+write_basic_package_version_file(
+	${CMAKE_CURRENT_BINARY_DIR}/GGPOConfigVersion.cmake
+	VERSION ${PROJECT_VERSION}
+	COMPATIBILITY SameMajorVersion
+)
+install(
+	EXPORT GGPOTargets
+	FILE GGPOTargets.cmake
+	NAMESPACE GGPO::
+	DESTINATION lib/cmake/GGPO
+)
+install(
+	FILES
+		${CMAKE_CURRENT_BINARY_DIR}/GGPOConfig.cmake
+		${CMAKE_CURRENT_BINARY_DIR}/GGPOConfigVersion.cmake
+	DESTINATION lib/cmake/GGPO
 )
 
 if(MSVC)
