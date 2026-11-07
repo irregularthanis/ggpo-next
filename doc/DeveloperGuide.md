@@ -178,17 +178,40 @@ self-contained tests. Use
 `-DGGPO_RUN_TESTS_ON_BUILD=OFF` only when test execution must be explicit, or
 `-DBUILD_TESTING=OFF` for a consumer/packaging-only build.
 
-### Link the installed package
+### Use the installed SDK from an application
 
-Both installation paths expose the same package. A consumer links only its
-exported target:
+For an application named `application_x`, include the public header in source:
 
-```cmake
-find_package(GGPO CONFIG REQUIRED)
-target_link_libraries(my_game PRIVATE GGPO::GGPO)
+```cpp
+#include <ggponet.h>
+
+int main()
+{
+    GGPOSession *session = 0;
+    (void)session;
+    return 0;
+}
 ```
 
-Use separate application build directories when comparing linkage variants:
+Then consume the installed CMake package in the application's `CMakeLists.txt`:
+
+```cmake
+cmake_minimum_required(VERSION 3.10)
+project(application_x LANGUAGES CXX)
+
+find_package(GGPO CONFIG REQUIRED)
+add_executable(application_x main.cpp)
+target_link_libraries(application_x PRIVATE GGPO::GGPO)
+```
+
+For a DEB or RPM installation, configure normally because GGPO is under `/usr`:
+
+```bash
+cmake -S . -B build
+cmake --build build --parallel
+```
+
+For an extracted tarball or a source-built SDK, identify its install prefix:
 
 ```bash
 # Compile the application against the extracted shared SDK.
@@ -202,9 +225,19 @@ cmake -S . -B build-static \
 cmake --build build-static --parallel
 ```
 
-The source and `target_link_libraries` call do not change. The selected package
-makes `GGPO::GGPO` resolve to `libGGPO.so` or `libGGPO.a`. System-installed DEB
-or RPM packages need no `CMAKE_PREFIX_PATH`.
+The application source and CMake target do not change. The selected prefix makes
+`GGPO::GGPO` resolve to `libGGPO.so` or `libGGPO.a` and supplies required system
+link dependencies. With the raw shared SDK during development, expose its
+runtime library when launching:
+
+```bash
+LD_LIBRARY_PATH=/path/to/ggpo-0.2.0-linux-x86_64-shared/lib \
+  ./build-shared/application_x
+```
+
+For distribution, ship `libGGPO.so.0` with a shared application and configure
+an application-relative RPATH, or use the static SDK so GGPO is incorporated
+into `application_x` and no GGPO runtime library is required.
 
 See the [build architecture](architecture/Build.md#install-layout) for the
 canonical layout and the [release workflow](architecture/Build.md#release-packages)
