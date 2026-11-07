@@ -54,9 +54,9 @@ repeated, interleaved A/B runs rather than a single elapsed-time result.
 ```mermaid
 flowchart LR
     Consumer["Game integration<br/>public C API"]
-    Core["Portable GGPO core<br/>rollback, backends, protocol"]
-    Contract["Platform contracts<br/>clock, wait, UDP, config, diagnostics"]
-    WinBuild["Windows build layer<br/>sources, defines, system libraries"]
+    Core["Portable GGPO core<br/>rollback, backends,<br/>protocol"]
+    Contract["Platform contracts<br/>clock, wait, UDP,<br/>config, diagnostics"]
+    WinBuild["Windows build layer<br/>sources, defines,<br/>system libraries"]
     WinImpl["Windows adapters<br/>Win32 and Winsock"]
     Future["Follow-up layers<br/>Linux, Apple, others"]
 
@@ -192,12 +192,12 @@ The two suites answer different questions and must remain separate:
 
 ```mermaid
 flowchart TD
-    CoreSuite["Platform-agnostic smoke suite"]
-    Fake["Deterministic fake adapter<br/>virtual time, memory UDP, temp files"]
-    Core["GGPO portable core"]
-    ContractSuite["Shared platform conformance suite"]
+    CoreSuite["Platform-agnostic<br/>smoke suite"]
+    Fake["Deterministic fake adapter<br/>virtual time, memory UDP,<br/>temp files"]
+    Core["GGPO portable<br/>core"]
+    ContractSuite["Shared platform<br/>conformance suite"]
     Windows["Real Windows adapter<br/>Win32 and Winsock"]
-    Full["Public API and two-peer smoke"]
+    Full["Public API and<br/>two-peer smoke"]
 
     CoreSuite --> Fake --> Core
     ContractSuite --> Windows
@@ -269,13 +269,13 @@ remain mandatory in CI, where the frozen M0 artifacts are available.
 ```mermaid
 flowchart TD
     Entry["configure_windows.cmd<br/>or AppVeyor"]
-    Root["Root CMake<br/>global options and output policy"]
-    List["src/CMakeLists and CMakeSources<br/>mixed source selection"]
+    Root["Root CMake<br/>global options and<br/>output policy"]
+    List["src/CMakeLists and<br/>CMakeSources<br/>mixed source selection"]
     Mixed["GGPO target<br/>core plus selected OS code"]
     Inline["Inline Windows policy<br/>defines, winmm, ws2_32"]
     Leak["Public includes<br/>API plus internal headers"]
     Output["DLL or static library<br/>partial install export"]
-    Sample["Windows Vector War target"]
+    Sample["Windows Vector War<br/>target"]
 
     Entry --> Root --> List --> Mixed --> Output
     Root --> Sample
@@ -291,14 +291,14 @@ an incomplete Unix file, and consumers inherit the internal include directory.
 ```mermaid
 flowchart TD
     Entry["CMake configure<br/>directly or CI wrapper"]
-    Root["Root CMake<br/>products and platform selection"]
+    Root["Root CMake<br/>products and<br/>platform selection"]
     Core["src/CMakeLists<br/>portable GGPO sources"]
     Select{"Supported platform layer?"}
-    Win["platform/windows CMake<br/>sources, defines, system libraries"]
-    Future["Future Linux or Apple layer<br/>same build contract"]
-    Target["GGPO target<br/>core plus one private platform layer"]
-    Public["Public build/install surface<br/>ggponet.h and GGPO::GGPO"]
-    Sample["apps/vectorwar<br/>separate Windows application"]
+    Win["platform/windows CMake<br/>sources, defines,<br/>system libraries"]
+    Future["Future Linux or<br/>Apple layer<br/>same build contract"]
+    Target["GGPO target<br/>core plus one private<br/>platform layer"]
+    Public["Public build/install<br/>surface<br/>ggponet.h and GGPO::GGPO"]
+    Sample["apps/vectorwar<br/>separate Windows<br/>application"]
 
     Entry --> Root --> Core --> Select
     Select -->|"Windows"| Win --> Target --> Public
@@ -347,10 +347,10 @@ or CMake restructuring.
 ```mermaid
 flowchart LR
     A["A: M0 source<br/>existing build"]
-    B["B: refactored source<br/>legacy build entry"]
-    C["C: same refactored source<br/>layered build entry"]
-    Total["A vs C<br/>end-to-end compatibility"]
-    Source["A vs B<br/>source and adapter effects"]
+    B["B: refactored source<br/>legacy build<br/>entry"]
+    C["C: same refactored<br/>source<br/>layered build entry"]
+    Total["A vs C<br/>end-to-end<br/>compatibility"]
+    Source["A vs B<br/>source and<br/>adapter effects"]
     Build["B vs C<br/>build-system effect"]
 
     A --> Total

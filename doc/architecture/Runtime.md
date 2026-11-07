@@ -30,16 +30,16 @@ backend and return it through the opaque `GGPOSession*` handle.
 
 ```mermaid
 flowchart TD
-    Start{"Public constructor"}
-    P2P["ggpo_start_session"]
-    Spectate["ggpo_start_spectating"]
-    Test["ggpo_start_synctest"]
-    P2PBackend["Peer2PeerBackend"]
-    SpectatorBackend["SpectatorBackend"]
-    SyncTestBackend["SyncTestBackend"]
-    Callbacks["Copy application callbacks"]
-    Queues["Create Sync and input queues"]
-    Socket["Bind local UDP socket"]
+    Start{"Public<br/>constructor"}
+    P2P["ggpo_start_<br/>session"]
+    Spectate["ggpo_start_<br/>spectating"]
+    Test["ggpo_start_<br/>synctest"]
+    P2PBackend["Peer2Peer<br/>Backend"]
+    SpectatorBackend["Spectator<br/>Backend"]
+    SyncTestBackend["SyncTest<br/>Backend"]
+    Callbacks["Copy application<br/>callbacks"]
+    Queues["Create Sync and<br/>input queues"]
+    Socket["Bind local<br/>UDP socket"]
 
     Start --> P2P --> P2PBackend
     Start --> Spectate --> SpectatorBackend
@@ -63,20 +63,20 @@ The application drives every frame. Vector War provides the concrete sequence in
 
 ```mermaid
 sequenceDiagram
-    participant Input as Local device input
-    participant App as Game application
-    participant P2P as Peer backend
-    participant Sync as Sync core
-    participant Peer as Remote peer
+    participant Input as Local device<br/>input
+    participant App as Game<br/>application
+    participant P2P as Peer<br/>backend
+    participant Sync as Sync<br/>core
+    participant Peer as Remote<br/>peer
 
     Input->>App: current local controls
     App->>P2P: ggpo_add_local_input()
-    P2P->>Sync: assign current frame and queue input
-    P2P->>Peer: send pending input history
+    P2P->>Sync: assign current frame<br/>and queue input
+    P2P->>Peer: send pending<br/>input history
     App->>P2P: ggpo_synchronize_input()
     P2P->>Sync: inputs for current frame
-    Sync-->>App: confirmed or predicted values
-    App->>App: advance deterministic game state
+    Sync-->>App: confirmed or<br/>predicted values
+    App->>App: advance deterministic<br/>game state
     App->>P2P: ggpo_advance_frame()
     P2P->>Sync: increment and save state
     P2P->>Peer: poll protocol events
@@ -99,7 +99,7 @@ flowchart TD
     Reset["Reset queue predictions<br/>at restored frame"]
     Replay["Call advance_frame once<br/>for each missing frame"]
     Inputs["Application calls<br/>ggpo_synchronize_input"]
-    Advance["Application advances state and<br/>calls ggpo_advance_frame"]
+    Advance["Application advances<br/>state and calls<br/>ggpo_advance_frame"]
     CaughtUp["Original frame reached;<br/>leave rollback mode"]
 
     Detect --> Load --> Reset --> Replay

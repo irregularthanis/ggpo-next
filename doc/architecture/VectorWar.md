@@ -35,14 +35,14 @@ consumer.
 
 ```mermaid
 flowchart TD
-    Main["main.cpp<br/>Win32 process and 60 Hz loop"]
+    Main["main.cpp<br/>Win32 process and<br/>60 Hz loop"]
     Host["vectorwar.cpp<br/>GGPO integration"]
     Game["GameState<br/>deterministic simulation"]
-    NonGame["NonGameState<br/>connection and UI data"]
+    NonGame["NonGameState<br/>connection and<br/>UI data"]
     Renderer["GDIRenderer<br/>presentation only"]
     Perf["GGPO perf monitor<br/>network statistics"]
     API["ggponet.h<br/>public API"]
-    Session["GGPOSession<br/>P2P, spectator, or SyncTest"]
+    Session["GGPOSession<br/>P2P, spectator,<br/>or SyncTest"]
 
     Main --> Host
     Host --> Game
@@ -105,12 +105,12 @@ flowchart TD
     Entry["wWinMain"]
     Window["CreateMainWindow"]
     Sockets["WSAStartup"]
-    Parse["Parse players and endpoints"]
+    Parse["Parse players<br/>and endpoints"]
     Mode{"spectate argument?"}
     Player["VectorWar_Init"]
-    Spectator["VectorWar_InitSpectator"]
+    Spectator["VectorWar_<br/>InitSpectator"]
     Loop["RunMainLoop"]
-    Exit["VectorWar_Exit and WSACleanup"]
+    Exit["VectorWar_Exit<br/>and WSACleanup"]
 
     Entry --> Window --> Sockets --> Parse --> Mode
     Mode -->|"no"| Player --> Loop
@@ -161,10 +161,10 @@ only `NonGameState`:
 stateDiagram-v2
     [*] --> Connecting
     Connecting --> Synchronizing: peer connected
-    Synchronizing --> Running: all peers synchronized
-    Running --> Disconnecting: packet interruption
-    Disconnecting --> Running: packets resume
-    Disconnecting --> Disconnected: timeout expires
+    Synchronizing --> Running: all peers<br/>synchronized
+    Running --> Disconnecting: packet<br/>interruption
+    Disconnecting --> Running: packets<br/>resume
+    Disconnecting --> Disconnected: timeout<br/>expires
 ```
 
 The renderer shows these values, but they are deliberately excluded from saved
@@ -177,9 +177,9 @@ integration example:
 
 ```mermaid
 sequenceDiagram
-    participant MainLoop as Win32 frame loop
-    participant VW as Vector War adapter
-    participant GGPO as GGPO session
+    participant MainLoop as Win32<br/>frame loop
+    participant VW as Vector War<br/>adapter
+    participant GGPO as GGPO<br/>session
     participant GS as GameState
     participant Draw as Renderer
 
@@ -187,7 +187,7 @@ sequenceDiagram
     VW->>VW: ReadInputs(hwnd)
     VW->>GGPO: ggpo_add_local_input()
     VW->>GGPO: ggpo_synchronize_input()
-    GGPO-->>VW: all player inputs and disconnect flags
+    GGPO-->>VW: all player inputs and<br/>disconnect flags
     VW->>GS: Update(inputs, disconnect_flags)
     VW->>GGPO: ggpo_advance_frame()
     VW->>Draw: Draw(gs, ngs)
@@ -220,13 +220,13 @@ replay. The callback does not read the keyboard or render:
 ```mermaid
 sequenceDiagram
     participant Sync as GGPO Sync
-    participant CB as vw_advance_frame_callback
+    participant CB as vw_advance_frame_<br/>callback
     participant API as GGPO API
     participant GS as GameState
 
     Sync->>CB: advance_frame(0)
     CB->>API: ggpo_synchronize_input()
-    API-->>CB: historical corrected inputs
+    API-->>CB: historical<br/>corrected inputs
     CB->>GS: VectorWar_AdvanceFrame()
     GS->>API: ggpo_advance_frame()
 ```
@@ -265,13 +265,13 @@ frame's synchronized input bit mask. Disconnected players use deterministic
 ```mermaid
 flowchart TD
     Frame["Increment frame"]
-    Ship["For each ship in index order"]
-    Connected{"Disconnected flag set?"}
-    Input["Parse synchronized input bits"]
-    AI["Generate deterministic AI input"]
-    Move["Update heading and velocity"]
-    Bullets["Spawn and move bullets"]
-    Collide["Resolve bounds and ship hits"]
+    Ship["For each ship<br/>in index order"]
+    Connected{"Disconnected<br/>flag set?"}
+    Input["Parse synchronized<br/>input bits"]
+    AI["Generate deterministic<br/>AI input"]
+    Move["Update heading<br/>and velocity"]
+    Bullets["Spawn and<br/>move bullets"]
+    Collide["Resolve bounds<br/>and ship hits"]
     Cooldown["Decrement cooldown"]
 
     Frame --> Ship --> Connected
@@ -312,10 +312,10 @@ so no game-state snapshots are streamed.
 flowchart LR
     P1["Player peer 1"]
     P2["Player peer 2"]
-    Confirm["Minimum confirmed frame"]
-    Stream["Confirmed composite inputs"]
-    Spectator["SpectatorBackend"]
-    Sim["Local Vector War simulation"]
+    Confirm["Minimum confirmed<br/>frame"]
+    Stream["Confirmed composite<br/>inputs"]
+    Spectator["Spectator<br/>Backend"]
+    Sim["Local Vector War<br/>simulation"]
 
     P1 --> Confirm
     P2 --> Confirm

@@ -40,14 +40,14 @@ DLL-only definitions or lifecycle behavior.
 
 ```mermaid
 flowchart TD
-    Configure["Configure Windows build<br/>tests enabled"]
-    Build["Build GGPO, Vector War<br/>and compatibility fixtures"]
+    Configure["Configure Windows<br/>build<br/>tests enabled"]
+    Build["Build GGPO,<br/>Vector War and<br/>compatibility fixtures"]
     Layout["Public and packet<br/>layout checks"]
     Sync["Deterministic<br/>SyncTest smoke"]
     Peers["Two-process Windows<br/>UDP loopback smoke"]
-    Capture["Capture exports, layouts,<br/>hashes and environment"]
+    Capture["Capture exports,<br/>layouts, hashes<br/>and environment"]
     Noise{"Repeated timing<br/>requested?"}
-    Repeat["Repeat peer pair<br/>and summarize duration"]
+    Repeat["Repeat peer pair<br/>and summarize<br/>duration"]
     Evidence["Upload compatibility<br/>evidence"]
 
     Configure --> Build
@@ -98,11 +98,11 @@ and replay it.
 ```mermaid
 flowchart LR
     Inputs["Two integer inputs"]
-    Step["SmokeApplyInputs<br/>deterministic state step"]
+    Step["SmokeApplyInputs<br/>deterministic<br/>state step"]
     State["Frame, accumulator,<br/>disconnect flags"]
     Save["save_game_state<br/>copy and checksum"]
     Load["load_game_state<br/>restore copy"]
-    Replay["advance_frame<br/>reapply synchronized inputs"]
+    Replay["advance_frame<br/>reapply synchronized<br/>inputs"]
 
     Inputs --> Step --> State
     State --> Save
@@ -135,23 +135,23 @@ one local player and treats the other as remote.
 
 ```mermaid
 sequenceDiagram
-    participant Runner as Python runner
-    participant A as Peer A process
-    participant B as Peer B process
+    participant Runner as Python<br/>runner
+    participant A as Peer A<br/>process
+    participant B as Peer B<br/>process
 
-    Runner->>A: Start player 1 on port A
-    Runner->>B: Start player 2 on port B
-    A->>B: GGPO sync request over UDP
-    B->>A: GGPO sync reply over UDP
+    Runner->>A: Start player 1<br/>on port A
+    Runner->>B: Start player 2<br/>on port B
+    A->>B: GGPO sync request<br/>over UDP
+    B->>A: GGPO sync reply<br/>over UDP
     loop Until frame 180
-        A->>B: Local input and acknowledgements
-        B->>A: Local input and acknowledgements
-        A->>A: Predict, restore and replay as needed
-        B->>B: Predict, restore and replay as needed
+        A->>B: Local input and<br/>acknowledgements
+        B->>A: Local input and<br/>acknowledgements
+        A->>A: Predict, restore and<br/>replay as needed
+        B->>B: Predict, restore and<br/>replay as needed
     end
-    A-->>Runner: Frame, checksum and callback counts
-    B-->>Runner: Frame, checksum and callback counts
-    Runner->>Runner: Require equal frame and checksum
+    A-->>Runner: Frame, checksum and<br/>callback counts
+    B-->>Runner: Frame, checksum and<br/>callback counts
+    Runner->>Runner: Require equal frame<br/>and checksum
 ```
 
 A pass establishes real Windows socket and two-peer behavior on one machine.

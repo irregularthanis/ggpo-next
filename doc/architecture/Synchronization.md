@@ -29,12 +29,12 @@ to peers by the current protocol.
 flowchart LR
     Device["Local controls"]
     Submit["AddLocalInput"]
-    LocalQueue["Local InputQueue<br/>confirmed input"]
-    Network["UDP input message"]
-    RemoteQueue["Remote InputQueue<br/>confirmed or predicted"]
+    LocalQueue["Local InputQueue<br/>confirmed<br/>input"]
+    Network["UDP input<br/>message"]
+    RemoteQueue["Remote InputQueue<br/>confirmed or<br/>predicted"]
     Sync["SynchronizeInputs"]
     Composite["All players' inputs<br/>for current frame"]
-    Game["Deterministic frame step"]
+    Game["Deterministic<br/>frame step"]
 
     Device --> Submit --> LocalQueue
     Submit --> Network
@@ -85,17 +85,17 @@ is saved when the first local input is accepted; subsequent states are saved by
 
 ```mermaid
 sequenceDiagram
-    participant Queue as Input queues
+    participant Queue as Input<br/>queues
     participant Sync as Sync
-    participant Host as Game callbacks
+    participant Host as Game<br/>callbacks
 
-    Queue-->>Sync: earliest incorrect frame N
+    Queue-->>Sync: earliest incorrect<br/>frame N
     Sync->>Sync: find checkpoint N
     Sync->>Host: load_game_state(checkpoint N)
     Sync->>Queue: reset predictions at N
     loop N through previous current frame - 1
         Sync->>Host: advance_frame(0)
-        Host->>Sync: synchronize input and advance frame
+        Host->>Sync: synchronize input<br/>and advance frame
         Host->>Sync: ggpo_advance_frame()
     end
     Sync->>Sync: leave rollback mode

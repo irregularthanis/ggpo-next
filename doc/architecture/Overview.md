@@ -38,16 +38,16 @@ See the existing [Developer Guide](../DeveloperGuide.md) for integration advice.
 
 ```mermaid
 flowchart LR
-    Game["Game application<br/>simulation, input, presentation"]
+    Game["Game application<br/>simulation, input,<br/>presentation"]
     API["Public C API<br/>ggponet.h"]
-    Backend["Session backend<br/>P2P, spectator, or SyncTest"]
-    Sync["Rollback synchronization<br/>saved states and input queues"]
-    Protocol["Peer protocol<br/>input, ACK, quality and sync messages"]
+    Backend["Session backend<br/>P2P, spectator,<br/>or SyncTest"]
+    Sync["Rollback synchronization<br/>saved states and<br/>input queues"]
+    Protocol["Peer protocol<br/>input, ACK, quality<br/>and sync messages"]
     UDP["UDP transport<br/>non-blocking socket"]
     Peer["Remote GGPO peer"]
-    Platform["Platform services<br/>time, sleep, configuration"]
+    Platform["Platform services<br/>time, sleep,<br/>configuration"]
 
-    Game <-->|"calls and callbacks"| API
+    Game <-->|"calls and<br/>callbacks"| API
     API --> Backend
     Backend <--> Sync
     Backend <--> Protocol
@@ -84,22 +84,22 @@ For the complete application flow, see the [Vector War walkthrough](VectorWar.md
 
 ```mermaid
 sequenceDiagram
-    participant App as Game application
-    participant GGPO as Session backend
-    participant Sync as Synchronization core
-    participant Net as UDP peer protocol
+    participant App as Game<br/>application
+    participant GGPO as Session<br/>backend
+    participant Sync as Synchronization<br/>core
+    participant Net as UDP<br/>peer protocol
 
     App->>GGPO: ggpo_add_local_input()
     GGPO->>Sync: queue local input
     GGPO->>Net: send input to peers
     App->>GGPO: ggpo_synchronize_input()
-    GGPO->>Sync: obtain confirmed or predicted inputs
+    GGPO->>Sync: obtain confirmed or<br/>predicted inputs
     Sync-->>App: all players' inputs
-    App->>App: advance deterministic simulation
+    App->>App: advance deterministic<br/>simulation
     App->>GGPO: ggpo_advance_frame()
-    GGPO->>Sync: save new state and advance frame
-    GGPO->>Net: poll messages and acknowledgements
-    alt late input differs from prediction
+    GGPO->>Sync: save new state and<br/>advance frame
+    GGPO->>Net: poll messages and<br/>acknowledgements
+    alt late input differs<br/>from prediction
         Sync->>App: load_game_state callback
         loop each replayed frame
             Sync->>App: advance_frame callback

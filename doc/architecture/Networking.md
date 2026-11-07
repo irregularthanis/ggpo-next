@@ -19,13 +19,13 @@ addresses and ports through [`GGPOPlayer`](../../src/include/ggponet.h).
 
 ```mermaid
 flowchart LR
-    Backend["Peer2PeerBackend"]
+    Backend["Peer2Peer<br/>Backend"]
     Poll["Poll loop"]
     UDP["Udp<br/>one local socket"]
     P1["UdpProtocol<br/>remote player 1"]
     P2["UdpProtocol<br/>remote player N"]
     S["UdpProtocol<br/>spectator"]
-    Network["UDP network"]
+    Network["UDP<br/>network"]
 
     Backend --> Poll
     Backend --> P1
@@ -58,11 +58,11 @@ measurements, connection state, and simulated latency/loss diagnostics.
 ```mermaid
 stateDiagram-v2
     [*] --> Syncing: Synchronize()
-    Syncing --> Synchronzied: handshake round trips complete
-    Synchronzied --> Running: synchronization event consumed
-    Running --> Running: input, ACK, quality, keepalive
-    Running --> Disconnected: local or remote disconnect
-    Syncing --> Disconnected: timeout or explicit disconnect
+    Syncing --> Synchronzied: handshake round<br/>trips complete
+    Synchronzied --> Running: synchronization<br/>event consumed
+    Running --> Running: input, ACK,<br/>quality, keepalive
+    Running --> Disconnected: local or remote<br/>disconnect
+    Syncing --> Disconnected: timeout or explicit<br/>disconnect
     Disconnected --> [*]
 ```
 
@@ -106,13 +106,13 @@ sequenceDiagram
     participant A as Peer A
     participant B as Peer B
 
-    A->>B: Input frames N..M plus ACK K
+    A->>B: Input frames N..M<br/>plus ACK K
     B->>B: decode unseen frames
-    B-->>A: Input frames P..Q plus ACK M
+    B-->>A: Input frames P..Q<br/>plus ACK M
     alt B has no input to send
         B-->>A: InputAck M
     end
-    A->>A: discard acknowledged pending history
+    A->>A: discard acknowledged<br/>pending history
 ```
 
 ## Quality and time synchronization
