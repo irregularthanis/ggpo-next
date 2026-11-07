@@ -7,6 +7,11 @@
 
 #ifndef _TYPES_H
 #define _TYPES_H
+
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 /*
  * Keep the compiler happy
  */

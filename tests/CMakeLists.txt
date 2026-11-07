@@ -81,6 +81,7 @@ endforeach()
 add_library(ggpo_fake_core STATIC
     ${GGPO_FAKE_CORE_SOURCES}
     platform/fake/platform_fake.cpp
+    platform/fake/platform_fake.h
 )
 add_common_flags(ggpo_fake_core)
 target_compile_options(ggpo_fake_core PRIVATE "/W4" "/WX")
@@ -107,3 +108,15 @@ set_tests_properties(fake_platform_synctest PROPERTIES
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/fake-synctest
     TIMEOUT 60
 )
+
+add_executable(ggpo_fake_platform_contract
+    platform/fake/platform_fake_test.cpp
+)
+add_common_flags(ggpo_fake_platform_contract)
+target_compile_options(ggpo_fake_platform_contract PRIVATE "/W4")
+target_include_directories(ggpo_fake_platform_contract PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/lib/ggpo
+    ${CMAKE_CURRENT_SOURCE_DIR}/platform/fake
+)
+target_link_libraries(ggpo_fake_platform_contract PRIVATE ggpo_fake_core)
+add_test(NAME fake_platform_contract COMMAND ggpo_fake_platform_contract)
