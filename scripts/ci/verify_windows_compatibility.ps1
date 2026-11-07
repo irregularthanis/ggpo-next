@@ -16,7 +16,16 @@ $baselineEvidence = Join-Path $EvidenceRoot "baseline"
 $candidateEvidence = Join-Path $EvidenceRoot "candidate"
 
 # The immutable baseline checkout retains its original script and target names.
-& (Join-Path $baseline "scripts/ci/windows_m0.ps1") `
+# Discover them by role so those historical names do not become part of the
+# current compatibility interface.
+$baselineRunners = @(
+    Get-ChildItem (Join-Path $baseline "scripts/ci") -Filter "windows_*.ps1" |
+        Where-Object { $_.Name -notmatch "^capture_" }
+)
+if ($baselineRunners.Count -ne 1) {
+    throw "Expected one Windows qualification runner in the frozen baseline; found $($baselineRunners.Count)"
+}
+& $baselineRunners[0].FullName `
     -Architecture x64 -Shared ON -Configuration Release `
     -Generator $Generator -BuildDirectory $baselineBuild `
     -EvidenceDirectory $baselineEvidence
@@ -42,8 +51,12 @@ $crossRoot = New-Item -ItemType Directory -Force -Path (Join-Path $EvidenceRoot 
 $baselineBin = Join-Path $baselineBuild "bin/x64/Release"
 $candidateBin = Join-Path $candidateBuild "bin/x64/Release"
 $runner = Join-Path $repo "tests/smoke/run_peer_smoke.py"
+$baselinePeerExecutables = @(Get-ChildItem $baselineBin -Filter "ggpo_*_peer_smoke.exe")
+if ($baselinePeerExecutables.Count -ne 1) {
+    throw "Expected one peer-smoke executable in the frozen baseline; found $($baselinePeerExecutables.Count)"
+}
 $crossCases = @(
-    @{ Name = "baseline-exe-candidate-dll"; Exe = (Join-Path $baselineBin "ggpo_m0_peer_smoke.exe"); Dll = $candidateBin },
+    @{ Name = "baseline-exe-candidate-dll"; Exe = $baselinePeerExecutables[0].FullName; Dll = $candidateBin },
     @{ Name = "candidate-exe-baseline-dll"; Exe = (Join-Path $candidateBin "ggpo_windows_peer_smoke.exe"); Dll = $baselineBin }
 )
 $checksums = @()
