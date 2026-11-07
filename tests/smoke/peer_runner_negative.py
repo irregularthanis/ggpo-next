@@ -43,7 +43,7 @@ def main():
     )
     expect_failure(
         "state mismatch", executable, "peer checksum mismatch",
-        fault_a="mismatch",
+        fault_a="mismatch", fault_b="mismatch",
     )
     expect_failure(
         "shutdown", executable, "fault: shutdown",

@@ -238,7 +238,7 @@ main(int argc, char **argv)
       TestWaitMs(1);
    }
 
-   if (FaultEnabled("mismatch")) {
+   if (FaultEnabled("mismatch") && local_player == 1) {
       g_smoke_state.accumulator ^= 1u;
    }
    if (!WriteResult(argv[5], local_player)) {
@@ -251,6 +251,13 @@ main(int argc, char **argv)
           g_smoke_metrics.loads,
           g_smoke_metrics.replay_frames);
 
+   if (FaultEnabled("mismatch")) {
+      return 0;
+   }
+   if (FaultEnabled("shutdown")) {
+      fprintf(stderr, "fault: shutdown\n");
+      return 92;
+   }
    if (!CheckResult(ggpo_close_session(g_smoke_session),
                     "ggpo_close_session")) {
       return 1;
@@ -260,9 +267,5 @@ main(int argc, char **argv)
    // Balance the fixture's startup reference after GGPO closes its session.
    WSACleanup();
 #endif
-   if (FaultEnabled("shutdown")) {
-      fprintf(stderr, "fault: shutdown\n");
-      return 92;
-   }
    return 0;
 }
