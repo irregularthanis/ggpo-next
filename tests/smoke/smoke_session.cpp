@@ -19,6 +19,7 @@ SmokeReset(void)
    g_smoke_session = NULL;
 }
 
+// Apply one deterministic frame transition from both players' inputs.
 void
 SmokeApplyInputs(SmokeState *state, const int inputs[2], int disconnect_flags)
 {
@@ -30,6 +31,7 @@ SmokeApplyInputs(SmokeState *state, const int inputs[2], int disconnect_flags)
    state->frame++;
 }
 
+// Hash the complete guest-visible test state for peer comparison.
 unsigned int
 SmokeChecksum(const SmokeState *state)
 {
@@ -43,12 +45,14 @@ SmokeChecksum(const SmokeState *state)
    return checksum;
 }
 
+// Accept GGPO's legacy begin-game notification for the fixture.
 static bool GGPO_CALL
 SmokeBeginGame(const char *)
 {
    return true;
 }
 
+// Snapshot deterministic state so rollback can restore it later.
 static bool GGPO_CALL
 SmokeSaveState(unsigned char **buffer, int *len, int *checksum, int)
 {
@@ -63,6 +67,7 @@ SmokeSaveState(unsigned char **buffer, int *len, int *checksum, int)
    return true;
 }
 
+// Restore a previously captured rollback snapshot.
 static bool GGPO_CALL
 SmokeLoadState(unsigned char *buffer, int len)
 {
@@ -74,18 +79,21 @@ SmokeLoadState(unsigned char *buffer, int len)
    return true;
 }
 
+// Satisfy the optional state-logging callback without producing fixture logs.
 static bool GGPO_CALL
 SmokeLogState(char *, unsigned char *, int)
 {
    return true;
 }
 
+// Release snapshot storage allocated by SmokeSaveState.
 static void GGPO_CALL
 SmokeFreeBuffer(void *buffer)
 {
    free(buffer);
 }
 
+// Replay one synchronized frame after GGPO restores a snapshot.
 static bool GGPO_CALL
 SmokeAdvanceFrame(int)
 {
@@ -106,6 +114,7 @@ SmokeAdvanceFrame(int)
    return GGPO_SUCCEEDED(ggpo_advance_frame(g_smoke_session));
 }
 
+// Record when the peer session becomes ready to accept gameplay input.
 static bool GGPO_CALL
 SmokeOnEvent(GGPOEvent *info)
 {
@@ -115,6 +124,7 @@ SmokeOnEvent(GGPOEvent *info)
    return true;
 }
 
+// Assemble the callback contract shared by the smoke-test sessions.
 GGPOSessionCallbacks
 SmokeCallbacks(void)
 {

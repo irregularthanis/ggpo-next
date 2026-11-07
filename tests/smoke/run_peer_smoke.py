@@ -17,6 +17,7 @@ import time
 from pathlib import Path
 
 
+# Reserve an available loopback UDP port for one peer process.
 def reserve_udp_port():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("127.0.0.1", 0))
@@ -25,6 +26,7 @@ def reserve_udp_port():
     return port
 
 
+# Run one peer pair and validate its frames, events, and final checksum.
 def run_pair(executable_a, executable_b, frames, run_number):
     port_a = reserve_udp_port()
     port_b = reserve_udp_port()
@@ -89,6 +91,7 @@ def run_pair(executable_a, executable_b, frames, run_number):
         }
 
 
+# Repeat the peer test and summarize its observed execution time.
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("executable", type=Path)

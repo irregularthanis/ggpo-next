@@ -15,6 +15,7 @@ InputForPlayer(int player, int frame)
    return ((frame + 1) * (player * 17 + 3)) ^ (frame << player);
 }
 
+// Convert a GGPO result into a readable test failure.
 static bool
 CheckResult(GGPOErrorCode result, const char *operation)
 {
@@ -25,6 +26,7 @@ CheckResult(GGPOErrorCode result, const char *operation)
    return true;
 }
 
+// Persist the final peer state for independent cross-host comparison.
 static bool
 WriteResult(const char *path, int player)
 {
@@ -48,6 +50,7 @@ WriteResult(const char *path, int player)
    return true;
 }
 
+// Run one native peer through handshake, synchronized frames, and shutdown.
 int
 main(int argc, char **argv)
 {

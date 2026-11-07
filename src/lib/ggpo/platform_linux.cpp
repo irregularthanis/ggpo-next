@@ -24,9 +24,11 @@
 
 struct ggpo_platform::UdpSocket::Impl {
    int socket;
+   // Start detached from any native socket descriptor.
    Impl() : socket(-1) { }
 };
 
+// Return monotonic milliseconds for GGPO deadlines and elapsed-time checks.
 uint32
 ggpo_platform::MonotonicTimeMs()
 {
@@ -40,6 +42,7 @@ ggpo_platform::MonotonicTimeMs()
    return (uint32)milliseconds;
 }
 
+// Suspend without shortening the wait when interrupted by a signal.
 void
 ggpo_platform::WaitMs(int timeout_ms)
 {
@@ -52,20 +55,24 @@ ggpo_platform::WaitMs(int timeout_ms)
    while (nanosleep(&requested, &requested) != 0 && errno == EINTR) { }
 }
 
+// Identify the process for platform-neutral logging and diagnostics.
 uint32 ggpo_platform::ProcessId() { return (uint32)getpid(); }
 
+// Report a failed internal invariant without changing the public ABI.
 void
 ggpo_platform::AssertFailed(const char *message)
 {
    fprintf(stderr, "GGPO assertion failed: %s\n", message ? message : "");
 }
 
+// Create a directory or accept one that already exists.
 bool
 ggpo_platform::EnsureDirectory(const char *path)
 {
    return path && (mkdir(path, 0755) == 0 || errno == EEXIST);
 }
 
+// Read an integer setting from the process environment.
 int
 ggpo_platform::GetConfigInt(const char *name, int fallback)
 {
@@ -73,6 +80,7 @@ ggpo_platform::GetConfigInt(const char *name, int fallback)
    return value ? atoi(value) : fallback;
 }
 
+// Read a boolean setting while preserving the caller's fallback.
 bool
 ggpo_platform::GetConfigBool(const char *name, bool fallback)
 {
@@ -83,6 +91,7 @@ ggpo_platform::GetConfigBool(const char *name, bool fallback)
    return atoi(value) != 0 || strcasecmp(value, "true") == 0;
 }
 
+// Convert an IPv4 string and port into GGPO's portable endpoint form.
 bool
 ggpo_platform::ParseUdpEndpoint(const char *address, uint16 port,
                                 UdpEndpoint *endpoint)
@@ -100,6 +109,7 @@ ggpo_platform::ParseUdpEndpoint(const char *address, uint16 port,
    return true;
 }
 
+// Compare portable endpoint address and port values.
 bool
 ggpo_platform::SameUdpEndpoint(const UdpEndpoint &left,
                                const UdpEndpoint &right)
@@ -108,6 +118,7 @@ ggpo_platform::SameUdpEndpoint(const UdpEndpoint &left,
           left.port == right.port;
 }
 
+// Format a portable endpoint for diagnostics without overflowing the buffer.
 void
 ggpo_platform::FormatUdpEndpoint(const UdpEndpoint &endpoint, char *buffer,
                                  int length)
@@ -120,17 +131,23 @@ ggpo_platform::FormatUdpEndpoint(const UdpEndpoint &endpoint, char *buffer,
    }
 }
 
+// Report that POSIX sockets are immediately available to the process.
 bool ggpo_platform::NetworkStartup() { return true; }
+
+// Perform the POSIX no-op counterpart to process-wide network startup.
 void ggpo_platform::NetworkShutdown() { }
 
+// Allocate the hidden native-socket state used by the portable interface.
 ggpo_platform::UdpSocket::UdpSocket() : _impl(new Impl()) { }
 
+// Close the descriptor before releasing its hidden state.
 ggpo_platform::UdpSocket::~UdpSocket()
 {
    Close();
    delete _impl;
 }
 
+// Open a nonblocking UDP socket, retrying consecutive ports when requested.
 bool
 ggpo_platform::UdpSocket::OpenAndBind(uint16 requested_port, int retries,
                                       uint16 *bound_port)
@@ -168,6 +185,7 @@ ggpo_platform::UdpSocket::OpenAndBind(uint16 requested_port, int retries,
    return false;
 }
 
+// Send one datagram and translate POSIX results into portable I/O status.
 ggpo_platform::IoResult
 ggpo_platform::UdpSocket::Send(const void *data, int bytes,
                                const UdpEndpoint &to)
@@ -193,6 +211,7 @@ ggpo_platform::UdpSocket::Send(const void *data, int bytes,
    return errno == EAGAIN || errno == EWOULDBLOCK ? IO_WOULD_BLOCK : IO_ERROR;
 }
 
+// Receive one datagram and return its portable source endpoint.
 ggpo_platform::IoResult
 ggpo_platform::UdpSocket::Receive(void *data, int capacity, int *bytes,
                                   UdpEndpoint *from)
@@ -222,6 +241,7 @@ ggpo_platform::UdpSocket::Receive(void *data, int capacity, int *bytes,
    return IO_OK;
 }
 
+// Close an open descriptor and make repeated closes harmless.
 void
 ggpo_platform::UdpSocket::Close()
 {

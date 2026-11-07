@@ -17,9 +17,11 @@ jobs:
         library: [shared, static]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out the tested source
+        uses: actions/checkout@v4
 
-      - uses: docker/setup-buildx-action@v3
+      - name: Enable cached container builds
+        uses: docker/setup-buildx-action@v3
 
       - name: Build the shared Linux environment
         uses: docker/build-push-action@v6

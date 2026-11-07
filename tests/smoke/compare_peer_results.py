@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 
+# Confirm two native peers reached the same deterministic session state.
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("peer_a", type=Path)

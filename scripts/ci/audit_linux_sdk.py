@@ -8,11 +8,13 @@ import subprocess
 from pathlib import Path
 
 
+# Capture one inspection command, failing if the tool reports an error.
 def output(*command):
     return subprocess.run(command, check=True, text=True,
                           stdout=subprocess.PIPE).stdout
 
 
+# Verify an installed SDK's library, ABI ceiling, SONAME, and exports.
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("prefix", type=Path)

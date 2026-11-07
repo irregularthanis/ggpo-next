@@ -9,11 +9,13 @@ import sys
 from pathlib import Path
 
 
+# Run a command visibly and stop the build on failure.
 def run(command, **kwargs):
     print("+", " ".join(str(part) for part in command), flush=True)
     subprocess.run([str(part) for part in command], check=True, **kwargs)
 
 
+# Validate the host, then build and verify one Linux SDK configuration.
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--compiler", choices=("gcc", "clang"), default="gcc")
