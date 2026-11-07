@@ -33,6 +33,15 @@ if ($LASTEXITCODE -ne 0) { throw "CMake build failed" }
 ctest --test-dir $BuildDirectory -C $Configuration --output-on-failure
 if ($LASTEXITCODE -ne 0) { throw "CTest failed" }
 
+& (Join-Path $PSScriptRoot "verify_installed_consumers.ps1") `
+    -BuildDirectory $BuildDirectory `
+    -Configuration $Configuration `
+    -Architecture $Architecture `
+    -Shared $Shared `
+    -Generator $Generator `
+    -EvidenceDirectory $EvidenceDirectory
+if ($LASTEXITCODE -ne 0) { throw "Installed-consumer verification failed" }
+
 & (Join-Path $PSScriptRoot "capture_windows_compatibility_baseline.ps1") `
     -BuildDirectory $BuildDirectory `
     -Configuration $Configuration `

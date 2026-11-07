@@ -27,6 +27,7 @@ behavior-changing refactor pass.
 | Layer | Contract | Source | Runs against |
 | --- | --- | --- | --- |
 | Public ABI | Public sizes, offsets, enum values, callback order, and DLL exports | [`public_layout.cpp`](../../tests/baseline/windows/public_layout.cpp), [`exports-x64.txt`](../../tests/baseline/windows/exports-x64.txt) | Compiled header and shared DLL |
+| Installed consumers | C11 and C++98 compile/link use only installed SDK files | [`tests/consumer`](../../tests/consumer), [`verify_installed_consumers.ps1`](../../scripts/ci/verify_installed_consumers.ps1) | Installed header and shared/static library |
 | Wire layout | Packed `UdpMsg` sizes, offsets, and representative packet lengths | [`packet_layout.cpp`](../../tests/baseline/windows/packet_layout.cpp) | Internal protocol structures |
 | Rollback behavior | Save, restore, synchronized input, replay, and deterministic final state | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | SyncTest backend without sockets |
 | Windows transport | Handshake, events, prediction, rollback, UDP delivery, and shutdown | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Two GGPO processes over localhost |
@@ -45,6 +46,7 @@ flowchart TD
     Layout["Public and<br/>packet<br/>layout checks"]
     Sync["Deterministic<br/>SyncTest smoke"]
     Peers["Two-process<br/>Windows<br/>UDP loopback<br/>smoke"]
+    Consumers["Install SDK;<br/>compile and link<br/>C11 and C++98<br/>consumers"]
     Capture["Capture<br/>exports,<br/>layouts,<br/>hashes<br/>and<br/>environment"]
     Noise{"Repeated<br/>timing<br/>requested?"}
     Repeat["Repeat<br/>peer pair<br/>and summarize<br/>duration"]
@@ -54,9 +56,9 @@ flowchart TD
     Build --> Layout
     Build --> Sync
     Build --> Peers
+    Peers --> Consumers --> Capture
     Layout --> Capture
     Sync --> Capture
-    Peers --> Capture
     Capture --> Noise
     Noise -->|"yes"| Repeat --> Evidence
     Noise -->|"no"| Evidence
@@ -171,8 +173,9 @@ windows_peer_loopback
 ```
 
 [`windows_compatibility_baseline.ps1`](../../scripts/ci/windows_compatibility_baseline.ps1)
-configures, builds, runs CTest, and calls the evidence collector. GitHub Actions
-runs it across this matrix:
+configures, builds, runs CTest, installs the SDK, compiles and links the two
+consumer fixtures, and calls the evidence collector. GitHub Actions runs it
+across this matrix:
 
 | Architecture | Linkage | Configuration |
 | --- | --- | --- |
@@ -207,7 +210,6 @@ established by the frame, checksum, callback, and lifecycle assertions.
 - No malformed/truncated packet suite validates parser rejection.
 - No spectator, disconnect/resume, simulated loss, or multi-player automated
   session exists.
-- No installed C/C++ consumer fixture currently checks package consumption.
 - No Linux/macOS build, platform conformance, or cross-OS peer test exists.
 - No sanitizer job is configured.
 

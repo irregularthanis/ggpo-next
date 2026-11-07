@@ -1,6 +1,6 @@
 # PROGRESS — Platform-agnostic GGPO core and Windows build layer
 
-Status: M0 complete; M1–M4 planned
+Status: M0 complete; M1 in validation; M2–M4 planned
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
 ## Milestones
@@ -23,10 +23,10 @@ and qualified by the [Windows compatibility matrix](https://github.com/irregular
 Parallel with M2; owns `src/include`, API/ABI fixtures, and installed-consumer
 contracts. Architecture: [public API](../../architecture/API.md).
 
-- [ ] M1-T01: Introduce portable export/call macros and C boolean support.
-- [ ] M1-T02: Preserve every M0 export, decoration, signature, enum value, callback slot, and public layout.
-- [ ] M1-T03: Compile and link installed-header C11 and C++98 consumers.
-- [ ] M1-T04: Define the ABI/versioning policy for later platform packages.
+- [x] M1-T01: Introduce portable export/call macros and C boolean support.
+- [ ] M1-T02: Preserve every M0 export, decoration, signature, enum value, callback slot, and public layout (matrix pending).
+- [ ] M1-T03: Compile and link installed-header C11 and C++98 consumers (matrix pending).
+- [x] M1-T04: Define the ABI/versioning policy for later platform packages.
 
 ### M2: Extract platform services (depends: M0)
 

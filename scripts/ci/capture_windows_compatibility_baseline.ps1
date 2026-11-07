@@ -74,13 +74,11 @@ if ($Shared -eq "ON") {
     )
     Set-Content -Encoding ascii (Join-Path $output "exports.txt") -Value $symbols
 
-    if ($Architecture -eq "x64") {
-        $expected = Get-Content (Join-Path $repo "tests/baseline/windows/exports-x64.txt")
-        $difference = Compare-Object $expected $symbols
-        if ($difference) {
-            $difference | Format-Table | Out-String | Write-Error
-            throw "x64 DLL exports differ from the Windows compatibility baseline"
-        }
+    $expected = Get-Content (Join-Path $repo "tests/baseline/windows/exports-$prefix.txt")
+    $difference = Compare-Object $expected $symbols
+    if ($difference) {
+        $difference | Format-Table | Out-String | Write-Error
+        throw "$prefix DLL exports differ from the Windows compatibility baseline"
     }
 }
 
