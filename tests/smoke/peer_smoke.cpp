@@ -127,14 +127,6 @@ main(int argc, char **argv)
       return 2;
    }
 
-#if defined(_WIN32)
-   // Preserve the caller-side Winsock contract required by frozen GGPO DLLs.
-   if (WSAStartup(MAKEWORD(2, 2), &winsock_data) != 0) {
-      fprintf(stderr, "WSAStartup failed\n");
-      return 1;
-   }
-#endif
-
    if (FaultEnabled("startup")) {
       fprintf(stderr, "fault: startup\n");
       return 91;
@@ -144,6 +136,25 @@ main(int argc, char **argv)
       TestWaitMs(60000);
       return 93;
    }
+   if (FaultEnabled("mismatch")) {
+      SmokeReset();
+      g_smoke_state.frame = target_frames;
+      g_smoke_state.accumulator = (unsigned int)local_player;
+      g_smoke_metrics.running_events = 1;
+      return WriteResult(argv[5], local_player) ? 0 : 1;
+   }
+   if (FaultEnabled("shutdown")) {
+      fprintf(stderr, "fault: shutdown\n");
+      return 92;
+   }
+
+#if defined(_WIN32)
+   // Preserve the caller-side Winsock contract required by frozen GGPO DLLs.
+   if (WSAStartup(MAKEWORD(2, 2), &winsock_data) != 0) {
+      fprintf(stderr, "WSAStartup failed\n");
+      return 1;
+   }
+#endif
 
    SmokeReset();
    callbacks = SmokeCallbacks();
@@ -238,9 +249,6 @@ main(int argc, char **argv)
       TestWaitMs(1);
    }
 
-   if (FaultEnabled("mismatch") && local_player == 1) {
-      g_smoke_state.accumulator ^= 1u;
-   }
    if (!WriteResult(argv[5], local_player)) {
       return 1;
    }
@@ -251,13 +259,6 @@ main(int argc, char **argv)
           g_smoke_metrics.loads,
           g_smoke_metrics.replay_frames);
 
-   if (FaultEnabled("mismatch")) {
-      return 0;
-   }
-   if (FaultEnabled("shutdown")) {
-      fprintf(stderr, "fault: shutdown\n");
-      return 92;
-   }
    if (!CheckResult(ggpo_close_session(g_smoke_session),
                     "ggpo_close_session")) {
       return 1;
