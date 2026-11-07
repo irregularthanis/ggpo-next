@@ -11,24 +11,27 @@
 
 ## Current boundary
 
-The intended platform selection occurs in [`types.h`](../../src/lib/ggpo/types.h)
-and [`src/CMakeSources.cmake`](../../src/CMakeSources.cmake). In practice, Windows
-types and APIs still leak into polling, networking, logging, backends, and the
-sample. The checked-in [`platform_linux.cpp`](../../src/lib/ggpo/platform_linux.cpp)
-is incomplete and does not provide a working Unix SDK build.
+The core consumes semantic services declared by
+[`platform.h`](../../src/lib/ggpo/platform.h). The Windows implementation in
+[`platform_windows.cpp`](../../src/lib/ggpo/platform_windows.cpp) owns Win32,
+Winsock, native error mapping, and socket representation.
+
+This is a source boundary, not Linux support. The checked-in legacy
+[`platform_linux.cpp`](../../src/lib/ggpo/platform_linux.cpp) remains incomplete;
+platform selection and build-layer separation are the next milestone.
 
 ## Platform dependencies
 
-| Concern | Current dependency | Source |
+| Concern | Core contract | Windows implementation |
 | --- | --- | --- |
-| UDP sockets | Winsock `SOCKET`, `ioctlsocket`, `closesocket`, WSA errors | [`udp.cpp`](../../src/lib/ggpo/network/udp.cpp), [`udp.h`](../../src/lib/ggpo/network/udp.h) |
-| Address types | `sockaddr_in` and IPv4 text conversion | [`udp_proto.h`](../../src/lib/ggpo/network/udp_proto.h) |
-| Pollable events | Win32 `HANDLE`, wait APIs | [`poll.h`](../../src/lib/ggpo/poll.h), [`poll.cpp`](../../src/lib/ggpo/poll.cpp) |
-| Time and sleep | `timeGetTime`, `Sleep` | [`platform_windows.h`](../../src/lib/ggpo/platform_windows.h), [`p2p.cpp`](../../src/lib/ggpo/backends/p2p.cpp) |
-| Configuration | Windows environment helpers | [`platform_windows.cpp`](../../src/lib/ggpo/platform_windows.cpp) |
-| Filesystem and diagnostics | `CreateDirectoryA`, `DebugBreak`, backslash paths | [`synctest.cpp`](../../src/lib/ggpo/backends/synctest.cpp) |
-| C runtime | Microsoft secure-CRT functions | Core and sample sources |
-| Shared-library lifecycle | `DllMain` and Windows export macros | [`main.cpp`](../../src/lib/ggpo/main.cpp), [`ggponet.h`](../../src/include/ggponet.h) |
+| UDP sockets | `UdpSocket` with `ok`, `would_block`, and `error` results | Winsock startup, bind, send/receive, and close |
+| Addresses | `UdpEndpoint` with four IPv4 octets and host-order port | `sockaddr_in` conversion and text formatting |
+| Polling | Computed deadline plus `WaitMs()` | `Sleep()`; unused native-handle registration was removed |
+| Time | Wrapping `MonotonicTimeMs()` | `timeGetTime()` |
+| Configuration | Integer/boolean lookup with explicit fallback | Windows environment lookup |
+| Filesystem and diagnostics | Directory creation and assertion reporting | `CreateDirectoryA` and Windows diagnostic UI |
+| Network lifetime | Balanced startup/shutdown contract | `WSAStartup()` and `WSACleanup()` |
+| Shared-library lifecycle | Public ABI macros remain in [`ggponet.h`](../../src/include/ggponet.h) | `DllMain` is isolated in the Windows adapter |
 | Sample UI | Win32 messages, GDI/OpenGL, keyboard polling | [`src/apps/vectorwar`](../../src/apps/vectorwar) |
 
 ## Portable core
@@ -62,9 +65,15 @@ flowchart LR
     Core --> Files
 ```
 
-Adapters should expose semantic operations rather than reproducing Win32 names on
-Unix. That keeps Linux (`poll`/`epoll`), macOS (`poll`/`kqueue`), and future mobile
-event loops replaceable without changing rollback logic.
+These contracts are implemented in [`platform.h`](../../src/lib/ggpo/platform.h).
+The production [`Udp`](../../src/lib/ggpo/network/udp.cpp) and
+[`Poll`](../../src/lib/ggpo/poll.cpp) code sees no native handles or address
+structures. A [deterministic fake adapter](../../tests/platform/fake/platform_fake.cpp)
+uses the same contracts for rollback and failure/cleanup tests.
+
+Adapters expose semantic operations rather than reproducing Win32 names on
+Unix. That keeps Linux (`poll`/`epoll`), macOS (`poll`/`kqueue`), and future
+mobile event loops replaceable without changing rollback logic.
 
 ## Protocol considerations
 

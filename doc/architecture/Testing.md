@@ -27,8 +27,10 @@ behavior-changing refactor pass.
 | Layer | Contract | Source | Runs against |
 | --- | --- | --- | --- |
 | Public ABI | Public sizes, offsets, enum values, callback order, and DLL exports | [`public_layout.cpp`](../../tests/baseline/windows/public_layout.cpp), [`exports-x64.txt`](../../tests/baseline/windows/exports-x64.txt) | Compiled header and shared DLL |
-| Installed consumers | C11 and C++98 compile/link use only installed SDK files | [`tests/consumer`](../../tests/consumer), [`verify_installed_consumers.ps1`](../../scripts/ci/verify_installed_consumers.ps1) | Installed header and shared/static library |
+| Installed consumers | C11 and C++98 compile/link use only installed SDK files | [`tests/consumer`](../../tests/consumer/CMakeLists.txt), [`verify_installed_consumers.ps1`](../../scripts/ci/verify_installed_consumers.ps1) | Installed header and shared/static library |
 | Wire layout | Packed `UdpMsg` sizes, offsets, and representative packet lengths | [`packet_layout.cpp`](../../tests/baseline/windows/packet_layout.cpp) | Internal protocol structures |
+| Platform contract | Virtual clock/wait, fallbacks, endpoint/socket results, failure, and cleanup | [`platform_fake_test.cpp`](../../tests/platform/fake/platform_fake_test.cpp) | Deterministic fake adapter |
+| Platform-free rollback | Production core linked without the Windows adapter | [`platform_fake.cpp`](../../tests/platform/fake/platform_fake.cpp), [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | Fake adapter and production rollback core |
 | Rollback behavior | Save, restore, synchronized input, replay, and deterministic final state | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | SyncTest backend without sockets |
 | Windows transport | Handshake, events, prediction, rollback, UDP delivery, and shutdown | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Two GGPO processes over localhost |
 | Build compatibility | x64/Win32, shared/static, Debug/Release | [`windows-compatibility.yml`](../../.github/workflows/windows-compatibility.yml) | Eight Windows build variants |
@@ -45,6 +47,7 @@ flowchart TD
     Build["Build GGPO,<br/>Vector War<br/>and<br/>compatibility<br/>fixtures"]
     Layout["Public and<br/>packet<br/>layout checks"]
     Sync["Deterministic<br/>SyncTest smoke"]
+    Fake["Fake adapter<br/>contract and<br/>core SyncTest"]
     Peers["Two-process<br/>Windows<br/>UDP loopback<br/>smoke"]
     Consumers["Install SDK;<br/>compile and link<br/>C11 and C++98<br/>consumers"]
     Capture["Capture<br/>exports,<br/>layouts,<br/>hashes<br/>and<br/>environment"]
@@ -55,10 +58,12 @@ flowchart TD
     Configure --> Build
     Build --> Layout
     Build --> Sync
+    Build --> Fake
     Build --> Peers
     Peers --> Consumers --> Capture
     Layout --> Capture
     Sync --> Capture
+    Fake --> Capture
     Capture --> Noise
     Noise -->|"yes"| Repeat --> Evidence
     Noise -->|"no"| Evidence
@@ -128,6 +133,13 @@ inputs through a direct reference state and through GGPO, then requires:
 A pass shows that the callbacks and local rollback path converge. It does not
 exercise Winsock, peer negotiation, or process timing.
 
+The same fixture also builds as `fake_platform_synctest`, linking the production
+rollback sources to [`platform_fake.cpp`](../../tests/platform/fake/platform_fake.cpp)
+instead of the Windows adapter. `fake_platform_contract` separately checks
+virtual time, configuration fallbacks, endpoint representation, would-block
+results, scripted socket-open failure, close behavior, and balanced network
+lifetime calls.
+
 ### Two-process loopback
 
 [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) reserves two ephemeral
@@ -162,7 +174,7 @@ than two players, or interoperability between operating systems.
 
 ## Build and CI integration
 
-[`tests/CMakeLists.txt`](../../tests/CMakeLists.txt) registers four Windows CTest
+[`tests/CMakeLists.txt`](../../tests/CMakeLists.txt) registers six Windows CTest
 entries:
 
 ```text
@@ -170,6 +182,8 @@ windows_public_layout
 windows_packet_layout
 windows_synctest_smoke
 windows_peer_loopback
+fake_platform_synctest
+fake_platform_contract
 ```
 
 [`windows_compatibility_baseline.ps1`](../../scripts/ci/windows_compatibility_baseline.ps1)
@@ -210,7 +224,7 @@ established by the frame, checksum, callback, and lifecycle assertions.
 - No malformed/truncated packet suite validates parser rejection.
 - No spectator, disconnect/resume, simulated loss, or multi-player automated
   session exists.
-- No Linux/macOS build, platform conformance, or cross-OS peer test exists.
+- No Linux/macOS adapter, build, or cross-OS peer test exists.
 - No sanitizer job is configured.
 
 The platform-extraction plan tracks those additions in the

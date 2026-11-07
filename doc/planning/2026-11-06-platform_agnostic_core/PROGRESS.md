@@ -1,6 +1,6 @@
 # PROGRESS — Platform-agnostic GGPO core and Windows build layer
 
-Status: M0–M1 complete; M2–M4 planned
+Status: M0–M2 complete; M3–M4 planned
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
 ## Milestones
@@ -33,11 +33,11 @@ contracts. Architecture: [public API](../../architecture/API.md).
 Parallel with M1; owns internal core/platform sources. Architecture:
 [required adapter contracts](../../architecture/Portability.md#required-adapter-contracts).
 
-- [ ] M2-T01: Define semantic clock, sleep, config, diagnostic, wait, and UDP contracts.
-- [ ] M2-T02: Move Win32/Winsock implementations behind the Windows adapters.
-- [ ] M2-T03: Remove OS and secure-CRT names from portable core sources.
-- [ ] M2-T04: Re-run M0 runtime and packet fixtures against the adapters.
-- [ ] M2-T05: Add deterministic fake-adapter core startup, rollback, failure, and cleanup smoke tests.
+- [x] M2-T01: Define semantic clock, sleep, config, diagnostic, wait, and UDP contracts.
+- [x] M2-T02: Move Win32/Winsock implementations behind the Windows adapters.
+- [x] M2-T03: Remove OS and secure-CRT names from portable core sources.
+- [x] M2-T04: Re-run M0 runtime and packet fixtures against the adapters.
+- [x] M2-T05: Add deterministic fake-adapter core startup, rollback, failure, and cleanup smoke tests.
 
 ### M3: Separate the Windows build layer (depends: M2)
 
@@ -70,4 +70,9 @@ May overlap late M1; owns CMake platform selection and Windows target wiring.
 | M1-T02 | [M1 matrix](https://github.com/irregularthanis/ggpo-next/actions/runs/42321026313), [`public_layout.cpp`](../../../tests/baseline/windows/public_layout.cpp), [export manifests](../../../tests/baseline/windows/README.md) | Compare layouts/enums/callback offsets and normalized exports | x64/Win32 shared/static Debug/Release | All eight lanes passed; shared builds retained all 16 exports |
 | M1-T03 | [`tests/consumer`](../../../tests/consumer/CMakeLists.txt), [consumer verifier](../../../scripts/ci/verify_installed_consumers.ps1), [M1 matrix](https://github.com/irregularthanis/ggpo-next/actions/runs/42321026313) | Install each SDK, compile and link consumers without source-tree includes | C11 and C++98; all eight Windows variants | Both installed consumers linked in every lane |
 | M1-T04 | [API language and ABI contract](../../architecture/API.md#language-and-abi-contract) | Document compatibility policy and package obligations | Public header, static/shared packages, wire protocol boundary | Patch/minor/major and cross-platform ABI rules recorded |
+| M2-T01 | [`platform.h`](../../../src/lib/ggpo/platform.h) | Source inspection and strict C++98 compilation | Core time, wait, config, diagnostics, filesystem, endpoint, and UDP needs | Semantic contract compiles without native types |
+| M2-T02 | [`platform_windows.cpp`](../../../src/lib/ggpo/platform_windows.cpp), [`70929d1`](https://github.com/irregularthanis/ggpo-next/commit/70929d142c2cdd069b0cda9f0fdf137010c1cbd7) | Replace native core fields/calls with adapter operations | Windows clock, environment, diagnostics, filesystem, Winsock, IPv4, and DLL lifecycle | Win32/Winsock representation is confined to the Windows adapter |
+| M2-T03 | [M2 source boundary](../../architecture/Portability.md#current-boundary) | Audit portable core for Win32/Winsock and secure-CRT names | `src/lib/ggpo`, excluding Windows adapter and unsupported legacy Linux adapter | No native Windows or secure-CRT name remains in portable sources |
+| M2-T04 | [M2 matrix](https://github.com/irregularthanis/ggpo-next/actions/runs/42340436948) | Eight-lane build, six CTests, installed consumers, export/layout evidence | x64/Win32; shared/static; Debug/Release | All lanes passed; M0 ABI, packet, rollback, and two-peer contracts retained |
+| M2-T05 | [`platform_fake_test.cpp`](../../../tests/platform/fake/platform_fake_test.cpp), [`fake_platform_synctest`](../../../tests/CMakeLists.txt) | Link production core to fake adapter; run contract and SyncTest fixtures | Virtual time/config/filesystem/UDP, scripted open failure, rollback state | Startup, rollback, would-block, failure recovery, close, and balanced lifetime checks passed |
 

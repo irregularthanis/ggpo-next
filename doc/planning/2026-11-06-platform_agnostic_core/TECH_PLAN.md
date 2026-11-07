@@ -1,10 +1,13 @@
 # TECH_PLAN — Platform-agnostic GGPO core and Windows build layer
 
-Status: M0–M1 implemented; M2–M4 planned
+Status: M0–M2 implemented; M3–M4 planned
 Source: [`004ffd7`](https://github.com/irregularthanis/ggpo-next/tree/004ffd7f47603d3bae4abd1d541501d715e03279)  
 M0 implementation: [`3498899`](https://github.com/irregularthanis/ggpo-next/commit/34988996cab45c1a37a9c556fe66b192d60a547b)
 
 M1 implementation: [`1f31b0a`](https://github.com/irregularthanis/ggpo-next/commit/1f31b0a16a8dae7edfc271db6fd44d5670dc190f)
+
+M2 implementation: [`70929d1`](https://github.com/irregularthanis/ggpo-next/commit/70929d142c2cdd069b0cda9f0fdf137010c1cbd7),
+qualified at [`9ac7b45`](https://github.com/irregularthanis/ggpo-next/commit/9ac7b454fe414bd58f77c5bd657d95b393058654)
 [Product brief](PRD.md) · [Tracker](PROGRESS.md)
 
 ## Inspected facts
@@ -69,6 +72,26 @@ passed all eight variants. Existing four-test runtime/layout coverage remained
 green; both installed consumers linked in every lane, and shared x64/Win32
 exports matched their frozen 16-symbol manifests.
 
+## M2 platform-service extraction
+
+[`platform.h`](../../../src/lib/ggpo/platform.h) now defines the core-facing
+clock, wait, process/configuration, diagnostics/filesystem, network lifetime,
+endpoint, and nonblocking UDP contracts. The core stores `UdpEndpoint` and
+`UdpSocket`; only [`platform_windows.cpp`](../../../src/lib/ggpo/platform_windows.cpp)
+sees Win32/Winsock types and errors.
+
+The unused `HANDLE` registration path was removed from `Poll`; no source caller
+registered a native handle. Standard C runtime calls replace MSVC-only secure
+CRT names in portable sources. The fake adapter exercises virtual time,
+fallbacks, socket failure, would-block, close, and balanced lifetime behavior;
+the production SyncTest runs against it without Windows services.
+
+The [M2 Windows matrix](https://github.com/irregularthanis/ggpo-next/actions/runs/42340436948)
+passed all eight variants and all six CTest entries. Existing ABI exports,
+packet layout, deterministic rollback, and two-process Windows UDP behavior
+remain qualified. This does not qualify Linux or Apple; M3 still owns platform
+selection and build-layer separation.
+
 ## Target boundary
 
 ```mermaid
@@ -96,10 +119,9 @@ as defining `SOCKET`, `HANDLE`, or `WSAGetLastError` on every OS.
 | --- | --- | --- | --- |
 | Implemented | [`ggponet.h`](../../../src/include/ggponet.h) | Add `GGPO_CALL` and complete `GGPO_API`; include C boolean support without changing Windows signatures/layout | M1 |
 | Implemented | [Windows baseline fixtures](../../../tests/baseline/windows/README.md), [installed consumers](../../../tests/consumer/CMakeLists.txt) | Export/layout fixtures, SyncTest, real two-peer baseline, and installed C11/C++98 compile/link checks | M0, M1 |
-| Modify | [`types.h`](../../../src/lib/ggpo/types.h) | Use fixed-width internal types and include a neutral platform contract | M2 |
-| Proposed | `src/platform/common/platform.h`, `udp_socket.h` | Declare clock/wait, process/config/diagnostic, and UDP semantics | M2 |
-| Move/modify | `platform_windows.*`, [`poll.cpp`](../../../src/lib/ggpo/poll.cpp), [`udp.cpp`](../../../src/lib/ggpo/network/udp.cpp) | Implement those contracts on Windows; keep protocol/session logic in core | M2 |
-| Proposed | `tests/smoke/core/`, `tests/platform/fake/` | Run core/session smoke cases with deterministic time, config, filesystem, wait, and UDP outcomes | M2 |
+| Implemented | [`types.h`](../../../src/lib/ggpo/types.h), [`platform.h`](../../../src/lib/ggpo/platform.h) | Include neutral clock/wait, process/config/diagnostic, filesystem, endpoint, and UDP contracts | M2 |
+| Implemented | [`platform_windows.cpp`](../../../src/lib/ggpo/platform_windows.cpp), [`poll.cpp`](../../../src/lib/ggpo/poll.cpp), [`udp.cpp`](../../../src/lib/ggpo/network/udp.cpp) | Keep Win32/Winsock implementation and native representation behind the adapter | M2 |
+| Implemented | [fake platform tests](../../../tests/platform/fake/platform_fake_test.cpp), [core SyncTest wiring](../../../tests/CMakeLists.txt) | Run production rollback core with deterministic time/config/filesystem/UDP outcomes and failure/cleanup checks | M2 |
 | Proposed | `src/platform/windows/Platform.cmake` | Own Windows sources, definitions, `winmm`, and `ws2_32` | M3 |
 | Proposed | `tests/smoke/platform/` | Reusable adapter conformance and two-peer loopback tests, first instantiated for Windows | M3 |
 | Modify | Root and [`src` CMake](../../../src/CMakeLists.txt) | Build portable `GGPO`, select one platform target, install `GGPO::GGPO`, and make internal includes private | M3 |
