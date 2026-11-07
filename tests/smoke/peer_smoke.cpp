@@ -6,6 +6,7 @@
 #include <string.h>
 
 #if defined(_WIN32)
+#include <winsock2.h>
 #include <windows.h>
 #else
 #include <errno.h>
@@ -92,6 +93,9 @@ main(int argc, char **argv)
 {
    GGPOSessionCallbacks callbacks;
    GGPOPlayerHandle local_handle = GGPO_INVALID_HANDLE;
+#if defined(_WIN32)
+   WSADATA winsock_data;
+#endif
    int local_player;
    int local_port;
    int remote_port;
@@ -114,6 +118,14 @@ main(int argc, char **argv)
       fprintf(stderr, "invalid peer-smoke arguments\n");
       return 2;
    }
+
+#if defined(_WIN32)
+   // Preserve the caller-side Winsock contract required by frozen GGPO DLLs.
+   if (WSAStartup(MAKEWORD(2, 2), &winsock_data) != 0) {
+      fprintf(stderr, "WSAStartup failed\n");
+      return 1;
+   }
+#endif
 
    SmokeReset();
    callbacks = SmokeCallbacks();
@@ -223,5 +235,9 @@ main(int argc, char **argv)
       return 1;
    }
    g_smoke_session = NULL;
+#if defined(_WIN32)
+   // Balance the fixture's startup reference after GGPO closes its session.
+   WSACleanup();
+#endif
    return 0;
 }
