@@ -3,6 +3,7 @@ set(GGPO_LIB_INC_NOFILTER
 	"lib/ggpo/game_input.h"
 	"lib/ggpo/input_queue.h"
 	"lib/ggpo/log.h"
+	"lib/ggpo/platform.h"
 	"lib/ggpo/poll.h"
 	"lib/ggpo/ring_buffer.h"
 	"lib/ggpo/sync.h"

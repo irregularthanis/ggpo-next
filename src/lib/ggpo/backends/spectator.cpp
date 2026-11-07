@@ -165,7 +165,7 @@ SpectatorBackend::OnUdpProtocolEvent(UdpProtocol::Event &evt)
 }
  
 void
-SpectatorBackend::OnMsg(sockaddr_in &from, UdpMsg *msg, int len)
+SpectatorBackend::OnMsg(ggpo_platform::UdpEndpoint &from, UdpMsg *msg, int len)
 {
    if (_host.HandlesMsg(from, msg)) {
       _host.OnMsg(msg, len);

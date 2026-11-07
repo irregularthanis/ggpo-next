@@ -10,9 +10,6 @@
 
 #include "static_buffer.h"
 
-#define MAX_POLLABLE_HANDLES     64
-
-
 class IPollSink {
 public:
    virtual ~IPollSink() { }
@@ -25,7 +22,6 @@ public:
 class Poll {
 public:
    Poll(void);
-   void RegisterHandle(IPollSink *sink, HANDLE h, void *cookie = NULL);
    void RegisterMsgLoop(IPollSink *sink, void *cookie = NULL);
    void RegisterPeriodic(IPollSink *sink, int interval, void *cookie = NULL);
    void RegisterLoop(IPollSink *sink, void *cookie = NULL);
@@ -52,10 +48,6 @@ protected:
    };
 
    int               _start_time;
-   int               _handle_count;
-   HANDLE            _handles[MAX_POLLABLE_HANDLES];
-   PollSinkCb        _handle_sinks[MAX_POLLABLE_HANDLES];
-
    StaticBuffer<PollSinkCb, 16>          _msg_sinks;
    StaticBuffer<PollSinkCb, 16>          _loop_sinks;
    StaticBuffer<PollPeriodicSinkCb, 16>  _periodic_sinks;

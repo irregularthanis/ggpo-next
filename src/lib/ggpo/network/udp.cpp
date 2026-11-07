@@ -8,46 +8,18 @@
 #include "types.h"
 #include "udp.h"
 
-SOCKET
-CreateSocket(uint16 bind_port, int retries)
-{
-   SOCKET s;
-   sockaddr_in sin;
-   uint16 port;
-   int optval = 1;
-
-   s = socket(AF_INET, SOCK_DGRAM, 0);
-   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (const char *)&optval, sizeof optval);
-   setsockopt(s, SOL_SOCKET, SO_DONTLINGER, (const char *)&optval, sizeof optval);
-
-   // non-blocking...
-   u_long iMode = 1;
-   ioctlsocket(s, FIONBIO, &iMode);
-
-   sin.sin_family = AF_INET;
-   sin.sin_addr.s_addr = htonl(INADDR_ANY);
-   for (port = bind_port; port <= bind_port + retries; port++) {
-      sin.sin_port = htons(port);
-      if (bind(s, (sockaddr *)&sin, sizeof sin) != SOCKET_ERROR) {
-         Log("Udp bound to port: %d.\n", port);
-         return s;
-      }
-   }
-   closesocket(s);
-   return INVALID_SOCKET;
-}
-
 Udp::Udp() :
-   _socket(INVALID_SOCKET),
+   _network_started(false),
    _callbacks(NULL)
 {
 }
 
 Udp::~Udp(void)
 {
-   if (_socket != INVALID_SOCKET) {
-      closesocket(_socket);
-      _socket = INVALID_SOCKET;
+   _socket.Close();
+   if (_network_started) {
+      ggpo_platform::NetworkShutdown();
+      _network_started = false;
    }
 }
 
@@ -60,49 +32,49 @@ Udp::Init(uint16 port, Poll *poll, Callbacks *callbacks)
    _poll->RegisterLoop(this);
 
    Log("binding udp socket to port %d.\n", port);
-   _socket = CreateSocket(port, 0);
+   _network_started = ggpo_platform::NetworkStartup();
+   uint16 bound_port = 0;
+   const bool opened = _network_started &&
+      _socket.OpenAndBind(port, 0, &bound_port);
+   ASSERT(opened);
+   Log("Udp bound to port: %d.\n", bound_port);
 }
 
 void
-Udp::SendTo(char *buffer, int len, int flags, struct sockaddr *dst, int destlen)
+Udp::SendTo(char *buffer, int len,
+            const ggpo_platform::UdpEndpoint &destination)
 {
-   struct sockaddr_in *to = (struct sockaddr_in *)dst;
-
-   int res = sendto(_socket, buffer, len, flags, dst, destlen);
-   if (res == SOCKET_ERROR) {
-      DWORD err = WSAGetLastError();
-      Log("unknown error in sendto (erro: %d  wsaerr: %d).\n", res, err);
-      ASSERT(FALSE && "Unknown error in sendto");
-   }
-   char dst_ip[1024];
-   Log("sent packet length %d to %s:%d (ret:%d).\n", len, inet_ntop(AF_INET, (void *)&to->sin_addr, dst_ip, ARRAY_SIZE(dst_ip)), ntohs(to->sin_port), res);
+   const ggpo_platform::IoResult result = _socket.Send(buffer, len, destination);
+   ASSERT(result == ggpo_platform::IO_OK);
+   char formatted[64];
+   ggpo_platform::FormatUdpEndpoint(destination, formatted, ARRAY_SIZE(formatted));
+   Log("sent packet length %d to %s.\n", len, formatted);
 }
 
 bool
 Udp::OnLoopPoll(void *cookie)
 {
    uint8          recv_buf[MAX_UDP_PACKET_SIZE];
-   sockaddr_in    recv_addr;
-   int            recv_addr_len;
+   ggpo_platform::UdpEndpoint source;
 
    for (;;) {
-      recv_addr_len = sizeof(recv_addr);
-      int len = recvfrom(_socket, (char *)recv_buf, MAX_UDP_PACKET_SIZE, 0, (struct sockaddr *)&recv_addr, &recv_addr_len);
-
-      // TODO: handle len == 0... indicates a disconnect.
-
-      if (len == -1) {
-         int error = WSAGetLastError();
-         if (error != WSAEWOULDBLOCK) {
-            Log("recvfrom WSAGetLastError returned %d (%x).\n", error, error);
-         }
+      int len = 0;
+      const ggpo_platform::IoResult result =
+         _socket.Receive(recv_buf, MAX_UDP_PACKET_SIZE, &len, &source);
+      if (result == ggpo_platform::IO_WOULD_BLOCK) {
          break;
-      } else if (len > 0) {
-         char src_ip[1024];
-         Log("recvfrom returned (len:%d  from:%s:%d).\n", len, inet_ntop(AF_INET, (void*)&recv_addr.sin_addr, src_ip, ARRAY_SIZE(src_ip)), ntohs(recv_addr.sin_port) );
+      }
+      if (result == ggpo_platform::IO_ERROR) {
+         Log("receive failed.\n");
+         break;
+      }
+      if (len > 0) {
+         char formatted[64];
+         ggpo_platform::FormatUdpEndpoint(source, formatted, ARRAY_SIZE(formatted));
+         Log("recvfrom returned (len:%d from:%s).\n", len, formatted);
          UdpMsg *msg = (UdpMsg *)recv_buf;
-         _callbacks->OnMsg(recv_addr, msg, len);
-      } 
+         _callbacks->OnMsg(source, msg, len);
+      }
    }
    return true;
 }
@@ -115,7 +87,7 @@ Udp::Log(const char *fmt, ...)
    size_t offset;
    va_list args;
 
-   strcpy_s(buf, "udp | ");
+   snprintf(buf, ARRAY_SIZE(buf), "%s", "udp | ");
    offset = strlen(buf);
    va_start(args, fmt);
    vsnprintf(buf + offset, ARRAY_SIZE(buf) - offset - 1, fmt, args);
