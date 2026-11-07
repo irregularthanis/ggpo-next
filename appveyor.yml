@@ -27,3 +27,20 @@ before_build:
 
 build:
   project: build\GGPO.sln
+
+test_script:
+  - ctest --test-dir build -C %CONFIGURATION% --output-on-failure
+
+after_test:
+  - ps: >-
+      ./scripts/ci/capture_windows_compatibility_baseline.ps1
+      -BuildDirectory build
+      -Configuration $env:CONFIGURATION
+      -Architecture x64
+      -Shared $(if ($env:GGPO_SHARED_LIB -eq 'on') { 'ON' } else { 'OFF' })
+      -OutputDirectory "build/windows-compatibility-evidence/x64-$env:GGPO_SHARED_LIB-$env:CONFIGURATION"
+      -NoiseRuns 0
+
+artifacts:
+  - path: build\windows-compatibility-evidence\**\*
+    name: windows-compatibility-evidence

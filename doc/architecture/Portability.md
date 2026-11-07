@@ -7,28 +7,33 @@
 - [Portable core](#portable-core)
 - [Required adapter contracts](#required-adapter-contracts)
 - [Protocol considerations](#protocol-considerations)
+- [Follow-up platform contract](#follow-up-platform-contract)
 - [Recommended port sequence](#recommended-port-sequence)
 
 ## Current boundary
 
-The intended platform selection occurs in [`types.h`](../../src/lib/ggpo/types.h)
-and [`src/CMakeSources.cmake`](../../src/CMakeSources.cmake). In practice, Windows
-types and APIs still leak into polling, networking, logging, backends, and the
-sample. The checked-in [`platform_linux.cpp`](../../src/lib/ggpo/platform_linux.cpp)
-is incomplete and does not provide a working Unix SDK build.
+The core consumes semantic services declared by
+[`platform.h`](../../src/lib/ggpo/platform.h). The Windows implementation in
+[`platform_windows.cpp`](../../src/lib/ggpo/platform_windows.cpp) owns Win32,
+Winsock, native error mapping, and socket representation.
+
+This is a source boundary, not Linux support. The checked-in legacy
+[`platform_linux.cpp`](../../src/lib/ggpo/platform_linux.cpp) remains incomplete;
+platform selection and build-layer separation are implemented by the Windows
+platform module; Linux and Apple implementations remain follow-up work.
 
 ## Platform dependencies
 
-| Concern | Current dependency | Source |
+| Concern | Core contract | Windows implementation |
 | --- | --- | --- |
-| UDP sockets | Winsock `SOCKET`, `ioctlsocket`, `closesocket`, WSA errors | [`udp.cpp`](../../src/lib/ggpo/network/udp.cpp), [`udp.h`](../../src/lib/ggpo/network/udp.h) |
-| Address types | `sockaddr_in` and IPv4 text conversion | [`udp_proto.h`](../../src/lib/ggpo/network/udp_proto.h) |
-| Pollable events | Win32 `HANDLE`, wait APIs | [`poll.h`](../../src/lib/ggpo/poll.h), [`poll.cpp`](../../src/lib/ggpo/poll.cpp) |
-| Time and sleep | `timeGetTime`, `Sleep` | [`platform_windows.h`](../../src/lib/ggpo/platform_windows.h), [`p2p.cpp`](../../src/lib/ggpo/backends/p2p.cpp) |
-| Configuration | Windows environment helpers | [`platform_windows.cpp`](../../src/lib/ggpo/platform_windows.cpp) |
-| Filesystem and diagnostics | `CreateDirectoryA`, `DebugBreak`, backslash paths | [`synctest.cpp`](../../src/lib/ggpo/backends/synctest.cpp) |
-| C runtime | Microsoft secure-CRT functions | Core and sample sources |
-| Shared-library lifecycle | `DllMain` and Windows export macros | [`main.cpp`](../../src/lib/ggpo/main.cpp), [`ggponet.h`](../../src/include/ggponet.h) |
+| UDP sockets | `UdpSocket` with `ok`, `would_block`, and `error` results | Winsock startup, bind, send/receive, and close |
+| Addresses | `UdpEndpoint` with four IPv4 octets and host-order port | `sockaddr_in` conversion and text formatting |
+| Polling | Computed deadline plus `WaitMs()` | `Sleep()`; unused native-handle registration was removed |
+| Time | Wrapping `MonotonicTimeMs()` | `timeGetTime()` |
+| Configuration | Integer/boolean lookup with explicit fallback | Windows environment lookup |
+| Filesystem and diagnostics | Directory creation and assertion reporting | `CreateDirectoryA` and Windows diagnostic UI |
+| Network lifetime | Balanced startup/shutdown contract | `WSAStartup()` and `WSACleanup()` |
+| Shared-library lifecycle | Public ABI macros remain in [`ggponet.h`](../../src/include/ggponet.h) | `DllMain` is isolated in the Windows adapter |
 | Sample UI | Win32 messages, GDI/OpenGL, keyboard polling | [`src/apps/vectorwar`](../../src/apps/vectorwar) |
 
 ## Portable core
@@ -48,12 +53,12 @@ The rollback algorithms are largely OS-independent:
 
 ```mermaid
 flowchart LR
-    Core["GGPO portable core"]
-    Clock["Monotonic clock<br/>and sleep"]
-    Socket["Non-blocking UDP<br/>and error mapping"]
-    Poll["Polling and wakeups"]
-    Config["Configuration<br/>and diagnostics"]
-    Files["Directories and<br/>debug output"]
+    Core["GGPO<br/>portable core"]
+    Clock["Monotonic<br/>clock and<br/>sleep"]
+    Socket["Non-blocking<br/>UDP and<br/>error mapping"]
+    Poll["Polling and<br/>wakeups"]
+    Config["Configuration<br/>and<br/>diagnostics"]
+    Files["Directories<br/>and debug<br/>output"]
 
     Core --> Clock
     Core --> Socket
@@ -62,9 +67,15 @@ flowchart LR
     Core --> Files
 ```
 
-Adapters should expose semantic operations rather than reproducing Win32 names on
-Unix. That keeps Linux (`poll`/`epoll`), macOS (`poll`/`kqueue`), and future mobile
-event loops replaceable without changing rollback logic.
+These contracts are implemented in [`platform.h`](../../src/lib/ggpo/platform.h).
+The production [`Udp`](../../src/lib/ggpo/network/udp.cpp) and
+[`Poll`](../../src/lib/ggpo/poll.cpp) code sees no native handles or address
+structures. A [deterministic fake adapter](../../tests/platform/fake/platform_fake.cpp)
+uses the same contracts for rollback and failure/cleanup tests.
+
+Adapters expose semantic operations rather than reproducing Win32 names on
+Unix. That keeps Linux (`poll`/`epoll`), macOS (`poll`/`kqueue`), and future
+mobile event loops replaceable without changing rollback logic.
 
 ## Protocol considerations
 
@@ -79,6 +90,24 @@ The current wire format transmits a packed native C++ structure defined by
 - compatibility/version behavior when protocol structures change.
 
 Compilation on another OS is insufficient without cross-platform peer tests.
+
+## Follow-up platform contract
+
+A Linux or Apple follow-up adds one platform module implementing the semantic
+services in [`platform.h`](../../src/lib/ggpo/platform.h); portable core sources
+and the public header remain shared.
+
+| Required artifact | Qualification before support is claimed |
+| --- | --- |
+| Platform CMake module | Owns native sources, private definitions, and system libraries |
+| Platform adapter | Implements time, wait, configuration, diagnostics, filesystem, network lifetime, endpoints, and nonblocking UDP |
+| Fake-adapter suite | Existing rollback, failure, and cleanup tests remain green |
+| Native conformance | Adapter contract and local two-peer UDP loopback pass |
+| Public package | C11/C++98 consumers link only `GGPO::GGPO` and installed headers |
+| Interoperability | Same-platform peers pass first; Windows-to-new-platform wire compatibility follows |
+
+The Windows [compatibility workflow](../../.github/workflows/windows-compatibility.yml)
+remains required while another adapter is introduced.
 
 ## Recommended port sequence
 

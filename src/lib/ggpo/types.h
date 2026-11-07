@@ -7,6 +7,11 @@
 
 #ifndef _TYPES_H
 #define _TYPES_H
+
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 /*
  * Keep the compiler happy
  */
@@ -33,17 +38,7 @@ typedef char int8;
 typedef short int16;
 typedef int int32;
 
-/*
- * Additional headers
- */
-#if defined(_WINDOWS)
-#  include "platform_windows.h"
-#elif defined(__GNUC__)
-#  include "platform_linux.h"
-#else
-#  error Unsupported platform
-#endif
-
+#include "platform.h"
 #include "log.h"
 
 
@@ -55,12 +50,12 @@ typedef int int32;
    do {                                                     \
       if (!(x)) {                                           \
          char assert_buf[1024];                             \
-         snprintf(assert_buf, sizeof(assert_buf) - 1, "Assertion: %s @ %s:%d (pid:%d)", #x, __FILE__, __LINE__, Platform::GetProcessID()); \
+         snprintf(assert_buf, sizeof(assert_buf) - 1, "Assertion: %s @ %s:%d (pid:%u)", #x, __FILE__, __LINE__, ggpo_platform::ProcessId()); \
          Log("%s\n", assert_buf);                           \
          Log("\n");                                         \
          Log("\n");                                         \
          Log("\n");                                         \
-         Platform::AssertFailed(assert_buf);                \
+         ggpo_platform::AssertFailed(assert_buf);           \
          exit(0);                                           \
       }                                                     \
    } while (false)

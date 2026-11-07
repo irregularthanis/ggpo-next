@@ -3,6 +3,7 @@ set(GGPO_LIB_INC_NOFILTER
 	"lib/ggpo/game_input.h"
 	"lib/ggpo/input_queue.h"
 	"lib/ggpo/log.h"
+	"lib/ggpo/platform.h"
 	"lib/ggpo/poll.h"
 	"lib/ggpo/ring_buffer.h"
 	"lib/ggpo/sync.h"
@@ -22,20 +23,6 @@ set(GGPO_LIB_SRC_NOFILTER
 	"lib/ggpo/sync.cpp"
 	"lib/ggpo/timesync.cpp"
 )
-
-if(UNIX)
-	set(GGPO_LIB_SRC_NOFILTER
-		${GGPO_LIB_SRC_NOFILTER}
-		"lib/ggpo/platform_linux.cpp"
-	)
-endif()
-
-if(WIN32)
-	set(GGPO_LIB_SRC_NOFILTER
-		${GGPO_LIB_SRC_NOFILTER}
-		"lib/ggpo/platform_windows.cpp"
-	)
-endif()
 
 set(GGPO_LIB_INC_NETWORK
 	"lib/ggpo/network/udp.h"

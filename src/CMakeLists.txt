@@ -3,22 +3,26 @@ include(CMakeSources.cmake)
 add_library(GGPO
 	${GGPO_LIB_SRC}
 )
+add_library(GGPO::GGPO ALIAS GGPO)
 
 add_common_flags(GGPO)
 
-target_include_directories(GGPO PUBLIC
+target_include_directories(GGPO
+	PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/ggpo>
+	$<INSTALL_INTERFACE:include>
+	PRIVATE
+	${CMAKE_CURRENT_SOURCE_DIR}/lib/ggpo
 )
 
-if(WIN32)
-	target_compile_options(GGPO PRIVATE "/W4" "/WX")
-	if(BUILD_SHARED_LIBS)
-		# Link to Multimedia API and Winsocks during a shared build.
-		target_link_libraries(GGPO PUBLIC winmm.lib ws2_32.lib)
-		add_definitions(-DGGPO_SHARED_LIB)
-		add_definitions(-DGGPO_SDK_EXPORT)
-	endif()
+if(NOT WIN32)
+	message(FATAL_ERROR
+		"The GGPO SDK currently supports only the Windows platform layer. "
+		"Linux and Apple adapters are planned follow-up work.")
+
+else()
+	include(platform/windows/Platform.cmake)
+	ggpo_configure_platform(GGPO)
 endif()
 
 set_target_properties(GGPO PROPERTIES VERSION ${PROJECT_VERSION})
@@ -34,10 +38,35 @@ install(
 
 install(
 	TARGETS GGPO
-	EXPORT ggpo
+	EXPORT GGPOTargets
 	RUNTIME DESTINATION bin
 	LIBRARY DESTINATION lib
 	ARCHIVE DESTINATION lib
+	INCLUDES DESTINATION include
+)
+
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+	${CMAKE_CURRENT_SOURCE_DIR}/cmake/GGPOConfig.cmake.in
+	${CMAKE_CURRENT_BINARY_DIR}/GGPOConfig.cmake
+	INSTALL_DESTINATION lib/cmake/GGPO
+)
+write_basic_package_version_file(
+	${CMAKE_CURRENT_BINARY_DIR}/GGPOConfigVersion.cmake
+	VERSION ${PROJECT_VERSION}
+	COMPATIBILITY SameMajorVersion
+)
+install(
+	EXPORT GGPOTargets
+	FILE GGPOTargets.cmake
+	NAMESPACE GGPO::
+	DESTINATION lib/cmake/GGPO
+)
+install(
+	FILES
+		${CMAKE_CURRENT_BINARY_DIR}/GGPOConfig.cmake
+		${CMAKE_CURRENT_BINARY_DIR}/GGPOConfigVersion.cmake
+	DESTINATION lib/cmake/GGPO
 )
 
 if(MSVC)

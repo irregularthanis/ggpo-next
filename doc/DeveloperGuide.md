@@ -20,156 +20,212 @@ Each player in a GGPO networked game has a complete copy of your game running.  
 - The game state must be fully encapsulated and serializable.  
 - Your game engine must be able to load, save, and execute a single simulation frame without rendering the result of that frame.  This will be used to implement rollbacks.
 
-## Programming Guide
+## Install the SDK
 
-The following section contains a walk-through for porting your application to GGPO.  For a detailed description of the GGPO API, please see the GGPO Reference section, below.
+The currently supported SDK is Windows. Choose a prebuilt release SDK for normal
+application integration or build from source when developing GGPO itself.
 
-### Interfacing with GGPO
+### Option 1: use a release SDK
 
-GGPO is designed to be easy to interface with new and existing game engines.  It handles most of the implementation of handling rollbacks by calling out to your application via the `GGPOSessionCallbacks` hooks.
+Download the archive matching the application's architecture and linkage from
+[GGPO Next Releases](https://github.com/irregularthanis/ggpo-next/releases):
 
-### Creating the GGPOSession Object
+| Archive suffix | Use it when |
+| --- | --- |
+| `windows-x64-shared` | The application is 64-bit and deploys `GGPO.dll` |
+| `windows-x64-static` | The application is 64-bit and links GGPO into its executable |
+| `windows-x86-shared` | The application is 32-bit and deploys `GGPO.dll` |
+| `windows-x86-static` | The application is 32-bit and links GGPO into its executable |
 
-The `GGPOSession` object is your interface to the GGPO framework.  Create one with the `ggponet_start_session` function passing the port to bind to locally and the IP address and port of the player you'd like to play against.   You should also pass in a `GGPOSessionCallbacks` object filled in with your game's callback functions for managing game state and whether this session is for player 1 or player 2.  All `GGPOSessionCallback` functions must be implemented.  See the reference for more details. 
-For example, to start a new session on the same host with another player bound to port 8001, you would do:
+Extract the ZIP to a stable location such as `C:/ggpo-sdk`. Each release archive
+is an installed CMake package rather than a source tree:
 
-```
-   GGPOSession ggpo;
-   GGPOErrorCode result;
-   GGPOSessionCallbacks cb;
-
-   /* fill in all callback functions */
-   cb.begin_game = vw_begin_game_callback;
-   cb.advance_frame = vw_advance_frame_callback;
-   cb.load_game_state = vw_load_game_state_callback;
-   cb.save_game_state = vw_save_game_state_callback;
-   cb.free_buffer = vw_free_buffer;
-   cb.on_event = vw_on_event_callback;
-
-   /* Start a new session */
-   result = ggpo_start_session(&ggpo,         // the new session object
-                               &cb,           // our callbacks
-                               "test_app",    // application name
-                               2,             // 2 players
-                               sizeof(int),   // size of an input packet
-                               8001);         // our local udp port
+```text
+C:/ggpo-sdk/
+├── include/ggponet.h
+├── bin/GGPO.dll                  # shared archive only
+├── lib/GGPO.lib
+├── lib/cmake/GGPO/
+└── share/GGPO/
 ```
 
+Configure the application with the extracted directory as a prefix:
 
-
-The `GGPOSession` object should only be used for a single game session.  If you need to connect to another opponent, close your existing object using `ggpo_close_session` and start a new one:
-
-```
-   /* Close the current session and start a new one */
-   ggpo_close_session(ggpo);
+```powershell
+cmake -S . -B build -DCMAKE_PREFIX_PATH=C:/ggpo-sdk
+cmake --build build --config Release --parallel
 ```
 
-### Sending Player Locations
+The release page also provides `SHA256SUMS`. Compare the archive's
+`Get-FileHash -Algorithm SHA256` result before extracting it. Shared builds must
+place `C:/ggpo-sdk/bin/GGPO.dll` beside the application executable or otherwise
+make that directory available to the Windows loader.
 
-When you created the GGPOSession object passed in the number of players participating in the game, but didn't actually describe how to contact them.  To do so, call the `ggpo_add_player` function with a `GGPOPlayer` object describing each player.   The following example show how you might use ggpo_add_player in a 2 player game:
+### Option 2: build and install from source
 
-```
-GGPOPlayer p1, p2;
-GGPOPlayerHandle player_handles[2];
+Install Visual Studio 2022 with the Desktop development with C++ workload,
+CMake, and Python 3. From a Developer PowerShell prompt in the source checkout:
 
-p1.size = p2.size = sizeof(GGPOPlayer);
-p1.type = GGPO_PLAYERTYPE_LOCAL;                // local player
-p2.type = GGPO_PLAYERTYPE_REMOTE;               // remote player
-strcpy(p2.remote.ip_address, "192.168.0.100");  // ip addess of the player
-p2.remote.ip_address.port = 8001;               // port of that player
-
-result = ggpo_add_player(ggpo, &p1,  &player_handles[0]);
-...
-result = ggpo_add_player(ggpo, &p2,  &player_handles[1]);
-```
-
-### Synchronizing Local and Remote Inputs
-
-Input synchronization happens at the top of each game frame.  This is done by calling `ggpo_add_local_input` for each local player and `ggpo_synchronize_input` to fetch the inputs for remote players.
-Be sure to check the return value of `ggpo_synchronize_inputs`.  If it returns a value other than `GGPO_OK`, you should not advance your game state.  This usually happens because GGPO has not received packets from the remote player in a while and has reached its internal prediction limit.
-
-For example, if your code looks like this currently for a local game:
-
-```
-   GameInputs &p1, &p2;
-   GetControllerInputs(0, &p1); /* read p1's controller inputs */
-   GetControllerInputs(1, &p2); /* read p2's controller inputs */
-   AdvanceGameState(&p1, &p2, &gamestate); /* send p1 and p2 to the game */
+```powershell
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+  -DBUILD_SHARED_LIBS=ON `
+  -DGGPO_BUILD_SDK=ON `
+  -DGGPO_BUILD_VECTORWAR=ON
+cmake --build build --config Release --parallel
+cmake --install build --config Release --prefix C:/ggpo-sdk
 ```
 
-You should change it to read as follows:
+Change `-A x64` to `-A Win32` for a 32-bit SDK. Set
+`BUILD_SHARED_LIBS=OFF` to build a static library. The normal build runs the six
+self-contained tests. Use
+`-DGGPO_RUN_TESTS_ON_BUILD=OFF` only when test execution must be explicit, or
+`-DBUILD_TESTING=OFF` for a consumer/packaging-only build.
 
-```
-   GameInputs p[2];
-   GetControllerInputs(0, &p[0]); /* read the controller */
+### Link the installed package
 
-   /* notify ggpo of the local player's inputs */
-   result = ggpo_add_local_input(ggpo,               // the session object
-                                 player_handles[0],  // handle for p1
-                                 &p[0],              // p1's inputs
-                                 sizeof(p[0]));      // size of p1's inputs
+Both installation paths expose the same package. A consumer links only its
+exported target:
 
-   /* synchronize the local and remote inputs */
-   if (GGPO_SUCCEEDED(result)) {
-      result = ggpo_synchronize_inputs(ggpo,         // the session object
-                                       p,            // array of inputs
-                                       sizeof(p));   // size of all inputs
-      if (GGPO_SUCCEEDED(result)) {
-         /* pass both inputs to our advance function */
-         AdvanceGameState(&p[0], &p[1], &gamestate);
-      }
-   }
+```cmake
+find_package(GGPO CONFIG REQUIRED)
+target_link_libraries(my_game PRIVATE GGPO::GGPO)
 ```
 
-You should call `ggpo_synchronize_inputs` every frame, even those that happen during a rollback.  Make sure you always use the values returned from `ggpo_synchronize_inputs` rather than the values you've read from the local controllers to advance your game state. During a rollback `ggpo_synchronize_inputs` will replace the values passed into `ggpo_add_local_input` with the values used for previous frames.  Also, if you've manually added input delay for the local player to smooth out the effect of rollbacks, the inputs you pass into `ggpo_add_local_input` won't actually be returned in `ggpo_synchronize_inputs` until after the frame delay.
+See the [build architecture](architecture/Build.md#install-layout) for the
+canonical layout and the [release workflow](architecture/Build.md#release-packages)
+for its validation and publication contract.
 
-### Implementing your save, load, and free Callbacks
+## Programming guide
 
-GGPO will use the `load_game_state` and `save_game_state` callbacks to periodically save and restore the state of your game.  The `save_game_state` function should create a buffer containing enough information to restore the current state of the game and return it in the `buffer` out parameter.  The `load_game_state` function should restore the game state from a previously saved buffer.  For example:
+GGPO coordinates rollback by calling the application through
+`GGPOSessionCallbacks`. The public declarations are in
+[`ggponet.h`](../src/include/ggponet.h); [Vector War](architecture/VectorWar.md)
+is the complete reference integration.
 
-```
-struct GameState gamestate;  // Suppose the authoritative value of our game's state is in here.
+### Create a session
 
-bool __cdecl
-ggpo_save_game_state_callback(unsigned char **buffer, int *len,
-                              int *checksum, int frame)
-{
-   *len = sizeof(gamestate);
-   *buffer = (unsigned char *)malloc(*len);
-   if (!*buffer) {
-      return false;
-   }
-   memcpy(*buffer, &gamestate, *len);
-   return true;
-}
+`GGPOSession` is opaque, so applications hold a pointer. Populate every callback
+before starting the session:
 
-bool __cdecl
-ggpo_load_game_state_callback(unsigned char *buffer, int len)
-{
-   memcpy(&gamestate, buffer, len);
-   return true;
+```cpp
+GGPOSession *ggpo = 0;
+GGPOSessionCallbacks cb = { 0 };
+
+cb.begin_game      = game_begin;
+cb.save_game_state = game_save;
+cb.load_game_state = game_load;
+cb.log_game_state  = game_log;
+cb.free_buffer     = game_free;
+cb.advance_frame   = game_advance_rollback_frame;
+cb.on_event        = game_on_event;
+
+GGPOErrorCode result = ggpo_start_session(
+    &ggpo, &cb, "my_game", 2, sizeof(GameInput), 7000);
+if (!GGPO_SUCCEEDED(result)) {
+    /* Report the error and do not use ggpo. */
 }
 ```
 
-GGPO will call your `free_buffer` callback to dispose of the memory you allocated in your `save_game_state` callback when it is no longer need.  
+The application name is diagnostic metadata. The final argument is the local
+UDP port; remote endpoints are registered separately. A session represents one
+match. Close it with `ggpo_close_session(ggpo)` before replacing it.
 
-```
-void __cdecl 
-ggpo_free_buffer(void *buffer)
-{
-   free(buffer);
+### Register players
+
+Call `ggpo_add_player()` exactly once per player. `player_num` is one-based and
+must be within the session's declared player count.
+
+```cpp
+GGPOPlayer local = { 0 };
+local.size = sizeof(local);
+local.type = GGPO_PLAYERTYPE_LOCAL;
+local.player_num = 1;
+
+GGPOPlayer remote = { 0 };
+remote.size = sizeof(remote);
+remote.type = GGPO_PLAYERTYPE_REMOTE;
+remote.player_num = 2;
+strcpy(remote.u.remote.ip_address, "192.168.0.100");
+remote.u.remote.port = 7001;
+
+GGPOPlayerHandle local_handle;
+GGPOPlayerHandle remote_handle;
+result = ggpo_add_player(ggpo, &local, &local_handle);
+if (GGPO_SUCCEEDED(result)) {
+    result = ggpo_add_player(ggpo, &remote, &remote_handle);
 }
 ```
 
-### Implementing Remaining Callbacks
+Keep the local handle: `ggpo_add_local_input()` requires it. Event callbacks
+use the returned handles to identify peers.
 
-As mentioned previously, there are no optional callbacks in the `GGPOSessionCallbacks` structure.  They all need to at least `return true`, but the remaining callbacks do not necessarily need to be implemented right away.  See the comments in `ggponet.h` for more information.
+### Implement state callbacks
 
-### Calling the GGPO Advance and Idle Functions
+The saved buffer must contain all deterministic simulation state and no
+presentation-only state. The save callback owns the allocation until GGPO calls
+`free_buffer`.
 
-We're almost done.  Promise.  The last step is notify GGPO every time your gamestate finishes advancing by one frame.  Just call `ggpo_advance_frame` after you've finished one frame but before you've started the next.
+```cpp
+GameState game_state;
 
-GGPO also needs some amount of time to send and receive packets do its own internal bookkeeping.  At least once per-frame you should call the `ggpo_idle` function with the number of milliseconds you're allowing GGPO to spend. 
+bool GGPO_CALL game_save(unsigned char **buffer, int *len,
+                         int *checksum, int)
+{
+    *len = sizeof(game_state);
+    *buffer = (unsigned char *)malloc(*len);
+    if (!*buffer) return false;
+    memcpy(*buffer, &game_state, *len);
+    *checksum = calculate_checksum(*buffer, *len);
+    return true;
+}
+
+bool GGPO_CALL game_load(unsigned char *buffer, int len)
+{
+    if (len != sizeof(game_state)) return false;
+    memcpy(&game_state, buffer, len);
+    return true;
+}
+
+void GGPO_CALL game_free(void *buffer)
+{
+    free(buffer);
+}
+```
+
+Also implement `log_game_state` for SyncTest diagnostics, `on_event` for
+connection state, and the deprecated `begin_game` callback as a successful
+no-op. The [API reference](architecture/API.md#required-callbacks) describes all
+seven callback contracts.
+
+### Run one frame
+
+Submit each local player's current input, request the synchronized input array,
+and advance only on success:
+
+```cpp
+GameInput local_input = read_local_input();
+GameInput inputs[2] = { 0 };
+int disconnect_flags = 0;
+
+result = ggpo_add_local_input(
+    ggpo, local_handle, &local_input, sizeof(local_input));
+if (GGPO_SUCCEEDED(result)) {
+    result = ggpo_synchronize_input(
+        ggpo, inputs, sizeof(inputs), &disconnect_flags);
+}
+if (GGPO_SUCCEEDED(result)) {
+    advance_deterministic_state(inputs, disconnect_flags);
+    ggpo_advance_frame(ggpo);
+    render_current_state();
+}
+ggpo_idle(ggpo, 0);
+```
+
+During rollback, `advance_frame` must call `ggpo_synchronize_input()`, advance
+exactly one deterministic frame, and call `ggpo_advance_frame()`. It must not
+sample devices, render, or emit presentation effects for replayed frames. The
+[Vector War callbacks](../src/apps/vectorwar/vectorwar.cpp) provide the tested
+reference flow.
 
 ## Tuning Your Application: Frame Delay vs. Speculative Execution
 

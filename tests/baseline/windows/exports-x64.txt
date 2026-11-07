@@ -1,0 +1,16 @@
+ggpo_add_local_input
+ggpo_add_player
+ggpo_advance_frame
+ggpo_close_session
+ggpo_disconnect_player
+ggpo_get_network_stats
+ggpo_idle
+ggpo_log
+ggpo_logv
+ggpo_set_disconnect_notify_start
+ggpo_set_disconnect_timeout
+ggpo_set_frame_delay
+ggpo_start_session
+ggpo_start_spectating
+ggpo_start_synctest
+ggpo_synchronize_input

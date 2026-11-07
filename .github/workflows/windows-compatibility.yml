@@ -1,0 +1,99 @@
+name: Windows compatibility baseline
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  baseline:
+    name: Windows compatibility (${{ matrix.architecture }}, ${{ matrix.shared == 'ON' && 'shared' || 'static' }}, ${{ matrix.configuration }})
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [x64, Win32]
+        shared: [ON, OFF]
+        configuration: [Debug, Release]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and test the Windows compatibility baseline
+        shell: pwsh
+        run: |
+          $noiseRuns = 0
+          if ("${{ matrix.architecture }}" -eq "x64" -and
+              "${{ matrix.shared }}" -eq "ON" -and
+              "${{ matrix.configuration }}" -eq "Release") {
+            $noiseRuns = 10
+          }
+          ./scripts/ci/windows_compatibility_baseline.ps1 `
+            -Architecture "${{ matrix.architecture }}" `
+            -Shared "${{ matrix.shared }}" `
+            -Configuration "${{ matrix.configuration }}" `
+            -Generator "Visual Studio 17 2022" `
+            -BuildDirectory "build/windows-compatibility" `
+            -EvidenceDirectory "build/windows-compatibility-evidence" `
+            -NoiseRuns $noiseRuns
+
+      - name: Upload Windows compatibility evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-compatibility-${{ matrix.architecture }}-${{ matrix.shared }}-${{ matrix.configuration }}
+          path: build/windows-compatibility-evidence
+          if-no-files-found: error
+
+  final-compatibility:
+    name: Frozen Windows baseline / candidate compatibility
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: 34988996cab45c1a37a9c556fe66b192d60a547b
+          path: windows-baseline
+      - name: Compare frozen Windows baseline and candidate contracts
+        shell: pwsh
+        run: |
+          ./scripts/ci/verify_windows_compatibility.ps1 `
+            -BaselineSource "windows-baseline" `
+            -Generator "Visual Studio 17 2022" `
+            -BuildRoot "build/windows-final-qualification" `
+            -EvidenceRoot "build/windows-final-evidence"
+      - name: Upload final compatibility evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-final-compatibility
+          path: build/windows-final-evidence
+          if-no-files-found: error
+
+  portable-header:
+    name: Portable public header (${{ matrix.compiler }})
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile C11 and C++98 consumers without linking an SDK
+        shell: bash
+        run: |
+          if [ "${{ matrix.compiler }}" = gcc ]; then
+            cc=gcc
+            cxx=g++
+            cxx_extra=()
+          else
+            cc=clang
+            cxx=clang++
+            # C needs a byte in GGPOPlayer.local because it forbids empty
+            # structs; C++ retains the frozen empty-member ABI.
+            cxx_extra=(-Wno-extern-c-compat)
+          fi
+          "$cc" -std=c11 -pedantic-errors -Werror -Isrc/include \
+            -c tests/consumer/consumer.c -o /tmp/ggpo-consumer-c.o
+          "$cxx" -std=c++98 -pedantic-errors -Werror "${cxx_extra[@]}" -Isrc/include \
+            -c tests/consumer/consumer.cpp -o /tmp/ggpo-consumer-cpp.o

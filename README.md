@@ -13,21 +13,25 @@ For more information about the history of GGPO, check out http://ggpo.net/
 This repository contains the code, documentation, and sample applications for the SDK.
 
 Architecture and API internals are documented in
-[`doc/architecture`](doc/architecture/README.md). Application integration guidance
-remains in the [Developer Guide](doc/DeveloperGuide.md).
+[`doc/architecture`](doc/architecture/README.md). Build, installation, and
+application integration guidance is in the [Developer Guide](doc/DeveloperGuide.md).
 
-## Building
+## Install or build the SDK
 
-Building GGPO is currently only available on Windows, however efforts are being made to port it to other platforms.
+The SDK currently supports Windows builds. Linux and Apple platform adapters are
+documented follow-up work; unsupported SDK targets fail configuration explicitly.
 
-### Windows
+Choose either:
 
-Windows builds requires both [Visual Studio 2019](https://visualstudio.microsoft.com/downloads/) and [CMake](https://cmake.org/download/).  Make sure you've installed both before starting.  Make sure to add CMake to your path when installing.
+- **Release SDK:** download a tested x64/x86 shared or static ZIP from
+  [Releases](https://github.com/irregularthanis/ggpo-next/releases). This is the
+  shortest path for application developers.
+- **Source build:** clone the repository and use CMake when changing GGPO,
+  running its tests, or selecting a configuration not distributed as a release.
 
-- Run the `build_windows.cmd` in the root directory of the SDK to generate the Visual Studio 2019 solution files.   
-- Open `build/GGPO.sln` solution for Visual Studio 2019 to compile.
-
-You can also run the `cmake-gui` tool if you prefer. 
+Both options provide `ggponet.h` and the `GGPO::GGPO` CMake target. Selection,
+installation, shared-library deployment, and source-build commands are in the
+[Developer Guide](doc/DeveloperGuide.md#install-the-sdk).
 
 ## Sample Application
 

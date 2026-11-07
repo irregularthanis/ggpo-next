@@ -10,18 +10,13 @@
 
 このリポジトリにコードやドキュメント、SDKのサンプルアプリケーションが収められています。
 
-## ビルド
+## SDKのインストールまたはビルド
 
-GGPOのビルドは現在のところWindowsのみになりますが、他プラットフォームへのポートも現在行っています。
+SDKのビルドは現在Windowsのみをサポートしています。LinuxおよびApple向けのプラットフォームアダプターは今後の作業です。
 
 ### Windows
 
-Windowsのビルドは[Visual Studio 2019](https://visualstudio.microsoft.com/downloads/)と[CMake](https://cmake.org/download/)が必要になります。ご使用の前に、どちらもインストールされていることをご確認ください。またインストール時、パスにCMakeを追加してください。
-
-- Visual Studio 2019のソリューションファイルを作成するため、SDKのルートディレクトリで`build_windows.cmd`を実行します。
-- コンパイルをするため、Visual Studio 2019で`build/GGPO.sln`ソリューションを開きます。
-
-好みにあわせて`cmake-gui`で実行も出来ます。
+[Releases](https://github.com/irregularthanis/ggpo-next/releases)からテスト済みのSDK ZIPを利用する方法と、ソースからCMakeでビルドする方法があります。アーカイブの選択、インストール、CMakeパッケージ、および統合手順については、英語版の[開発者ガイド](doc/DeveloperGuide.md#install-the-sdk)を参照してください。
 
 ## サンプルアプリケーション
 

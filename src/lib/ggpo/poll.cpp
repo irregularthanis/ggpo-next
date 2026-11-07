@@ -9,23 +9,8 @@
 #include "poll.h"
 
 Poll::Poll(void) :
-   _handle_count(0),
    _start_time(0)
 {
-   /*
-    * Create a dummy handle to simplify things.
-    */
-   _handles[_handle_count++] = CreateEvent(NULL, true, false, NULL);
-}
-
-void
-Poll::RegisterHandle(IPollSink *sink, HANDLE h, void *cookie)
-{
-   ASSERT(_handle_count < MAX_POLLABLE_HANDLES - 1);
-
-   _handles[_handle_count] = h;
-   _handle_sinks[_handle_count] = PollSinkCb(sink, cookie);
-   _handle_count++;
 }
 
 void
@@ -56,23 +41,19 @@ Poll::Run()
 bool
 Poll::Pump(int timeout)
 {
-   int i, res;
+   int i;
    bool finished = false;
 
    if (_start_time == 0) {
-      _start_time = Platform::GetCurrentTimeMS();
+      _start_time = ggpo_platform::MonotonicTimeMs();
    }
-   int elapsed = Platform::GetCurrentTimeMS() - _start_time;
+   int elapsed = ggpo_platform::MonotonicTimeMs() - _start_time;
    int maxwait = ComputeWaitTime(elapsed);
-   if (maxwait != INFINITE) {
+   if (maxwait >= 0) {
       timeout = MIN(timeout, maxwait);
    }
 
-   res = WaitForMultipleObjects(_handle_count, _handles, false, timeout);
-   if (res >= WAIT_OBJECT_0 && res < WAIT_OBJECT_0 + _handle_count) {
-      i = res - WAIT_OBJECT_0;
-      finished = !_handle_sinks[i].sink->OnHandlePoll(_handle_sinks[i].cookie) || finished;
-   }
+   ggpo_platform::WaitMs(timeout);
    for (i = 0; i < _msg_sinks.size(); i++) {
       PollSinkCb &cb = _msg_sinks[i];
       finished = !cb.sink->OnMsgPoll(cb.cookie) || finished;
@@ -96,14 +77,14 @@ Poll::Pump(int timeout)
 int
 Poll::ComputeWaitTime(int elapsed)
 {
-   int waitTime = INFINITE;
+   int waitTime = -1;
    size_t count = _periodic_sinks.size();
 
    if (count > 0) {
       for (int i = 0; i < count; i++) {
          PollPeriodicSinkCb &cb = _periodic_sinks[i];
          int timeout = (cb.interval + cb.last_fired) - elapsed;
-         if (waitTime == INFINITE || (timeout < waitTime)) {
+         if (waitTime < 0 || (timeout < waitTime)) {
             waitTime = MAX(timeout, 0);
          }         
       }

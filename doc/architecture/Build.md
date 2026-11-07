@@ -8,6 +8,7 @@
 - [SDK source composition](#sdk-source-composition)
 - [Vector War](#vector-war)
 - [Install layout](#install-layout)
+- [Release packages](#release-packages)
 - [Platform status](#platform-status)
 
 ## Build outputs
@@ -26,36 +27,35 @@ builds the Windows sample.
 
 ```mermaid
 flowchart TD
-    Root["Root CMakeLists.txt<br/>options and project"]
-    SDKList["src/CMakeLists.txt<br/>GGPO library target"]
-    Sources["src/CMakeSources.cmake<br/>SDK source inventory"]
-    Public["src/include/ggponet.h<br/>public API"]
-    Core["Backends, sync, input,<br/>poll and UDP sources"]
-    Platform{"Selected platform"}
-    Windows["platform_windows.cpp<br/>Winsock and Win32 services"]
-    Unix["platform_linux.cpp<br/>incomplete Unix path"]
-    Library["GGPO library<br/>shared or static"]
-    SampleList["Vector War CMakeLists.txt<br/>Windows only"]
-    Sample["VectorWar executable"]
+    Root["Root<br/>CMakeLists.txt<br/>options and<br/>project"]
+    SDKList["src/<br/>CMakeLists.txt<br/>GGPO library<br/>target"]
+    Sources["src/<br/>CMakeSources<br/>.cmake<br/>portable SDK<br/>inventory"]
+    Public["src/include/<br/>ggponet.h<br/>public API"]
+    Core["Backends,<br/>sync, input,<br/>poll and UDP<br/>sources"]
+    Platform{"Supported<br/>platform layer?"}
+    Windows["platform/windows/<br/>Platform.cmake<br/>Windows source,<br/>defines and libs"]
+    Unsupported["Configuration error<br/>Linux and Apple<br/>follow-up required"]
+    Library["GGPO library<br/>shared or<br/>static"]
+    SampleList["Vector War<br/>CMakeLists.txt<br/>Windows only"]
+    Sample["VectorWar<br/>executable"]
 
-    Root -->|"GGPO_BUILD_SDK"| SDKList
+    Root -->|"GGPO_BUILD_<br/>SDK"| SDKList
     SDKList --> Sources
     Sources --> Public
     Sources --> Core
     Sources --> Platform
-    Platform -->|"WIN32"| Windows
-    Platform -->|"UNIX"| Unix
+    Platform -->|"Windows"| Windows
+    Platform -->|"Other"| Unsupported
     Public --> Library
     Core --> Library
     Windows --> Library
-    Unix --> Library
-    Root -->|"GGPO_BUILD_VECTORWAR and WIN32"| SampleList
+    Root -->|"GGPO_BUILD_<br/>VECTORWAR<br/>and WIN32"| SampleList
     SampleList --> Library
     SampleList --> Sample
 ```
 
-The diagram includes the Unix source selected by CMake, but that source does not
-make upstream `master` a supported Unix build. See [Portability](Portability.md).
+The root selects exactly one supported platform layer. The incomplete legacy
+Unix source is no longer selected implicitly. See [Portability](Portability.md).
 
 ## Configuration options
 
@@ -66,6 +66,7 @@ Declared in the [root build file](../../CMakeLists.txt):
 | `GGPO_BUILD_SDK` | `ON` | Adds the `GGPO` library target |
 | `GGPO_BUILD_VECTORWAR` | `ON` | Adds Vector War only when `WIN32` is true |
 | `BUILD_SHARED_LIBS` | `ON` | Chooses a shared library instead of a static library |
+| `GGPO_RUN_TESTS_ON_BUILD` | `ON` | Runs the six self-contained CTests in the default build |
 
 Current Windows setup uses [`configure_windows.cmd`](../../configure_windows.cmd).
 The generated solution is described in the root [README](../../README.md).
@@ -79,12 +80,11 @@ The generated solution is described in the root [README](../../README.md).
 | Core | Inputs, queues, saved state, polling, logging, and time synchronization | [`sync.cpp`](../../src/lib/ggpo/sync.cpp), [`input_queue.cpp`](../../src/lib/ggpo/input_queue.cpp), [`timesync.cpp`](../../src/lib/ggpo/timesync.cpp) |
 | Network | UDP socket, wire messages, reliability, and peer state | [`udp.cpp`](../../src/lib/ggpo/network/udp.cpp), [`udp_proto.cpp`](../../src/lib/ggpo/network/udp_proto.cpp), [`udp_msg.h`](../../src/lib/ggpo/network/udp_msg.h) |
 | Backends | Peer-to-peer, spectator, and deterministic sync-test sessions | [`backends`](../../src/lib/ggpo/backends) |
-| Platform | Platform clock, process, configuration, and OS types | [`platform_windows.cpp`](../../src/lib/ggpo/platform_windows.cpp), [`platform_linux.cpp`](../../src/lib/ggpo/platform_linux.cpp) |
+| Platform | Selected separately from the portable inventory | [Windows platform layer](../../src/platform/windows/Platform.cmake), [`platform_windows.cpp`](../../src/lib/ggpo/platform_windows.cpp) |
 | Public | C-compatible integration contract | [`ggponet.h`](../../src/include/ggponet.h) |
 
-The library exposes both `src/include` and the internal `src/lib/ggpo` directory
-as public include paths in [`src/CMakeLists.txt`](../../src/CMakeLists.txt). The
-latter is an implementation leak that consumers should not depend upon.
+Only `src/include` is public. Internal headers remain private to the SDK target.
+In-tree and installed consumers link the `GGPO::GGPO` target.
 
 ## Vector War
 
@@ -111,20 +111,33 @@ The SDK install rules in [`src/CMakeLists.txt`](../../src/CMakeLists.txt) place:
 ```text
 <prefix>/
 ├── include/ggponet.h
-├── bin/<shared library on Windows>
-└── lib/<static library or Unix shared library>
+├── bin/GGPO.dll                  # shared build
+├── lib/GGPO.lib                  # import or static library
+├── lib/cmake/GGPO/               # CMake package and target export
+└── share/GGPO/                   # license and README
 ```
 
-The target is exported as `ggpo`, but the current build does not install a
-complete CMake package configuration for `find_package()` consumers.
+The install also exports `lib/cmake/GGPO/GGPOConfig.cmake`; consumers use
+`find_package(GGPO CONFIG REQUIRED)` and link `GGPO::GGPO`.
+
+## Release packages
+
+Pushing a version tag such as `v0.1.0` runs the
+[`Package release SDK`](../../.github/workflows/release-packages.yml) workflow.
+The tag must match the version declared by the root [`project()`](../../CMakeLists.txt).
+
+The workflow builds and tests Release SDKs for x64 and x86, with shared and
+static linkage. Each installed SDK is archived, extracted into a clean prefix,
+and used to build and run the external C11 and C++98 consumers before its ZIP
+and the combined `SHA256SUMS` file are attached to the GitHub Release.
 
 ## Platform status
 
-| Platform | Upstream build status | Main blockers |
+| Platform | Current build status | Main blockers |
 | --- | --- | --- |
 | Windows | Supported SDK and Vector War build | Existing reference platform |
-| Linux | CMake selects an incomplete `platform_linux` source | Win32 polling, sockets, CRT calls, and syntax errors remain |
-| macOS | Falls under the broad `UNIX` selection but has no validated path | Same Unix gaps plus no CI or sample frontend |
+| Linux | Explicitly rejected until a Linux platform layer exists | Adapter, CI, sample/frontend, and packaging remain |
+| macOS | Explicitly rejected until an Apple platform layer exists | Adapter, CI, lifecycle/frontend, and packaging remain |
 | Mobile and consoles | No build target | Platform services, lifecycle, socket policy, packaging, and validation absent |
 
 The build-port roadmap should preserve the public API while moving OS facilities

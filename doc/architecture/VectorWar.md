@@ -35,14 +35,14 @@ consumer.
 
 ```mermaid
 flowchart TD
-    Main["main.cpp<br/>Win32 process and 60 Hz loop"]
-    Host["vectorwar.cpp<br/>GGPO integration"]
-    Game["GameState<br/>deterministic simulation"]
-    NonGame["NonGameState<br/>connection and UI data"]
-    Renderer["GDIRenderer<br/>presentation only"]
-    Perf["GGPO perf monitor<br/>network statistics"]
+    Main["main.cpp<br/>Win32 process<br/>and 60 Hz<br/>loop"]
+    Host["vectorwar.cpp<br/>GGPO<br/>integration"]
+    Game["GameState<br/>deterministic<br/>simulation"]
+    NonGame["NonGameState<br/>connection and<br/>UI data"]
+    Renderer["GDIRenderer<br/>presentation<br/>only"]
+    Perf["GGPO perf<br/>monitor<br/>network<br/>statistics"]
     API["ggponet.h<br/>public API"]
-    Session["GGPOSession<br/>P2P, spectator, or SyncTest"]
+    Session["GGPOSession<br/>P2P,<br/>spectator,<br/>or SyncTest"]
 
     Main --> Host
     Host --> Game
@@ -68,9 +68,9 @@ flowchart TD
 ## Build and launch
 
 [`src/apps/vectorwar/CMakeLists.txt`](../../src/apps/vectorwar/CMakeLists.txt)
-builds the `VectorWar` Windows executable and links it to `GGPO`, `winmm`, and
-`ws2_32`. The root build adds it only when `GGPO_BUILD_VECTORWAR` and `WIN32` are
-both true.
+builds the `VectorWar` Windows executable and links it to `GGPO::GGPO`. The SDK's
+Windows platform layer carries `winmm` and `ws2_32` transitively. The root build
+adds Vector War only when `GGPO_BUILD_VECTORWAR` and `WIN32` are both true.
 
 The command line is parsed by [`wWinMain`](../../src/apps/vectorwar/main.cpp):
 
@@ -103,14 +103,14 @@ Repository scripts provide complete topologies:
 ```mermaid
 flowchart TD
     Entry["wWinMain"]
-    Window["CreateMainWindow"]
+    Window["CreateMain<br/>Window"]
     Sockets["WSAStartup"]
-    Parse["Parse players and endpoints"]
-    Mode{"spectate argument?"}
-    Player["VectorWar_Init"]
-    Spectator["VectorWar_InitSpectator"]
-    Loop["RunMainLoop"]
-    Exit["VectorWar_Exit and WSACleanup"]
+    Parse["Parse<br/>players and<br/>endpoints"]
+    Mode{"spectate<br/>argument?"}
+    Player["VectorWar_<br/>Init"]
+    Spectator["VectorWar_<br/>InitSpectator"]
+    Loop["RunMain<br/>Loop"]
+    Exit["VectorWar_Exit<br/>and WSACleanup"]
 
     Entry --> Window --> Sockets --> Parse --> Mode
     Mode -->|"no"| Player --> Loop
@@ -160,11 +160,11 @@ only `NonGameState`:
 ```mermaid
 stateDiagram-v2
     [*] --> Connecting
-    Connecting --> Synchronizing: peer connected
-    Synchronizing --> Running: all peers synchronized
-    Running --> Disconnecting: packet interruption
-    Disconnecting --> Running: packets resume
-    Disconnecting --> Disconnected: timeout expires
+    Connecting --> Synchronizing: peer<br/>connected
+    Synchronizing --> Running: all peers<br/>synchronized
+    Running --> Disconnecting: packet<br/>interruption
+    Disconnecting --> Running: packets<br/>resume
+    Disconnecting --> Disconnected: timeout<br/>expires
 ```
 
 The renderer shows these values, but they are deliberately excluded from saved
@@ -177,19 +177,19 @@ integration example:
 
 ```mermaid
 sequenceDiagram
-    participant MainLoop as Win32 frame loop
-    participant VW as Vector War adapter
-    participant GGPO as GGPO session
+    participant MainLoop as Win32<br/>frame loop
+    participant VW as Vector War<br/>adapter
+    participant GGPO as GGPO<br/>session
     participant GS as GameState
     participant Draw as Renderer
 
-    MainLoop->>VW: VectorWar_RunFrame(hwnd)
-    VW->>VW: ReadInputs(hwnd)
-    VW->>GGPO: ggpo_add_local_input()
-    VW->>GGPO: ggpo_synchronize_input()
-    GGPO-->>VW: all player inputs and disconnect flags
-    VW->>GS: Update(inputs, disconnect_flags)
-    VW->>GGPO: ggpo_advance_frame()
+    MainLoop->>VW: VectorWar_<br/>RunFrame(hwnd)
+    VW->>VW: ReadInputs<br/>(hwnd)
+    VW->>GGPO: ggpo_add_<br/>local_input()
+    VW->>GGPO: ggpo_<br/>synchronize_<br/>input()
+    GGPO-->>VW: all player<br/>inputs and<br/>disconnect<br/>flags
+    VW->>GS: Update(inputs,<br/>disconnect_<br/>flags)
+    VW->>GGPO: ggpo_<br/>advance_<br/>frame()
     VW->>Draw: Draw(gs, ngs)
 ```
 
@@ -220,15 +220,15 @@ replay. The callback does not read the keyboard or render:
 ```mermaid
 sequenceDiagram
     participant Sync as GGPO Sync
-    participant CB as vw_advance_frame_callback
+    participant CB as vw_advance_<br/>frame_callback
     participant API as GGPO API
     participant GS as GameState
 
-    Sync->>CB: advance_frame(0)
-    CB->>API: ggpo_synchronize_input()
-    API-->>CB: historical corrected inputs
-    CB->>GS: VectorWar_AdvanceFrame()
-    GS->>API: ggpo_advance_frame()
+    Sync->>CB: advance_<br/>frame(0)
+    CB->>API: ggpo_<br/>synchronize_<br/>input()
+    API-->>CB: historical<br/>corrected<br/>inputs
+    CB->>GS: VectorWar_<br/>AdvanceFrame()
+    GS->>API: ggpo_<br/>advance_<br/>frame()
 ```
 
 `VectorWar_AdvanceFrame` updates the simulation and calls `ggpo_advance_frame`
@@ -264,15 +264,15 @@ frame's synchronized input bit mask. Disconnected players use deterministic
 
 ```mermaid
 flowchart TD
-    Frame["Increment frame"]
-    Ship["For each ship in index order"]
-    Connected{"Disconnected flag set?"}
-    Input["Parse synchronized input bits"]
-    AI["Generate deterministic AI input"]
-    Move["Update heading and velocity"]
-    Bullets["Spawn and move bullets"]
-    Collide["Resolve bounds and ship hits"]
-    Cooldown["Decrement cooldown"]
+    Frame["Increment<br/>frame"]
+    Ship["For each ship<br/>in index order"]
+    Connected{"Disconnected<br/>flag set?"}
+    Input["Parse<br/>synchronized<br/>input bits"]
+    AI["Generate<br/>deterministic<br/>AI input"]
+    Move["Update heading<br/>and velocity"]
+    Bullets["Spawn and<br/>move bullets"]
+    Collide["Resolve bounds<br/>and ship hits"]
+    Cooldown["Decrement<br/>cooldown"]
 
     Frame --> Ship --> Connected
     Connected -->|"no"| Input --> Move
@@ -312,10 +312,10 @@ so no game-state snapshots are streamed.
 flowchart LR
     P1["Player peer 1"]
     P2["Player peer 2"]
-    Confirm["Minimum confirmed frame"]
-    Stream["Confirmed composite inputs"]
-    Spectator["SpectatorBackend"]
-    Sim["Local Vector War simulation"]
+    Confirm["Minimum<br/>confirmed<br/>frame"]
+    Stream["Confirmed<br/>composite<br/>inputs"]
+    Spectator["Spectator<br/>Backend"]
+    Sim["Local<br/>Vector War<br/>simulation"]
 
     P1 --> Confirm
     P2 --> Confirm
@@ -371,8 +371,9 @@ For frame 120:
 - Raw `memcpy` serialization is not versioned and is unsuitable for pointers or
   dynamic containers.
 - The sample uses a full peer mesh rather than an authoritative server.
-- There is no automated integration test; validation requires interactive
-  multi-process runs.
+- Vector War's window, renderer, and input path still require interactive
+  validation. Automated SDK tests separately cover SyncTest and two Windows
+  processes exchanging inputs over loopback UDP.
 
 Continue with the general [Runtime](Runtime.md), [Synchronization](Synchronization.md),
 and [API reference](API.md).

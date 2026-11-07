@@ -3,6 +3,7 @@
 ## Contents
 
 - [Header and linkage](#header-and-linkage)
+- [Language and ABI contract](#language-and-abi-contract)
 - [Integration lifecycle](#integration-lifecycle)
 - [Core types](#core-types)
 - [Required callbacks](#required-callbacks)
@@ -17,21 +18,48 @@
 
 The complete public declaration is [`src/include/ggponet.h`](../../src/include/ggponet.h),
 implemented by [`src/lib/ggpo/main.cpp`](../../src/lib/ggpo/main.cpp). Include it
-from C++ and link the `GGPO` library. Declarations use `extern "C"`, but the
-header currently depends on C++ `bool` and is not directly C-compilable.
+from C11 or C++98 and link `GGPO::GGPO` from the installed CMake package. Both
+language paths resolve the same C-linkage exports.
 
 This page reflects the source; the older [Developer Guide](../DeveloperGuide.md)
 contains useful integration guidance but some example names differ from the header.
+
+## Language and ABI contract
+
+`GGPO_API` controls DLL import/export visibility. `GGPO_CALL` expands to
+`__cdecl` on Windows and to the platform's default C convention elsewhere; it
+decorates both exported functions and application callback slots. C includes
+`<stdbool.h>`, while C++ continues to use its built-in `bool`.
+
+The [installed-consumer fixtures](../../tests/consumer) compile and link C11 and
+C++98 programs using only the installed header and library. The frozen
+[Windows ABI fixtures](../../tests/baseline/windows/README.md) separately guard
+exports, public layouts, enum values, and callback offsets.
+
+Versioning follows these rules:
+
+- patch releases may change implementation but not the public ABI;
+- minor releases may add declarations while retaining old source and binary
+  compatibility;
+- ABI-breaking declarations, layouts, or calling conventions require an
+  explicit major version and separately named compatibility proposal;
+- static consumers must rebuild, but still retain source compatibility; and
+- wire-protocol compatibility is a separate contract and is not implied by the
+  library version alone.
+
+New platform packages must expose this same C declaration surface. They may
+change how visibility is expressed internally, but cannot silently change
+names, signatures, callback order, or public data layout.
 
 ## Integration lifecycle
 
 ```mermaid
 flowchart TD
-    Callbacks["Populate all callbacks"]
-    Start["Start P2P, spectator,<br/>or SyncTest session"]
-    Players["Add every player"]
-    Loop["Submit input, synchronize,<br/>advance, idle"]
-    Events["Handle asynchronous events"]
+    Callbacks["Populate<br/>all callbacks"]
+    Start["Start P2P,<br/>spectator,<br/>or SyncTest<br/>session"]
+    Players["Add every<br/>player"]
+    Loop["Submit input,<br/>synchronize,<br/>advance, idle"]
+    Events["Handle<br/>asynchronous<br/>events"]
     Close["Close session"]
 
     Callbacks --> Start --> Players --> Loop

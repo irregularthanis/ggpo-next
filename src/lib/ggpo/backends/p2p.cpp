@@ -161,7 +161,7 @@ Peer2PeerBackend::DoPoll(int timeout)
          }
          // XXX: this is obviously a farce...
          if (timeout) {
-            Sleep(1);
+            ggpo_platform::WaitMs(1);
          }
       }
    }
@@ -583,7 +583,7 @@ Peer2PeerBackend::PlayerHandleToQueue(GGPOPlayerHandle player, int *queue)
 
  
 void
-Peer2PeerBackend::OnMsg(sockaddr_in &from, UdpMsg *msg, int len)
+Peer2PeerBackend::OnMsg(ggpo_platform::UdpEndpoint &from, UdpMsg *msg, int len)
 {
    for (int i = 0; i < _num_players; i++) {
       if (_endpoints[i].HandlesMsg(from, msg)) {
