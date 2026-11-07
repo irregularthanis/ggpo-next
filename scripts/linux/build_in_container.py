@@ -65,7 +65,7 @@ def main():
         "LD_LIBRARY_PATH=/out/install/lib /out/consumer/ggpo_installed_c11",
         "LD_LIBRARY_PATH=/out/install/lib /out/consumer/ggpo_installed_cpp98",
         "python3 /src/scripts/ci/audit_linux_sdk.py /out/install",
-        "cc --version | head -n 1",
+        f"{cc} --version | head -n 1",
         "cmake --version | head -n 1",
         "ninja --version",
     ])

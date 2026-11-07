@@ -85,7 +85,7 @@ Declared in the [root build file](../../CMakeLists.txt):
 | `GGPO_BUILD_SDK` | `ON` | Adds the `GGPO` library target |
 | `GGPO_BUILD_VECTORWAR` | `ON` | Adds Vector War only when `WIN32` is true |
 | `BUILD_SHARED_LIBS` | `ON` | Chooses a shared library instead of a static library |
-| `GGPO_RUN_TESTS_ON_BUILD` | `ON` | Runs the six self-contained CTests in the default build |
+| `GGPO_RUN_TESTS_ON_BUILD` | `ON` | Runs the platform's self-contained CTests in the default build |
 
 Current Windows setup uses [`configure_windows.cmd`](../../configure_windows.cmd).
 The generated solution is described in the root [README](../../README.md).
@@ -151,9 +151,7 @@ The workflow builds Windows x64/x86 and Linux x86-64 SDKs with shared and
 static linkage. Each installed SDK is archived into ZIP or tar.gz, then
 validated through external C11 and C++98 consumers. The Linux archive is also
 audited for its SONAME, exports, dependencies, and glibc symbol ceiling.
-Each installed SDK is extracted into a clean prefix,
-and used to build and run the external C11 and C++98 consumers before its ZIP
-and the combined `SHA256SUMS` file are attached to the GitHub Release.
+The archives and combined `SHA256SUMS` file are attached to the GitHub Release.
 
 ## Platform status
 

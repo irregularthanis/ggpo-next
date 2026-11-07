@@ -241,7 +241,7 @@ GCC/Clang × static/shared matrix inside that image. Each lane runs CTest,
 installs the SDK, builds and executes external C11/C++98 consumers, and audits
 the installed Linux library.
 
-Windows GCC and Clang header jobs also compile the public C11 and C++98
+The GCC and Clang portable-header jobs also compile the public C11 and C++98
 consumers without linking an SDK. These remain header-portability gates.
 The Clang C++ gate suppresses only `-Wextern-c-compat`: C requires the documented
 one-byte `GGPOPlayer.local` placeholder while C++ retains the frozen empty-member
