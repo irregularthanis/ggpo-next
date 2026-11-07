@@ -64,3 +64,46 @@ add_test(NAME windows_peer_loopback
             --frames 180
 )
 set_tests_properties(windows_peer_loopback PROPERTIES TIMEOUT 90)
+
+# Build the production rollback core against a deterministic adapter. This is
+# intentionally a separate static library: it proves SyncTest does not acquire
+# Win32/Winsock behavior through an accidental transitive dependency.
+set(GGPO_FAKE_CORE_RELATIVE_SOURCES ${GGPO_LIB_SRC})
+list(REMOVE_ITEM GGPO_FAKE_CORE_RELATIVE_SOURCES
+    "lib/ggpo/platform_windows.cpp"
+    "lib/ggpo/platform_linux.cpp"
+)
+set(GGPO_FAKE_CORE_SOURCES)
+foreach(source ${GGPO_FAKE_CORE_RELATIVE_SOURCES})
+    list(APPEND GGPO_FAKE_CORE_SOURCES "${PROJECT_SOURCE_DIR}/src/${source}")
+endforeach()
+
+add_library(ggpo_fake_core STATIC
+    ${GGPO_FAKE_CORE_SOURCES}
+    platform/fake/platform_fake.cpp
+)
+add_common_flags(ggpo_fake_core)
+target_compile_options(ggpo_fake_core PRIVATE "/W4" "/WX")
+target_include_directories(ggpo_fake_core PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/include
+    ${PROJECT_SOURCE_DIR}/src/lib/ggpo
+)
+
+add_executable(ggpo_fake_core_synctest
+    smoke/synctest_smoke.cpp
+    ${GGPO_WINDOWS_BASELINE_COMMON}
+)
+add_common_flags(ggpo_fake_core_synctest)
+target_compile_options(ggpo_fake_core_synctest PRIVATE "/W4")
+target_include_directories(ggpo_fake_core_synctest PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/include
+    ${PROJECT_SOURCE_DIR}/src/lib/ggpo
+    ${CMAKE_CURRENT_SOURCE_DIR}/smoke
+)
+target_link_libraries(ggpo_fake_core_synctest PRIVATE ggpo_fake_core)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/fake-synctest)
+add_test(NAME fake_platform_synctest COMMAND ggpo_fake_core_synctest)
+set_tests_properties(fake_platform_synctest PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/fake-synctest
+    TIMEOUT 60
+)
