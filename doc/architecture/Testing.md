@@ -200,10 +200,11 @@ across this matrix:
 | x64 | Shared and static | Debug and Release |
 | Win32 | Shared and static | Debug and Release |
 
-The final [M0 verifier](../../scripts/ci/verify_windows_against_m0.ps1) builds
-the frozen M0 source and the current candidate. It compares exports and layouts,
-then runs both cross-revision directions: the M0 executable with the candidate
-DLL and the candidate executable with the M0 DLL.
+The final [Windows compatibility verifier](../../scripts/ci/verify_windows_compatibility.ps1)
+builds the frozen Windows baseline and the current candidate. It compares
+exports and layouts, then runs both cross-revision directions: the baseline
+executable with the candidate DLL and the candidate executable with the
+baseline DLL.
 
 GCC and Clang jobs also compile the public C11 and C++98 consumers without
 linking an SDK. These are header-portability gates, not Linux runtime support.

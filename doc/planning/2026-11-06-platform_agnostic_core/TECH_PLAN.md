@@ -1,8 +1,8 @@
 # TECH_PLAN — Platform-agnostic GGPO core and Windows build layer
 
-Status: M0–M3 complete; M4 implemented and awaiting final qualification
+Status: Windows compatibility baseline and M1–M3 complete; M4 implemented and awaiting final qualification
 Source: [`004ffd7`](https://github.com/irregularthanis/ggpo-next/tree/004ffd7f47603d3bae4abd1d541501d715e03279)  
-M0 implementation: [`3498899`](https://github.com/irregularthanis/ggpo-next/commit/34988996cab45c1a37a9c556fe66b192d60a547b)
+Windows baseline implementation: [`3498899`](https://github.com/irregularthanis/ggpo-next/commit/34988996cab45c1a37a9c556fe66b192d60a547b)
 
 M1 implementation: [`1f31b0a`](https://github.com/irregularthanis/ggpo-next/commit/1f31b0a16a8dae7edfc271db6fd44d5670dc190f)
 
@@ -35,9 +35,9 @@ qualified at [`9ac7b45`](https://github.com/irregularthanis/ggpo-next/commit/9ac
   but emulate several Win32 names inside Unix code. This plan instead keeps OS
   names out of the core and preserves attribution for reused logic.
 
-## M0 Windows compatibility baseline
+## Windows compatibility baseline
 
-M0 adds tests and evidence capture without changing GGPO runtime behavior. The
+The baseline adds tests and evidence capture without changing GGPO runtime behavior. The
 [successful matrix](https://github.com/irregularthanis/ggpo-next/actions/runs/42296246130)
 builds x64 and Win32, shared and static, in Debug and Release.
 
@@ -64,7 +64,7 @@ Windows `__cdecl` and becomes empty on other toolchains; C gains
 [`tests/consumer`](../../../tests/consumer/CMakeLists.txt) contains minimal C11 and C++98
 programs. The [Windows validation wrapper](../../../scripts/ci/verify_installed_consumers.ps1)
 installs each matrix build into a clean prefix, then compiles and links both
-programs using only that installed header and library. The M0 layout and export
+programs using only that installed header and library. The baseline layout and export
 fixtures remain the hard ABI gate, now including an x86 export manifest.
 
 The [M1 Windows matrix](https://github.com/irregularthanis/ggpo-next/actions/runs/42321026313)
@@ -118,12 +118,12 @@ as defining `SOCKET`, `HANDLE`, or `WSAGetLastError` on every OS.
 | Status | File / symbol | Practical edit | Milestone |
 | --- | --- | --- | --- |
 | Implemented | [`ggponet.h`](../../../src/include/ggponet.h) | Add `GGPO_CALL` and complete `GGPO_API`; include C boolean support without changing Windows signatures/layout | M1 |
-| Implemented | [Windows baseline fixtures](../../../tests/baseline/windows/README.md), [installed consumers](../../../tests/consumer/CMakeLists.txt) | Export/layout fixtures, SyncTest, real two-peer baseline, and installed C11/C++98 compile/link checks | M0, M1 |
+| Implemented | [Windows baseline fixtures](../../../tests/baseline/windows/README.md), [installed consumers](../../../tests/consumer/CMakeLists.txt) | Export/layout fixtures, SyncTest, real two-peer baseline, and installed C11/C++98 compile/link checks | Baseline, M1 |
 | Implemented | [`types.h`](../../../src/lib/ggpo/types.h), [`platform.h`](../../../src/lib/ggpo/platform.h) | Include neutral clock/wait, process/config/diagnostic, filesystem, endpoint, and UDP contracts | M2 |
 | Implemented | [`platform_windows.cpp`](../../../src/lib/ggpo/platform_windows.cpp), [`poll.cpp`](../../../src/lib/ggpo/poll.cpp), [`udp.cpp`](../../../src/lib/ggpo/network/udp.cpp) | Keep Win32/Winsock implementation and native representation behind the adapter | M2 |
 | Implemented | [fake platform tests](../../../tests/platform/fake/platform_fake_test.cpp), [core SyncTest wiring](../../../tests/CMakeLists.txt) | Run production rollback core with deterministic time/config/filesystem/UDP outcomes and failure/cleanup checks | M2 |
 | Added | [`src/platform/windows/Platform.cmake`](../../../src/platform/windows/Platform.cmake) | Own Windows sources, definitions, `winmm`, and `ws2_32` | M3 |
-| Added | [`tests/platform/fake`](../../../tests/platform/fake), [`tests/smoke`](../../../tests/smoke) | Deterministic adapter contract plus Windows two-peer loopback tests | M2–M3 |
+| Added | [`platform_fake_test.cpp`](../../../tests/platform/fake/platform_fake_test.cpp), [`peer_smoke.cpp`](../../../tests/smoke/peer_smoke.cpp) | Deterministic adapter contract plus Windows two-peer loopback tests | M2–M3 |
 | Modified | Root and [`src` CMake](../../../src/CMakeLists.txt) | Build portable `GGPO`, select one platform target, install `GGPO::GGPO`, and make internal includes private | M3 |
 | Modify | [`appveyor.yml`](../../../appveyor.yml), architecture docs | Run compatibility gates and document the extension point | M4 |
 
@@ -145,10 +145,10 @@ not an escape hatch within this work.
 | Surface | Proposed contract | Compatibility gate |
 | --- | --- | --- |
 | Linkage | All functions retain C linkage | C and C++ consumers resolve the same exported names |
-| Visibility | `GGPO_API` maps build/import/export visibility per toolchain | M0 Windows DLL export manifest is unchanged |
+| Visibility | `GGPO_API` maps build/import/export visibility per toolchain | Baseline Windows DLL export manifest is unchanged |
 | Calls and callbacks | `GGPO_CALL` replaces direct `__cdecl` on functions and callback fields | Windows x86/x64 convention is explicit; other targets use their default C convention |
-| Boolean callbacks | C includes `<stdbool.h>`; C++ continues using built-in `bool` | Callback structure size/offsets match M0 on Windows |
-| Public data | Existing integer, enum, union, and array declarations remain unchanged | `sizeof` and `offsetof` report matches M0 |
+| Boolean callbacks | C includes `<stdbool.h>`; C++ continues using built-in `bool` | Callback structure size/offsets match the Windows baseline |
+| Public data | Existing integer, enum, union, and array declarations remain unchanged | `sizeof` and `offsetof` report matches the Windows baseline |
 | Versioning | ABI-breaking cleanup is deferred to a separate future proposal; this work is compatibility-preserving | CI rejects every export/layout drift |
 
 **Proposed declaration pattern:**
@@ -221,7 +221,7 @@ public:
 `sockaddr_in` fields and callbacks with `UdpEndpoint`. Packet payloads are not
 changed. `Poll` retains scheduling and callback ownership; only OS waiting moves
 behind `WaitMs()`. The unused native-handle registration path is removed only if
-M0 confirms no required behavior.
+The Windows baseline confirms no required behavior.
 
 MSVC secure-CRT calls are a separate concern: bounded formatting, copying, and
 file opening become portable internal helpers rather than fake platform APIs.
@@ -304,7 +304,7 @@ endif()
 `ctest`. Cross-compilation must provide `CMAKE_CROSSCOMPILING_EMULATOR` or
 explicitly disable execution; configuration fails instead of silently claiming
 tests ran. Cross-revision old/new DLL checks carry the `cross-revision` label and
-remain mandatory in CI, where the frozen M0 artifacts are available.
+remain mandatory in CI, where the frozen Windows baseline artifacts are available.
 
 ### Build toolchain: before
 
@@ -376,19 +376,19 @@ remains a separate Windows application layer in this phase.
 
 ### Build-system A/B qualification
 
-Two comparisons are required because M0-versus-final proves overall
+Two comparisons are required because baseline-versus-final proves overall
 compatibility but does not isolate whether a difference came from core changes
 or CMake restructuring.
 
 | Artifact | Source | Build path | Purpose |
 | --- | --- | --- | --- |
-| A — M0 control | Pinned `004ffd7` | Unmodified existing build | True pre-refactor baseline |
+| A — Windows baseline | Pinned `004ffd7` | Unmodified existing build | True pre-refactor baseline |
 | B — refactored legacy | Candidate commit | Temporary legacy entry point; only source-path updates allowed | Holds source constant while retaining the previous build organization |
 | C — refactored layered | Same candidate commit as B | New core plus Windows platform layer | Candidate shipped build |
 
 ```mermaid
 flowchart LR
-    A["A: M0 source<br/>existing build"]
+    A["A: Windows baseline<br/>source and build"]
     B["B: refactored source<br/>legacy build<br/>entry"]
     C["C: same refactored<br/>source<br/>layered build entry"]
     Total["A vs C<br/>end-to-end<br/>compatibility"]
@@ -414,7 +414,7 @@ be traced to an actual flag or input.
 | B vs C | Exports/layouts, installed headers, compile/link commands, smoke checksums, rollback traces, two-peer frame/checksum results | Exact contract and deterministic results; any flag/input difference is explained and removed unless intentionally additive |
 | A vs B | Same API/ABI and runtime evidence | Identifies effects of source/platform refactoring independently of build layering |
 | A vs C | Old consumer with candidate DLL plus complete qualification suite | Final compatibility gate; any API/ABI or deterministic behavior mismatch blocks merge |
-| All artifacts | Build duration, output size, and paired runtime samples | Informational until M0 establishes same-build noise; differences outside that measured envelope require investigation |
+| All artifacts | Build duration, output size, and paired runtime samples | Informational until the baseline establishes same-build noise; differences outside that measured envelope require investigation |
 
 Binary hashes are recorded for identity, not equality: compiler metadata, PDBs,
 paths, and timestamps can differ. Export/layout reports and deterministic runtime
@@ -434,9 +434,9 @@ The Windows compatibility matrix is bidirectional where the contract allows:
 
 | Consumer test | Header/import library | Runtime library | Required result |
 | --- | --- | --- | --- |
-| Existing binary | M0 | Refactored DLL | Loads and completes the fixed smoke scenario unchanged |
-| Existing source | M0 application source, refactored SDK | Refactored DLL/static library | Compiles, links, and completes the same scenario without source edits |
-| New-header consumer | Refactored header/import library | M0 DLL | Links and runs because no existing declaration/export changed |
+| Existing binary | Frozen Windows baseline | Refactored DLL | Loads and completes the fixed smoke scenario unchanged |
+| Existing source | Baseline application source, refactored SDK | Refactored DLL/static library | Compiles, links, and completes the same scenario without source edits |
+| New-header consumer | Refactored header/import library | Baseline DLL | Links and runs because no existing declaration/export changed |
 | C and C++ fixtures | Refactored installed package | Refactored DLL/static library | Both use only the public include and `GGPO::GGPO` |
 
 Static libraries have no cross-build binary promise; they must retain source and
@@ -450,7 +450,7 @@ be introduced, but existing names and build options remain accepted.
 | Plan | `validate_plan.py <planning-dir>` | Structural pass and valid links | Any error blocks planning PR completion |
 | Windows build | CMake x64 Debug/Release, static/shared | SDK, install tree, and Vector War compile | Any current matrix regression fails |
 | Public API | Build C11 and C++98 consumers from installed headers | Compile and link with no internal includes | Either language failure fails |
-| ABI | Run the M0/refactored compatibility matrix and compare exports/layouts | No signature, decoration, symbol, layout, or old-binary runtime drift | Any difference blocks this work; redesign or defer it |
+| ABI | Run the baseline/refactored compatibility matrix and compare exports/layouts | No signature, decoration, symbol, layout, or old-binary runtime drift | Any difference blocks this work; redesign or defer it |
 | Core boundary | Source-contract scan plus target include inspection | No Win32/Winsock/secure-CRT names in portable sources | Match outside allowed Windows layer fails |
 | Runtime | SyncTest and two local UDP peers over fixed frame counts | All frames complete; peer checksums match | Missing run or mismatch is inconclusive/fail |
 | Agnostic smoke | Core linked with deterministic fake adapter | Startup, frames, rollback, scripted failures, cleanup all pass without OS calls | Any fallback to real time/network fails |
@@ -463,13 +463,13 @@ be introduced, but existing names and build options remain accepted.
 
 | Milestone | Depends | Can run with | Deliverable / integration gate |
 | --- | --- | --- | --- |
-| M0 | — | — | Freeze Windows build, export/layout, wire, and runtime baselines |
-| M1 | M0 | M2 | Portable header and installed-consumer fixtures preserve M0 ABI |
-| M2 | M0 | M1 | Core uses semantic contracts; Windows adapters preserve runtime baseline |
+| Windows baseline | — | — | Freeze Windows build, export/layout, wire, and runtime contracts |
+| M1 | Windows baseline | M2 | Portable header and installed-consumer fixtures preserve baseline ABI |
+| M2 | Windows baseline | M1 | Core uses semantic contracts; Windows adapters preserve runtime baseline |
 | M3 | M2 | late M1 | Windows target owns OS inputs; consumer target/install surface is clean |
 | M4 | M1, M2, M3 | — | CI, runtime evidence, docs, and follow-up contract agree |
 
-### M0: Freeze Windows contracts
+### Windows compatibility baseline
 
 Capture the supported build, export/layout, packet, and runtime evidence before
 moving code. These artifacts become the comparison inputs for every later gate.
@@ -477,12 +477,12 @@ moving code. These artifacts become the comparison inputs for every later gate.
 ### M1: Stabilize the public API and ABI
 
 Own `src/include` plus API/ABI fixtures. Make declarations portable while
-preserving the M0 Windows ABI and proving installed C and C++ consumption.
+preserving the baseline Windows ABI and proving installed C and C++ consumption.
 
 ### M2: Extract platform services
 
 Own internal core/platform sources. Replace OS names with semantic contracts,
-implement them for Windows, and compare runtime behavior with M0.
+implement them for Windows, and compare runtime behavior with the frozen baseline.
 
 ### M3: Separate the Windows build layer
 
@@ -495,7 +495,7 @@ Retain the test-only legacy entry until the same-source B-vs-C gate passes.
 Combine M1–M3, run all compatibility gates, update architecture documentation,
 and publish the stable contract consumed by later platform PRs.
 
-Critical path: M0 → M2 → M3 → M4. M1 can proceed alongside M2 because it owns
+Critical path: Windows baseline → M2 → M3 → M4. M1 can proceed alongside M2 because it owns
 the public header and ABI fixtures; coordinate only the target export definitions
 with M3. Platform implementations are serialized after this PR because they all
 depend on the same frozen contract.
@@ -506,7 +506,7 @@ depend on the same frozen contract.
   "clean up" any existing public declaration in this phase.
 - If C compilation cannot be added without changing callback ABI, retain the
   existing ABI and add a separate compatible declaration layer or defer C mode.
-- Remove or replace the unused handle-registration path only after M0 runtime
+- Remove or replace the unused handle-registration path only after baseline runtime
   evidence; absence of current callers is not alone proof of external use.
 - The automated suite guards ABI, layout, rollback, adapter behavior, installed
   consumers, and local Windows UDP behavior; broader protocol cases remain follow-up work.

@@ -46,20 +46,20 @@ jobs:
           path: build/windows-compatibility-evidence
           if-no-files-found: error
 
-  final-m0-qualification:
-    name: Final M0/candidate compatibility
+  final-compatibility:
+    name: Frozen Windows baseline / candidate compatibility
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with:
           ref: 34988996cab45c1a37a9c556fe66b192d60a547b
-          path: m0
-      - name: Compare frozen M0 and candidate contracts
+          path: windows-baseline
+      - name: Compare frozen Windows baseline and candidate contracts
         shell: pwsh
         run: |
-          ./scripts/ci/verify_windows_against_m0.ps1 `
-            -M0Source "m0" `
+          ./scripts/ci/verify_windows_compatibility.ps1 `
+            -BaselineSource "windows-baseline" `
             -Generator "Visual Studio 17 2022" `
             -BuildRoot "build/windows-final-qualification" `
             -EvidenceRoot "build/windows-final-evidence"
@@ -67,7 +67,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: windows-final-m0-qualification
+          name: windows-final-compatibility
           path: build/windows-final-evidence
           if-no-files-found: error
 
