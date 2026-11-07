@@ -22,6 +22,21 @@ function(ggpo_configure_test target)
     endif()
 endfunction()
 
+# Configure fixtures that compile GGPO sources directly into a static target.
+function(ggpo_configure_static_test target)
+    add_common_flags(${target})
+    if(MSVC)
+        target_compile_options(${target} PRIVATE "/W4")
+    else()
+        target_compile_options(${target} PRIVATE -Wall -Wextra)
+    endif()
+    target_include_directories(${target} PRIVATE
+        ${PROJECT_SOURCE_DIR}/src/include
+        ${PROJECT_SOURCE_DIR}/src/lib/ggpo
+        ${CMAKE_CURRENT_SOURCE_DIR}/smoke
+    )
+endfunction()
+
 # Compile-time/public-data contracts; neither test opens a socket.
 if(WIN32)
     add_executable(ggpo_windows_public_layout
@@ -95,7 +110,7 @@ add_library(ggpo_fake_core STATIC
     platform/fake/platform_fake.cpp
     platform/fake/platform_fake.h
 )
-ggpo_configure_test(ggpo_fake_core)
+ggpo_configure_static_test(ggpo_fake_core)
 if(MSVC)
     target_compile_options(ggpo_fake_core PRIVATE "/WX")
 endif()
@@ -109,7 +124,7 @@ add_executable(ggpo_fake_core_synctest
     smoke/synctest_smoke.cpp
     ${GGPO_SMOKE_COMMON}
 )
-ggpo_configure_test(ggpo_fake_core_synctest)
+ggpo_configure_static_test(ggpo_fake_core_synctest)
 target_include_directories(ggpo_fake_core_synctest PRIVATE
     ${PROJECT_SOURCE_DIR}/src/include
     ${PROJECT_SOURCE_DIR}/src/lib/ggpo
@@ -126,7 +141,7 @@ set_tests_properties(fake_platform_synctest PROPERTIES
 add_executable(ggpo_fake_platform_contract
     platform/fake/platform_fake_test.cpp
 )
-ggpo_configure_test(ggpo_fake_platform_contract)
+ggpo_configure_static_test(ggpo_fake_platform_contract)
 target_include_directories(ggpo_fake_platform_contract PRIVATE
     ${PROJECT_SOURCE_DIR}/src/lib/ggpo
     ${CMAKE_CURRENT_SOURCE_DIR}/platform/fake
