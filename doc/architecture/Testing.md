@@ -105,6 +105,13 @@ protocol-version compatibility; those require separate tests.
 game-owned state, checksum, and the callbacks GGPO needs to save, load, free,
 and replay it.
 
+The cross-host result uses `SmokeCanonicalChecksum`: frame, accumulator, and
+disconnect flags are serialized as three little-endian 32-bit values before
+hashing. [`result_schema.py`](../../tests/e2e/result_schema.py) independently
+computes the same state and fixed vectors, avoiding native padding and byte
+order as an accidental test contract. The legacy native-memory checksum remains
+available to schema-1 loopback results.
+
 ```mermaid
 flowchart LR
     Inputs["Two integer<br/>inputs"]
@@ -186,21 +193,39 @@ tests.
 
 ### Native cross-host smoke
 
-Run the same smoke executable on controlled Windows and Linux hosts. Start both
-commands together, using each host's reachable LAN address:
+[`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml)
+automates native Linux↔Linux, Windows↔Windows, Linux↔Windows, and
+Windows↔Linux role assignments on GitHub-hosted runners. Both peers use the
+same source SHA and advance 180 deterministic frames.
 
-```text
-# Windows
-ggpo_windows_peer_smoke.exe 1 7000 7001 180 windows.json LINUX_IP
+```mermaid
+flowchart LR
+    P1["Player 1<br/>native runner"]
+    P2["Player 2<br/>native runner"]
+    UDP["Production GGPO<br/>UDP session"]
+    Control["Authenticated<br/>test control"]
+    Results["Canonical state<br/>and lifecycle<br/>results"]
+    Oracle["Independent<br/>Python oracle"]
 
-# Ubuntu or SteamOS
-./ggpo_linux_peer_smoke 2 7001 7000 180 linux.json WINDOWS_IP
+    P1 <--> UDP
+    UDP <--> P2
+    P2 --> Control --> P1
+    P1 --> Results
+    P2 --> Results
+    Results --> Oracle
 ```
 
-Copy both result files to one machine and validate them with
-[`compare_peer_results.py`](../../tests/smoke/compare_peer_results.py). Record
-both artifact hashes, OS versions, commands, and the validator output. Wine is
-not native Windows interoperability evidence.
+The role-1 runner publishes a run- and scenario-bound endpoint through a
+transient GitHub Deployment. [`host_agent.py`](../../tests/e2e/host_agent.py)
+accepts only authenticated lifecycle operations; production GGPO data still
+travels directly over UDP. At frame 180, both peers keep pumping GGPO until the
+coordinator observes both ready markers and releases the finalize markers.
+
+[`compare_peer_results.py`](../../tests/smoke/compare_peer_results.py) retains
+schema-1 compatibility. Schema 2 additionally requires matching run/session
+identity, the expected platform roles, independent oracle checksum, one running
+event, no unexpected disconnect, clean session close, and zero exit status.
+Wine is not native Windows interoperability evidence.
 
 ## Build and CI integration
 
@@ -210,7 +235,11 @@ layout checks plus shared smoke families. Linux registers:
 ```text
 linux_synctest_smoke
 linux_peer_loopback
+linux_peer_schema2_loopback
 linux_peer_negative_contracts
+cross_host_result_contract
+cross_host_orchestration_contract
+cross_host_rendezvous_contract
 fake_platform_synctest
 fake_platform_contract
 ```
@@ -222,7 +251,11 @@ windows_public_layout
 windows_packet_layout
 windows_synctest_smoke
 windows_peer_loopback
+windows_peer_schema2_loopback
 windows_peer_negative_contracts
+cross_host_result_contract
+cross_host_orchestration_contract
+cross_host_rendezvous_contract
 fake_platform_synctest
 fake_platform_contract
 ```
@@ -263,6 +296,13 @@ Windows ABI. All other pedantic diagnostics remain errors.
 its existing x64 Windows builds. Unsupported SDK platforms now fail CMake
 configuration explicitly instead of selecting the incomplete legacy Unix file.
 
+The trusted-only [native E2E workflow](../../.github/workflows/cross-platform-e2e.yml)
+builds static Release x64 peers on their native runners. It joins ephemeral
+Tailscale nodes with a commit-pinned action, executes all four ordered platform
+roles, uploads per-role evidence, and rejects a missing, duplicate, or failed
+scenario in an unconditional final job. It requires repository secrets and is
+not triggered by pull requests.
+
 ## Evidence and interpretation
 
 [`capture_windows_compatibility_baseline.ps1`](../../scripts/ci/capture_windows_compatibility_baseline.ps1)
@@ -286,8 +326,9 @@ established by the frame, checksum, callback, and lifecycle assertions.
 - No malformed/truncated packet suite validates parser rejection.
 - No spectator, disconnect/resume, simulated loss, or multi-player automated
   session exists.
-- Native Windows↔Ubuntu and Windows↔SteamOS sessions require controlled hosts;
-  ordinary isolated GitHub-hosted jobs cannot provide this network.
+- The automated matrix covers native Windows↔Ubuntu, but not SteamOS hardware.
+- The clean cross-platform workflow does not inject latency or packet loss;
+  deterministic impairment remains a follow-up after clean-run qualification.
 - No macOS adapter or build exists.
 - No sanitizer job is configured.
 

@@ -1,8 +1,8 @@
 # TECH_PLAN — Native cross-platform end-to-end CI
 
-Status: Planning only
+Status: Implementation in progress
 
-Source: `3ae20afbda22f245d15ac28d67f9bd9d732100ab`
+Implementation baseline: `2a5cbe7` (current `master` plus owner-approval policy)
 
 [Product brief](PRD.md) · [Tracker](PROGRESS.md)
 
@@ -71,7 +71,7 @@ Proposed schema 2 adds fields without changing schema 1 readers:
 }
 ```
 
-`SmokeCanonicalBytes` serializes frame, accumulator, and disconnect flags as explicitly sized unsigned 32-bit little-endian values. A Python oracle independently applies the documented input sequence and transition and checks known vectors. The existing native-memory checksum remains available only for legacy schema 1 tests.
+`SmokeCanonicalChecksum` serializes frame, accumulator, and disconnect flags as explicitly sized unsigned 32-bit little-endian values. A Python oracle independently applies the documented input sequence and transition and checks known vectors. The existing native-memory checksum remains available only for legacy schema 1 tests.
 
 At target frame, each fixture writes a ready marker and continues pumping GGPO. The coordinator releases a test-only finalize marker only after both peers are ready; peers then record state and close. This replaces the fixed delay as the success condition while keeping control traffic outside production UDP.
 

@@ -86,6 +86,12 @@ The current wire format transmits a packed native C++ structure defined by
 - compatibility/version behavior when protocol structures change.
 
 Compilation on another OS is insufficient without cross-platform peer tests.
+The [native E2E workflow](../../.github/workflows/cross-platform-e2e.yml) checks
+both same-platform assignments and both Windows/Linux role directions. Its
+portable result oracle validates explicit state bytes, while GGPO's existing
+packed UDP messages exercise the actual platform compiler layouts on the wire.
+This is compatibility evidence for the tested x64 little-endian hosts, not a
+claim that the implicit wire format is portable to every architecture.
 
 ## Follow-up platform contract
 

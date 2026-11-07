@@ -6,7 +6,7 @@
 
 GGPOSession *g_smoke_session = NULL;
 SmokeState g_smoke_state = { 0, 0, 0 };
-SmokeMetrics g_smoke_metrics = { 0, 0, 0, 0 };
+SmokeMetrics g_smoke_metrics = { 0, 0, 0, 0, 0 };
 
 // This deliberately small deterministic state is shared by SyncTest and the
 // real loopback test.  GGPO may save, restore, and replay it exactly as a game
@@ -40,6 +40,34 @@ SmokeChecksum(const SmokeState *state)
    size_t i;
    for (i = 0; i < sizeof(*state); i++) {
       checksum ^= bytes[i];
+      checksum *= 16777619u;
+   }
+   return checksum;
+}
+
+// Hash an explicit little-endian representation instead of native structure
+// bytes, making the E2E checksum independent of padding and host byte order.
+unsigned int
+SmokeCanonicalChecksum(const SmokeState *state)
+{
+   unsigned int values[3];
+   unsigned char bytes[12];
+   unsigned int checksum = 2166136261u;
+   size_t byte_index = 0;
+   size_t value_index;
+
+   values[0] = (unsigned int)state->frame;
+   values[1] = state->accumulator;
+   values[2] = (unsigned int)state->disconnect_flags;
+   for (value_index = 0; value_index < 3; value_index++) {
+      unsigned int value = values[value_index];
+      bytes[byte_index++] = (unsigned char)(value & 0xffu);
+      bytes[byte_index++] = (unsigned char)((value >> 8) & 0xffu);
+      bytes[byte_index++] = (unsigned char)((value >> 16) & 0xffu);
+      bytes[byte_index++] = (unsigned char)((value >> 24) & 0xffu);
+   }
+   for (byte_index = 0; byte_index < sizeof(bytes); byte_index++) {
+      checksum ^= bytes[byte_index];
       checksum *= 16777619u;
    }
    return checksum;
@@ -120,6 +148,8 @@ SmokeOnEvent(GGPOEvent *info)
 {
    if (info->code == GGPO_EVENTCODE_RUNNING) {
       g_smoke_metrics.running_events++;
+   } else if (info->code == GGPO_EVENTCODE_DISCONNECTED_FROM_PEER) {
+      g_smoke_metrics.unexpected_disconnects++;
    }
    return true;
 }

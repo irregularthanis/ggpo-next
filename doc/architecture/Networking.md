@@ -53,6 +53,13 @@ implement reliability itself. [`UdpProtocol`](../../src/lib/ggpo/network/udp_pro
 adds GGPO-specific sequencing, redundant input history, acknowledgements, quality
 measurements, connection state, and simulated latency/loss diagnostics.
 
+The native E2E test adds a separate authenticated TCP control channel in
+[`peer_agent.py`](../../tests/e2e/peer_agent.py). It launches, observes, and
+closes the fixture but never carries game inputs or GGPO packets. Endpoint
+bootstrap uses a transient, run-scoped
+[`DeploymentRendezvous`](../../tests/e2e/rendezvous.py); production peers still
+exchange session traffic directly through `Udp`.
+
 ## Peer state machine
 
 ```mermaid

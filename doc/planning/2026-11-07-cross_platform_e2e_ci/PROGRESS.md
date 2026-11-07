@@ -1,6 +1,6 @@
 # PROGRESS — Native cross-platform end-to-end CI
 
-Status: Planned
+Status: In progress
 
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
@@ -10,17 +10,17 @@ Status: Planned
 
 Architecture: [native cross-host smoke](../../architecture/Testing.md#native-cross-host-smoke).
 
-- [ ] M0-T01: Freeze schema 2, canonical byte order, independent oracle vectors, and schema 1 compatibility.
-- [ ] M0-T02: Freeze run identity, HMAC message, Deployment rendezvous, permissions, trigger, port, timeout, and cleanup contracts.
-- [ ] M0-T03: Record required secrets, Tailscale tag/grants, pinned action commit, and unavailable-evidence behavior.
+- [x] M0-T01: Freeze schema 2, canonical byte order, independent oracle vectors, and schema 1 compatibility.
+- [x] M0-T02: Freeze run identity, HMAC message, Deployment rendezvous, permissions, trigger, port, timeout, and cleanup contracts.
+- [x] M0-T03: Record required secrets, Tailscale tag/grants, pinned action commit, and unavailable-evidence behavior.
 
 ### M1: Make fixture results cross-platform-safe (depends: M0)
 
 Parallel with M2/M3; owns `tests/smoke` and schema/oracle code; integrates at M4.
 
-- [ ] M1-T01: Add canonical state serialization and independent known-vector oracle without changing GGPO API or wire data.
-- [ ] M1-T02: Extend peer/result/comparator schema and replace fixed-delay success with a bounded ready/finalize barrier.
-- [ ] M1-T03: Pass legacy smoke/negative tests plus schema, oracle, completion, and wrong-result regressions.
+- [x] M1-T01: Add canonical state serialization and independent known-vector oracle without changing GGPO API or wire data.
+- [x] M1-T02: Extend peer/result/comparator schema and replace fixed-delay success with a bounded ready/finalize barrier.
+- [x] M1-T03: Pass legacy smoke/negative tests plus schema, oracle, completion, and wrong-result regressions.
 
 ### M2: Build authenticated orchestration (depends: M0)
 
@@ -54,3 +54,9 @@ Parallel with M1/M2; owns `.github/workflows/cross-platform-e2e.yml`; integrates
 
 | Task | Commit / artifact | Command / method | Environment / input | Result |
 |---|---|---|---|---|
+| M0-T01 | [`result_schema.py`](../../../tests/e2e/result_schema.py), [technical plan](TECH_PLAN.md#contracts-and-flow) | Source contract and fixed-vector review | Schema 1 and schema 2 | Frozen |
+| M0-T02 | [`control.py`](../../../tests/e2e/control.py), [`rendezvous.py`](../../../tests/e2e/rendezvous.py), [workflow](../../../.github/workflows/cross-platform-e2e.yml) | Source contract review | Run/SHA/attempt/session-bound control | Frozen |
+| M0-T03 | [Technical plan security contract](TECH_PLAN.md#workflow-and-security) | Permission, trigger, secret, action-pin review | Trusted `push`/manual workflow | Frozen |
+| M1-T01 | [`smoke_session.cpp`](../../../tests/smoke/smoke_session.cpp), [`test_result_schema.py`](../../../tests/e2e/test_result_schema.py) | `python3 tests/e2e/test_result_schema.py` | 9 schema/oracle cases | PASS |
+| M1-T02 | [`peer_smoke.cpp`](../../../tests/smoke/peer_smoke.cpp), [`run_schema2_loopback.py`](../../../tests/e2e/run_schema2_loopback.py) | `linux_peer_schema2_loopback` | 180-frame bounded barrier | PASS |
+| M1-T03 | `/tmp/ggpo-pr5-build` | `cmake -S . -B /tmp/ggpo-pr5-build -G Ninja -DCMAKE_BUILD_TYPE=Release`; build; `ctest --test-dir /tmp/ggpo-pr5-build --output-on-failure -C Release` | Linux Release; 9 registered tests | PASS, 9/9 (run twice: build-time check and explicit CTest) |
