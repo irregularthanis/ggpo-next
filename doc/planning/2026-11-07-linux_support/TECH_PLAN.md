@@ -83,11 +83,10 @@ Linux shared libraries receive a project-major `SOVERSION`. Hidden-by-default vi
 | Environment parity | Local wrapper and Linux CI at one revision | Same Dockerfile; recorded image identity and matching compiler/CMake/Ninja versions | Alternate CI/local dependency recipe blocks |
 | Installed package | Extract archive; external C11 and C++98 consumers using `find_package` | Compile, link, run without source-tree includes | Missing transitive dependency/export blocks |
 | ABI audit | `readelf`, `objdump`, `ldd` | SONAME/exports; max `GLIBC <= 2.39`; recorded `GLIBCXX`/`CXXABI` ceilings | Newer symbol or untracked dependency blocks |
-| Automated cross-binary | Native Linux peer ↔ exact MSVC artifact under Wine, 3×180 frames | Same checkpoints, checksum, events, clean exits | Useful protocol gate; cannot replace native-Windows qualification |
-| Cross-host | Real Windows ↔ Ubuntu and Windows ↔ SteamOS on controlled LAN | Artifact SHAs, OS/toolchain identity, full transcript, 3 passing runs | Unavailable evidence leaves support unqualified |
+| Cross-host | Native Windows ↔ Ubuntu and native Windows ↔ SteamOS on a controlled LAN, 3×180 frames | Artifact SHAs, OS/toolchain identity, matching checkpoints/checksum/events, and clean exits | Unavailable evidence leaves support unqualified |
 | Release | Tag workflow | Separate static/shared Linux x86-64 archives plus manifests | No publication until required gates pass |
 
-Ordinary GitHub-hosted Windows and Linux jobs are not assumed to share a reachable LAN. The real cross-host gate therefore needs controlled/self-hosted machines or a documented release qualification run.
+Ordinary GitHub-hosted Windows and Linux jobs are not assumed to share a reachable LAN. The cross-host gate therefore needs controlled/self-hosted machines or a documented release qualification run. Wine is not accepted as evidence of native Windows interoperability.
 
 ## Implementation order
 

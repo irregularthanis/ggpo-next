@@ -38,8 +38,8 @@ Parallel with M1; owns peer-runner scripts and evidence format; integrates at M4
 
 ### M4: Qualify cross-OS support and release (depends: M2, M3)
 
-- [ ] M4-T01: Run the automated native-Linux ↔ MSVC-under-Wine protocol gate.
-- [ ] M4-T02: Pass real Windows↔Ubuntu and Windows↔SteamOS peer sessions with complete evidence.
+- [ ] M4-T01: Pass native Windows↔Ubuntu peer sessions with complete evidence.
+- [ ] M4-T02: Pass native Windows↔SteamOS peer sessions with complete evidence.
 - [ ] M4-T03: Enable release-tag Linux archives and update install, testing, and portability documentation.
 
 ## Evidence ledger
