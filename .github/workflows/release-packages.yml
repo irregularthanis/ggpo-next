@@ -1,0 +1,142 @@
+name: Package release SDK
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  package-windows:
+    name: Windows ${{ matrix.label }} SDK
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: x64
+            platform: x64
+            shared: "ON"
+            linkage: shared
+            label: x64 shared
+          - architecture: x64
+            platform: x64
+            shared: "OFF"
+            linkage: static
+            label: x64 static
+          - architecture: Win32
+            platform: x86
+            shared: "ON"
+            linkage: shared
+            label: x86 shared
+          - architecture: Win32
+            platform: x86
+            shared: "OFF"
+            linkage: static
+            label: x86 static
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify tag and project versions agree
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $text = Get-Content CMakeLists.txt -Raw
+          if ($text -notmatch 'project\(GGPO VERSION ([0-9]+\.[0-9]+\.[0-9]+)\)') {
+            throw "Could not read the GGPO project version"
+          }
+          $expectedTag = "v$($Matches[1])"
+          if ("${{ github.ref_name }}" -ne $expectedTag) {
+            throw "Release tag ${{ github.ref_name }} does not match project version $expectedTag"
+          }
+
+      - name: Configure the SDK
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          cmake -S . -B build/package `
+            -G "Visual Studio 17 2022" `
+            -A "${{ matrix.architecture }}" `
+            -DBUILD_SHARED_LIBS=${{ matrix.shared }} `
+            -DGGPO_BUILD_SDK=ON `
+            -DGGPO_BUILD_VECTORWAR=OFF `
+            -DGGPO_RUN_TESTS_ON_BUILD=OFF `
+            -DBUILD_TESTING=ON
+
+      - name: Build and test the SDK
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          cmake --build build/package --config Release --parallel
+          ctest --test-dir build/package -C Release --output-on-failure
+
+      - name: Install and archive the SDK
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          $version = "${{ github.ref_name }}".Substring(1)
+          $name = "ggpo-$version-windows-${{ matrix.platform }}-${{ matrix.linkage }}"
+          $stage = Join-Path $PWD "build/stage/$name"
+          cmake --install build/package --config Release --prefix $stage
+          Compress-Archive -Path "$stage/*" -DestinationPath "build/$name.zip"
+
+      - name: Validate the extracted release archive
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          $version = "${{ github.ref_name }}".Substring(1)
+          $name = "ggpo-$version-windows-${{ matrix.platform }}-${{ matrix.linkage }}"
+          $extract = Join-Path $PWD "build/extracted/$name"
+          Expand-Archive "build/$name.zip" -DestinationPath $extract
+          cmake -S tests/consumer -B build/release-consumer `
+            -G "Visual Studio 17 2022" `
+            -A "${{ matrix.architecture }}" `
+            "-DCMAKE_PREFIX_PATH=$($extract.Replace('\', '/'))"
+          cmake --build build/release-consumer --config Release --parallel
+          $env:PATH = "$(Join-Path $extract bin);$env:PATH"
+          & (Join-Path $PWD "build/release-consumer/Release/ggpo_installed_c11.exe")
+          if ($LASTEXITCODE -ne 0) { throw "Extracted C11 consumer failed" }
+          & (Join-Path $PWD "build/release-consumer/Release/ggpo_installed_cpp98.exe")
+          if ($LASTEXITCODE -ne 0) { throw "Extracted C++98 consumer failed" }
+
+      - name: Upload packaged SDK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-package-windows-${{ matrix.platform }}-${{ matrix.linkage }}
+          path: build/ggpo-*.zip
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish release assets
+    needs: package-windows
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-package-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Generate checksums
+        working-directory: release-assets
+        run: sha256sum ggpo-*.zip > SHA256SUMS
+
+      - name: Create or update the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --verify-tag --generate-notes --title "GGPO $TAG"
+          fi
+          gh release upload "$TAG" release-assets/ggpo-*.zip release-assets/SHA256SUMS --clobber

@@ -26,6 +26,7 @@ option(GGPO_RUN_TESTS_ON_BUILD "Run self-contained GGPO tests during the default
 
 if(GGPO_BUILD_SDK)
 	add_subdirectory(src)
+	install(FILES LICENSE README.md DESTINATION share/GGPO)
 endif()
 
 if(GGPO_BUILD_VECTORWAR)

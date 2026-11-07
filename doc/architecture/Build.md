@@ -8,6 +8,7 @@
 - [SDK source composition](#sdk-source-composition)
 - [Vector War](#vector-war)
 - [Install layout](#install-layout)
+- [Release packages](#release-packages)
 - [Platform status](#platform-status)
 
 ## Build outputs
@@ -112,11 +113,23 @@ The SDK install rules in [`src/CMakeLists.txt`](../../src/CMakeLists.txt) place:
 ├── include/ggponet.h
 ├── bin/GGPO.dll                  # shared build
 ├── lib/GGPO.lib                  # import or static library
-└── lib/cmake/GGPO/               # CMake package and target export
+├── lib/cmake/GGPO/               # CMake package and target export
+└── share/GGPO/                   # license and README
 ```
 
 The install also exports `lib/cmake/GGPO/GGPOConfig.cmake`; consumers use
 `find_package(GGPO CONFIG REQUIRED)` and link `GGPO::GGPO`.
+
+## Release packages
+
+Pushing a version tag such as `v1.0.0` runs the
+[`Package release SDK`](../../.github/workflows/release-packages.yml) workflow.
+The tag must match the version declared by the root [`project()`](../../CMakeLists.txt).
+
+The workflow builds and tests Release SDKs for x64 and x86, with shared and
+static linkage. Each installed SDK is archived, extracted into a clean prefix,
+and used to build and run the external C11 and C++98 consumers before its ZIP
+and the combined `SHA256SUMS` file are attached to the GitHub Release.
 
 ## Platform status
 
