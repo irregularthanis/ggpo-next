@@ -1,6 +1,6 @@
 # TECH_PLAN — Platform-agnostic GGPO core and Windows build layer
 
-Status: M0–M2 complete; M3 implemented and awaiting Windows qualification; M4 planned
+Status: M0–M3 complete; M4 planned
 Source: [`004ffd7`](https://github.com/irregularthanis/ggpo-next/tree/004ffd7f47603d3bae4abd1d541501d715e03279)  
 M0 implementation: [`3498899`](https://github.com/irregularthanis/ggpo-next/commit/34988996cab45c1a37a9c556fe66b192d60a547b)
 

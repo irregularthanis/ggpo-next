@@ -1,6 +1,6 @@
 # PROGRESS — Platform-agnostic GGPO core and Windows build layer
 
-Status: M0–M2 complete; M3 implemented and awaiting Windows qualification; M4 planned
+Status: M0–M3 complete; M4 planned
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
 ## Milestones
@@ -43,11 +43,11 @@ Parallel with M1; owns internal core/platform sources. Architecture:
 
 May overlap late M1; owns CMake platform selection and Windows target wiring.
 
-- [ ] M3-T01: Make the Windows layer own sources, definitions, and system libraries.
-- [ ] M3-T02: Keep core source composition platform-neutral and reject unsupported targets clearly.
-- [ ] M3-T03: Expose only public headers and install the `GGPO::GGPO` consumer target.
-- [ ] M3-T04: Build the same refactored source through legacy and layered entries and run the B-vs-C A/B gate.
-- [ ] M3-T05: Build/install the M0 Windows matrix; enforce default tests, Windows conformance, and UDP loopback.
+- [x] M3-T01: Make the Windows layer own sources, definitions, and system libraries.
+- [x] M3-T02: Keep core source composition platform-neutral and reject unsupported targets clearly.
+- [x] M3-T03: Expose only public headers and install the `GGPO::GGPO` consumer target.
+- [x] M3-T04: Build the same refactored source through legacy and layered entries and run the B-vs-C A/B gate.
+- [x] M3-T05: Build/install the M0 Windows matrix; enforce default tests, Windows conformance, and UDP loopback.
 
 ### M4: Integrate and qualify (depends: M1, M2, M3)
 
@@ -75,4 +75,9 @@ May overlap late M1; owns CMake platform selection and Windows target wiring.
 | M2-T03 | [M2 source boundary](../../architecture/Portability.md#current-boundary) | Audit portable core for Win32/Winsock and secure-CRT names | `src/lib/ggpo`, excluding Windows adapter and unsupported legacy Linux adapter | No native Windows or secure-CRT name remains in portable sources |
 | M2-T04 | [M2 matrix](https://github.com/irregularthanis/ggpo-next/actions/runs/42340436948) | Eight-lane build, six CTests, installed consumers, export/layout evidence | x64/Win32; shared/static; Debug/Release | All lanes passed; M0 ABI, packet, rollback, and two-peer contracts retained |
 | M2-T05 | [`platform_fake_test.cpp`](../../../tests/platform/fake/platform_fake_test.cpp), [`fake_platform_synctest`](../../../tests/CMakeLists.txt) | Link production core to fake adapter; run contract and SyncTest fixtures | Virtual time/config/filesystem/UDP, scripted open failure, rollback state | Startup, rollback, would-block, failure recovery, close, and balanced lifetime checks passed |
+| M3-T01 | [`Platform.cmake`](../../../src/platform/windows/Platform.cmake), [`79fb6aa`](https://github.com/irregularthanis/ggpo-next/commit/79fb6aa) | Configure the default layered Windows target | Windows native source, definitions, `winmm`, and `ws2_32` | Platform inputs are owned by the Windows layer |
+| M3-T02 | [`CMakeSources.cmake`](../../../src/CMakeSources.cmake), [M3 matrix](https://github.com/irregularthanis/ggpo-next/actions/runs/42342130890) | Remove implicit Unix selection; configure supported and unsupported targets | Portable source inventory and non-Windows configuration | Portable inventory contains no OS source; unsupported SDK platforms fail explicitly |
+| M3-T03 | [`src/CMakeLists.txt`](../../../src/CMakeLists.txt), [`tests/consumer`](../../../tests/consumer/CMakeLists.txt) | Install package; consume with `find_package(GGPO CONFIG REQUIRED)` and `GGPO::GGPO` | C11 and C++98 consumers in all eight Windows lanes | Public header only; installed consumers compiled and linked |
+| M3-T04 | [Build-layer equivalence job](https://github.com/irregularthanis/ggpo-next/actions/runs/42342130890/job/128311912480), [`verify_windows_build_layers.ps1`](../../../scripts/ci/verify_windows_build_layers.ps1) | Build identical source through `LEGACY` and `LAYERED`; compare contracts | x64 shared Release; six CTests and installed consumers per entry | Exports, public layout, packet layout, runtime tests, and consumers matched |
+| M3-T05 | [M3 Windows matrix](https://github.com/irregularthanis/ggpo-next/actions/runs/42342130890), [`ggpo_check`](../../../CMakeLists.txt) | Build/install x64 and Win32, shared/static, Debug/Release with tests enabled by default | Nine jobs: eight compatibility lanes plus build-layer equivalence | All jobs passed; 6/6 CTests passed in each compatibility build |
 
