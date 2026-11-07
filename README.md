@@ -8,17 +8,24 @@
 
 This repository is a (maybe temporary?) fork of the [original GGPO](https://github.com/pond3r/ggpo) SDK lib. Everything here stands on the shoulders of those giants, so any recognition, donations etc, belongs there, not here.
 
-# Why make this?
+### Why make this?
 The reason this fork exists as it is right now is to:
  - Document runtime, api reference and build systems.
  - Support multi-platform, beyond Windows (WIP).
  - Proper release pipeline.
 
-# Are you merging back to upstream?
+### Are you merging back to upstream?
 Maybe. Once this is mature enough we will reach out. It will depend on the original maintainer.
 
-# Is this vibe-coded
-No, bu it is AI-assisted.
+### Is this vibe-coded
+No, but it is AI-assisted.
+
+  
+  
+  
+---
+
+
 
 ## What is GGPO?
 
