@@ -38,8 +38,8 @@ Download the archive matching the application's architecture and linkage from
 | `windows-x86-static` | The application is 32-bit and links GGPO into its executable |
 | `linux-x86_64-shared.deb` / `.rpm` | Install the shared SDK system-wide on a Debian- or RPM-family distribution |
 | `linux-x86_64-static.deb` / `.rpm` | Install the static SDK system-wide on a Debian- or RPM-family distribution |
-| `linux-x86_64-shared.tar.gz` | Extract a relocatable shared SDK without a package manager |
-| `linux-x86_64-static.tar.gz` | Extract a relocatable static SDK without a package manager |
+| [`linux-x86_64-shared.tar.gz`](#linux-raw-sdk-targz) | Extract a relocatable shared SDK without a package manager |
+| [`linux-x86_64-static.tar.gz`](#linux-raw-sdk-targz) | Extract a relocatable static SDK without a package manager |
 
 Extract the ZIP to a stable location such as `C:/ggpo-sdk`. Each release archive
 is an installed CMake package rather than a source tree:
@@ -83,16 +83,38 @@ design because they own the same headers and CMake metadata. After installation,
 ordinary `find_package(GGPO CONFIG REQUIRED)` resolves the SDK without an
 additional prefix.
 
-#### Linux raw SDK
+Their installed files mirror the raw SDK below under `/usr`: the public header
+in `/usr/include`, libraries and CMake metadata in `/usr/lib`, and license/readme
+files in `/usr/share/GGPO`.
+
+#### Linux raw SDK (`tar.gz`)
 
 Use the raw archive for an unprivileged, application-local, or CI installation:
 
 ```bash
+sha256sum --check SHA256SUMS --ignore-missing
 tar -xzf ggpo-0.2.0-linux-x86_64-shared.tar.gz
 cmake -S . -B build \
   -DCMAKE_PREFIX_PATH="$PWD/ggpo-0.2.0-linux-x86_64-shared"
 cmake --build build --parallel
 ```
+
+The extracted shared SDK contains:
+
+```text
+ggpo-0.2.0-linux-x86_64-shared/
+├── include/ggponet.h
+├── lib/libGGPO.so -> libGGPO.so.0
+├── lib/libGGPO.so.0 -> libGGPO.so.0.2.0
+├── lib/libGGPO.so.0.2.0
+├── lib/cmake/GGPO/
+└── share/GGPO/
+    ├── LICENSE
+    └── README.md
+```
+
+The static archive has the same layout and consumer metadata, but replaces the
+three shared-library entries with `lib/libGGPO.a`.
 
 The shared archive contains `lib/libGGPO.so.0`; deploy that library with the
 application and make its directory available to the loader, for example with
