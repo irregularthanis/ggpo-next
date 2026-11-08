@@ -1,6 +1,6 @@
 # PROGRESS — Shared-core testing and CI consolidation
 
-Status: Planned
+Status: In progress
 
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
@@ -10,11 +10,12 @@ Status: Planned
 
 Architecture: [test layers](../../architecture/Testing.md#test-layers).
 
-- [ ] M0-T01: Inventory all 16 public exports and classify existing coverage.
-- [ ] M0-T02: Inventory portable components and all 15 platform operations.
-- [ ] M0-T03: Record current tests, compatibility gates, job count, runner minutes,
+- [x] M0-T01: Inventory all 16 public exports and classify existing coverage.
+- [x] M0-T02: Inventory portable components and all 16 callable platform
+  operations plus socket lifecycle.
+- [x] M0-T03: Record current tests, compatibility gates, job count, runner minutes,
   critical path, cache behavior and retry/failure evidence.
-- [ ] M0-T04: Prioritize missing contracts without removing any test or lane.
+- [x] M0-T04: Prioritize missing contracts without removing any test or lane.
 
 ### M1: Add deterministic core contracts (depends: M0)
 
@@ -75,3 +76,7 @@ Parallel with M1/M2; owns `tests/platform`; integrates in M5.
 
 | Task | Commit / artifact | Command / method | Environment / input | Result |
 |---|---|---|---|---|
+| M0-T01 | [`SHARED_CORE_BASELINE.md`](../../testing/SHARED_CORE_BASELINE.md#public-api) | Header-to-test call-site audit | `d427210`; 16 exports | 8 called by smoke paths; 8 have no direct runtime test |
+| M0-T02 | [`SHARED_CORE_BASELINE.md`](../../testing/SHARED_CORE_BASELINE.md#portable-core) | Source and fake-contract audit | Portable core and `platform.h` | Core coverage classified; 16 operations plus lifecycle inventoried |
+| M0-T03 | [`SHARED_CORE_BASELINE.md`](../../testing/SHARED_CORE_BASELINE.md#ci-baseline) | Workflow/job timestamps and protected-check audit | Successful `master` runs 42423387489/42423387435 | 15 build/test jobs; 27m12s summed; 6m51s critical path |
+| M0-T04 | [`SHARED_CORE_BASELINE.md`](../../testing/SHARED_CORE_BASELINE.md#priority-order) | Gap ranking against retained gates | API/core/platform/protocol surfaces | P0/P1 order recorded; no lane removed |
