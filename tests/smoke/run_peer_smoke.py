@@ -70,8 +70,11 @@ def run_pair(executable_a, executable_b, frames, run_number,
             raise RuntimeError("peer smoke timed out")
 
         elapsed_ms = (time.perf_counter() - started) * 1000.0
+        # Emit both peers before evaluating either return code so a failure on
+        # one side cannot hide the diagnostic that explains it on the other.
+        for output in outputs:
+            print(output, end="")
         for index, process in enumerate(processes):
-            print(outputs[index], end="")
             if process.returncode != 0:
                 raise RuntimeError(
                     f"peer {index + 1} exited with {process.returncode}: "

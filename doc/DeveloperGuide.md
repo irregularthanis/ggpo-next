@@ -150,6 +150,17 @@ Each installed CMake package is written to its output's `install` directory;
 verified DEB, RPM, and raw artifacts are written to `packages`. Select `clang`
 with `--compiler clang` when testing that toolchain.
 
+Run the extended static-library sanitizer qualification with the same image:
+
+```bash
+python3 scripts/linux/build_in_container.py \
+  --compiler clang --library static --sanitizers \
+  --out build/linux-sanitizers
+```
+
+This instruments production GGPO objects, all registered tests, and the
+installed C11/C++98 consumers with ASan and UBSan.
+
 ### Option 3: build Windows from source
 
 Install Visual Studio 2022 with the Desktop development with C++ workload,
@@ -173,8 +184,8 @@ cmake --build build/static --config Release --parallel
 cmake --install build/static --config Release --prefix C:/ggpo-sdk-static
 ```
 
-Change `-A x64` to `-A Win32` for a 32-bit SDK. The normal build runs the six
-self-contained tests. Use
+Change `-A x64` to `-A Win32` for a 32-bit SDK. The normal build runs every
+registered core, API, protocol, platform, native, and compatibility test. Use
 `-DGGPO_RUN_TESTS_ON_BUILD=OFF` only when test execution must be explicit, or
 `-DBUILD_TESTING=OFF` for a consumer/packaging-only build.
 

@@ -1,0 +1,39 @@
+name: Extended sanitizer qualification
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 1"
+
+jobs:
+  linux-sanitizers:
+    name: Linux ASan and UBSan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the shared Linux environment
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/linux/Dockerfile
+          load: true
+          tags: ggpo-linux-ci:sanitizers
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Instrument production GGPO and run all tests
+        run: |
+          python3 scripts/linux/build_in_container.py \
+            --skip-image-build \
+            --image ggpo-linux-ci:sanitizers \
+            --compiler clang \
+            --library static \
+            --sanitizers \
+            --out build/linux-sanitizers
+      - name: Upload sanitizer test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-clang-asan-ubsan
+          path: build/linux-sanitizers/build/Testing
+          if-no-files-found: error

@@ -8,6 +8,7 @@ RUN apt-get update \
         build-essential \
         ca-certificates \
         clang \
+        libclang-rt-18-dev \
         cmake \
         cpio \
         git \
