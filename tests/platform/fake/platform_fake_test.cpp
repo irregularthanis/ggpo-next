@@ -38,7 +38,14 @@ int main()
    Check(socket.OpenAndBind(7000, 0, 0), "socket can recover after failure");
    Check(socket.Send("x", 1, endpoint) == ggpo_platform::IO_OK,
          "open socket accepts send");
-   Check(socket.Receive(0, 0, 0, 0) == ggpo_platform::IO_WOULD_BLOCK,
+   char received[1];
+   int bytes = 0;
+   ggpo_platform::UdpEndpoint from;
+   Check(socket.Receive(received, sizeof(received), &bytes, &from) ==
+            ggpo_platform::IO_OK && bytes == 1 && received[0] == 'x',
+         "queued datagram is delivered once");
+   Check(socket.Receive(received, sizeof(received), &bytes, &from) ==
+            ggpo_platform::IO_WOULD_BLOCK,
          "empty receive is explicitly would-block");
    socket.Close();
    Check(socket.Send("x", 1, endpoint) == ggpo_platform::IO_ERROR,

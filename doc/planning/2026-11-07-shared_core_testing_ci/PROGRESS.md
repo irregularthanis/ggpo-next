@@ -39,11 +39,11 @@ Parallel with M1/M3; owns `tests/contract`; integrates in M5.
 
 Parallel with M1/M2; owns `tests/platform`; integrates in M5.
 
-- [ ] M3-T01: Extend only the fake capabilities required by concrete regressions.
-- [ ] M3-T02: Implement one mandatory suite for all 16 callable platform
+- [x] M3-T01: Extend only the fake capabilities required by concrete regressions.
+- [x] M3-T02: Implement one mandatory suite for all 16 callable platform
   operations and socket construction/destruction lifecycle.
 - [ ] M3-T03: Run identical assertions against Windows and Linux adapters.
-- [ ] M3-T04: Reject silent mandatory skips and verify bounded cleanup failures.
+- [x] M3-T04: Reject silent mandatory skips and verify bounded cleanup failures.
 
 ### M4: Harden protocol contracts (depends: M1, M3)
 
@@ -88,3 +88,6 @@ Parallel with M1/M2; owns `tests/platform`; integrates in M5.
 | M2-T02 | [`public_api_contract_test.cpp`](../../../tests/contract/public_api_contract_test.cpp) | Fake-platform production backends plus retained smoke tests | P2P, SyncTest and spectator lifecycle | PASS |
 | M2-T03 | [`public_api_contract_test.cpp`](../../../tests/contract/public_api_contract_test.cpp) | Null guards, valid P2P configuration, handles, logging and terminal cleanup | All public wrappers | PASS |
 | M2-T04 | API contract source comment and coverage map | Excluded repeated local disconnect from compatibility assertions | Observable implementation behavior without documented guarantee | Not frozen; future hardening remains explicit |
+| M3-T01 | [`platform_fake.cpp`](../../../tests/platform/fake/platform_fake.cpp) | Deterministic endpoint formatting and in-memory datagram delivery | Fake adapter | PASS |
+| M3-T02 | [`platform_conformance_test.cpp`](../../../tests/platform/conformance/platform_conformance_test.cpp) | One assertion source linked against fake/native adapters | 16 operations plus socket lifecycle | PASS on fake and Linux; modal Windows assertion reporter linked but not invoked |
+| M3-T04 | CTest `platform` label | Open/send/receive/close and post-close error assertions | Fake and Linux Debug static | PASS, 2/2; no mandatory case skipped |

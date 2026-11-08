@@ -188,6 +188,24 @@ target_link_libraries(ggpo_public_api_contract PRIVATE ggpo_fake_core)
 add_test(NAME public_api_contract COMMAND ggpo_public_api_contract)
 set_tests_properties(public_api_contract PROPERTIES LABELS "portable;api")
 
+# Compile one assertion source against both the fake and selected native
+# adapters so platform drift cannot hide behind OS-specific test logic.
+add_executable(ggpo_fake_platform_conformance
+    platform/conformance/platform_conformance_test.cpp)
+ggpo_configure_static_test(ggpo_fake_platform_conformance)
+target_link_libraries(ggpo_fake_platform_conformance PRIVATE ggpo_fake_core)
+add_test(NAME fake_platform_conformance COMMAND ggpo_fake_platform_conformance)
+set_tests_properties(fake_platform_conformance PROPERTIES LABELS "portable;platform")
+
+add_executable(ggpo_native_platform_conformance
+    platform/conformance/platform_conformance_test.cpp)
+ggpo_configure_test(ggpo_native_platform_conformance)
+target_link_libraries(ggpo_native_platform_conformance PRIVATE GGPO::GGPO)
+add_test(NAME ${GGPO_SMOKE_PREFIX}_platform_conformance
+    COMMAND ggpo_native_platform_conformance)
+set_tests_properties(${GGPO_SMOKE_PREFIX}_platform_conformance
+    PROPERTIES LABELS "native;platform")
+
 # Export every portable contract target so the root test-on-build target builds
 # the executables before invoking CTest on multi-config generators such as MSVC.
 set(GGPO_PORTABLE_TEST_TARGETS
@@ -196,5 +214,7 @@ set(GGPO_PORTABLE_TEST_TARGETS
     ggpo_timesync_contract
     ggpo_core_utilities_contract
     ggpo_public_api_contract
+    ggpo_fake_platform_conformance
+    ggpo_native_platform_conformance
     PARENT_SCOPE
 )
