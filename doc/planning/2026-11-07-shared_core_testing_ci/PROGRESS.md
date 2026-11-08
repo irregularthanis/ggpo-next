@@ -30,10 +30,10 @@ Parallel with M2/M3; owns `tests/unit`; integrates in M5.
 
 Parallel with M1/M3; owns `tests/contract`; integrates in M5.
 
-- [ ] M2-T01: Classify backend/lifecycle/error behavior for every export.
-- [ ] M2-T02: Add creation, registration, input and frame-lifecycle contracts.
-- [ ] M2-T03: Add close/disconnect/stats/config/logging and cleanup contracts.
-- [ ] M2-T04: Keep unspecified inputs distinct from stable compatibility behavior.
+- [x] M2-T01: Classify backend/lifecycle/error behavior for every export.
+- [x] M2-T02: Add creation, registration, input and frame-lifecycle contracts.
+- [x] M2-T03: Add close/disconnect/stats/config/logging and cleanup contracts.
+- [x] M2-T04: Keep unspecified inputs distinct from stable compatibility behavior.
 
 ### M3: Build reusable platform conformance (depends: M0)
 
@@ -84,3 +84,7 @@ Parallel with M1/M2; owns `tests/platform`; integrates in M5.
 | M1-T02 | [`sync_contract_test.cpp`](../../../tests/unit/sync_contract_test.cpp) | Production `Sync` with independent state oracle | Two mismatches, repeated replay, snapshot eviction and prediction threshold | PASS |
 | M1-T03 | [`timesync_test.cpp`](../../../tests/unit/timesync_test.cpp), [`core_utilities_test.cpp`](../../../tests/unit/core_utilities_test.cpp) | Fixed history and boundary cases | TimeSync, ring/static buffers and bit vector | PASS |
 | M1-T04 | CTest `portable;core` plus full suite | `ctest --test-dir /tmp/ggpo-shared-core-build --output-on-failure` | Linux Debug static; GCC 16.2.1 | PASS, 9/9; rollback loads/replay counts and oracle convergence asserted |
+| M2-T01 | [API coverage map](TECH_PLAN.md#public-api-coverage-map) | Header/backend/source classification | All 16 exports and three backends | Covered, partial, missing and unspecified behavior separated |
+| M2-T02 | [`public_api_contract_test.cpp`](../../../tests/contract/public_api_contract_test.cpp) | Fake-platform production backends plus retained smoke tests | P2P, SyncTest and spectator lifecycle | PASS |
+| M2-T03 | [`public_api_contract_test.cpp`](../../../tests/contract/public_api_contract_test.cpp) | Null guards, valid P2P configuration, handles, logging and terminal cleanup | All public wrappers | PASS |
+| M2-T04 | API contract source comment and coverage map | Excluded repeated local disconnect from compatibility assertions | Observable implementation behavior without documented guarantee | Not frozen; future hardening remains explicit |

@@ -177,3 +177,13 @@ ggpo_add_portable_contract(ggpo_timesync_contract
     unit/timesync_test.cpp timesync_contract)
 ggpo_add_portable_contract(ggpo_core_utilities_contract
     unit/core_utilities_test.cpp core_utilities_contract)
+
+# Public wrappers run against production backends and the fake platform so
+# lifecycle/error contracts remain deterministic and socket-free.
+add_executable(ggpo_public_api_contract
+    contract/public_api_contract_test.cpp
+)
+ggpo_configure_static_test(ggpo_public_api_contract)
+target_link_libraries(ggpo_public_api_contract PRIVATE ggpo_fake_core)
+add_test(NAME public_api_contract COMMAND ggpo_public_api_contract)
+set_tests_properties(public_api_contract PROPERTIES LABELS "portable;api")
