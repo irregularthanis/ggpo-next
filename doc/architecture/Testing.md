@@ -28,7 +28,11 @@ behavior-changing refactor pass.
 | Public ABI | Public sizes, offsets, enum values, callback order, and DLL exports | [`public_layout.cpp`](../../tests/baseline/windows/public_layout.cpp), [`exports-x64.txt`](../../tests/baseline/windows/exports-x64.txt) | Compiled header and shared DLL |
 | Installed consumers | C11 and C++98 compile/link use only installed SDK files | [`tests/consumer`](../../tests/consumer/CMakeLists.txt), [`verify_installed_consumers.ps1`](../../scripts/ci/verify_installed_consumers.ps1) | Installed header and shared/static library |
 | Wire layout | Packed `UdpMsg` sizes, offsets, and representative packet lengths | [`packet_layout.cpp`](../../tests/baseline/windows/packet_layout.cpp) | Internal protocol structures |
+| Portable core | Queue prediction, rollback/replay, time sync, containers, and bit encoding | [`tests/unit`](../../tests/unit/input_queue_test.cpp) | Production algorithms with deterministic state |
+| Public API | Session construction, lifecycle, null guards, configuration, and logging | [`public_api_contract_test.cpp`](../../tests/contract/public_api_contract_test.cpp) | Production backends with fake services |
+| Protocol safety | Exact packet sizes and truncated, trailing, or unknown messages | [`protocol_test.cpp`](../../tests/unit/protocol_test.cpp) | Production packet validator and receive guard |
 | Platform contract | Virtual clock/wait, fallbacks, endpoint/socket results, failure, and cleanup | [`platform_fake_test.cpp`](../../tests/platform/fake/platform_fake_test.cpp) | Deterministic fake adapter |
+| Native conformance | One clock/config/endpoint/UDP assertion source | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | Fake, Windows, and Linux adapters |
 | Platform-free rollback | Production core linked without the Windows adapter | [`platform_fake.cpp`](../../tests/platform/fake/platform_fake.cpp), [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | Fake adapter and production rollback core |
 | Rollback behavior | Save, restore, synchronized input, replay, and deterministic final state | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | SyncTest backend without sockets |
 | Windows transport | Handshake, events, prediction, rollback, UDP delivery, and shutdown | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Two GGPO processes over localhost |
@@ -213,6 +217,14 @@ linux_peer_loopback
 linux_peer_negative_contracts
 fake_platform_synctest
 fake_platform_contract
+input_queue_contract
+sync_contract
+timesync_contract
+core_utilities_contract
+protocol_contract
+public_api_contract
+fake_platform_conformance
+linux_platform_conformance
 ```
 
 Windows retains these entries:
@@ -225,6 +237,14 @@ windows_peer_loopback
 windows_peer_negative_contracts
 fake_platform_synctest
 fake_platform_contract
+input_queue_contract
+sync_contract
+timesync_contract
+core_utilities_contract
+protocol_contract
+public_api_contract
+fake_platform_conformance
+windows_platform_conformance
 ```
 
 With `BUILD_TESTING=ON` and the default `GGPO_RUN_TESTS_ON_BUILD=ON`, the
@@ -281,15 +301,15 @@ established by the frame, checksum, callback, and lifecycle assertions.
 
 ## Current limits and follow-ups
 
-- No focused unit tests yet cover `InputQueue`, `Sync`, bit vectors, ring
-  buffers, or time synchronization.
-- No malformed/truncated packet suite validates parser rejection.
 - No spectator, disconnect/resume, simulated loss, or multi-player automated
   session exists.
 - Native Windows↔Ubuntu and Windows↔SteamOS sessions require controlled hosts;
   ordinary isolated GitHub-hosted jobs cannot provide this network.
 - No macOS adapter or build exists.
 - No sanitizer job is configured.
+
+The focused core, API, protocol, and platform suites are tracked by the
+[shared-core testing plan](../planning/2026-11-07-shared_core_testing_ci/TECH_PLAN.md).
 
 The platform-extraction plan tracks those additions in the
 [technical plan](../planning/2026-11-06-platform_agnostic_core/TECH_PLAN.md) and

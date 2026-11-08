@@ -53,10 +53,10 @@ Parallel with M1/M2; owns `tests/platform`; integrates in M5.
 
 ### M5: Qualify platform portability (depends: M1, M2, M3, M4)
 
-- [ ] M5-T01: Define the supported/experimental adapter checklist.
-- [ ] M5-T02: Preserve Windows ABI/DLL and Linux ABI/package requirements.
+- [x] M5-T01: Define the supported/experimental adapter checklist.
+- [x] M5-T02: Preserve Windows ABI/DLL and Linux ABI/package requirements.
 - [ ] M5-T03: Prove a future adapter reuses core, API and conformance suites.
-- [ ] M5-T04: Publish platform limitations and native qualification evidence.
+- [x] M5-T04: Publish platform limitations and native qualification evidence.
 
 ### M6: Consolidate CI from evidence (depends: M1, M2, M3, M4, M5)
 
@@ -68,9 +68,9 @@ Parallel with M1/M2; owns `tests/platform`; integrates in M5.
 
 ### M7: Integrate documentation and E2E boundary (depends: M3, M5)
 
-- [ ] M7-T01: Update Testing, Build and Portability with verified commands/targets.
-- [ ] M7-T02: Cross-reference PR #5’s peer artifacts, result schema and ownership.
-- [ ] M7-T03: Document future-platform E2E qualification without duplicating its harness.
+- [x] M7-T01: Update Testing, Build and Portability with verified commands/targets.
+- [x] M7-T02: Cross-reference PR #5’s peer artifacts, result schema and ownership.
+- [x] M7-T03: Document future-platform E2E qualification without duplicating its harness.
 
 ## Evidence ledger
 
@@ -93,3 +93,9 @@ Parallel with M1/M2; owns `tests/platform`; integrates in M5.
 | M3-T04 | CTest `platform` label | Open/send/receive/close and post-close error assertions | Fake and Linux Debug static | PASS, 2/2; no mandatory case skipped |
 | M4-T01 | [`udp_msg.h`](../../../src/lib/ggpo/network/udp_msg.h) | Inline validation without field/layout changes | Packed existing wire representation | Exact packet sizes remain authoritative |
 | M4-T02 | [`protocol_test.cpp`](../../../tests/unit/protocol_test.cpp) | Exact, truncated, trailing, partial-byte and unknown-type cases | Production `UdpMsg::IsValidPacketSize` and receive guard | PASS |
+| M5-T01 | [Portability qualification](../../architecture/Portability.md#follow-up-platform-contract) | Supported/experimental checklist | Future native adapters | Published |
+| M5-T02 | [Testing architecture](../../architecture/Testing.md#test-layers) | Retain ABI, linkage, consumer and package layers | Windows and Linux | Requirements preserved |
+| M5-T04 | [Platform status](../../architecture/Build.md#platform-status) | Current support/limitations review | Windows, Linux and unsupported targets | Published |
+| M7-T01 | [Testing architecture](../../architecture/Testing.md) and [Portability](../../architecture/Portability.md) | Documentation update against test target names | Current branch | Published |
+| M7-T02 | [PR #5](https://github.com/irregularthanis/ggpo-next/pull/5) | Ownership boundary review | Cross-host E2E | Referenced; no duplicate harness |
+| M7-T03 | [Portability qualification](../../architecture/Portability.md#follow-up-platform-contract) | Future adapter E2E gate | Future platforms | Documented |
