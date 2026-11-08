@@ -56,6 +56,7 @@ if(BUILD_TESTING AND GGPO_BUILD_SDK)
 			COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>
 			DEPENDS
 				${GGPO_PLATFORM_TEST_TARGETS}
+				${GGPO_PORTABLE_TEST_TARGETS}
 				ggpo_fake_core_synctest
 				ggpo_fake_platform_contract
 			USES_TERMINAL

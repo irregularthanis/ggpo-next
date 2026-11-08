@@ -187,3 +187,14 @@ ggpo_configure_static_test(ggpo_public_api_contract)
 target_link_libraries(ggpo_public_api_contract PRIVATE ggpo_fake_core)
 add_test(NAME public_api_contract COMMAND ggpo_public_api_contract)
 set_tests_properties(public_api_contract PROPERTIES LABELS "portable;api")
+
+# Export every portable contract target so the root test-on-build target builds
+# the executables before invoking CTest on multi-config generators such as MSVC.
+set(GGPO_PORTABLE_TEST_TARGETS
+    ggpo_input_queue_contract
+    ggpo_sync_contract
+    ggpo_timesync_contract
+    ggpo_core_utilities_contract
+    ggpo_public_api_contract
+    PARENT_SCOPE
+)
