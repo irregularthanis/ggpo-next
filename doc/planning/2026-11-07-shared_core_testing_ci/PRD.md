@@ -23,8 +23,9 @@ a duplicated test-suite design.
 
 ## Outcomes
 
-- Inventory all 16 exported `ggpo_*` functions, portable components, platform
-  operations, existing tests, and compatibility gates.
+- Inventory all 16 exported `ggpo_*` functions, portable components, all 16
+  callable platform operations, socket lifecycle, existing tests, and
+  compatibility gates.
 - Add deterministic core and public API suites with independent expected state,
   including negative and lifecycle cases.
 - Run one native conformance contract against Windows, Linux, and future
