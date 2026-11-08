@@ -60,8 +60,8 @@ Parallel with M1/M2; owns `tests/platform`; integrates in M5.
 
 ### M6: Consolidate CI from evidence (depends: M1, M2, M3, M4, M5)
 
-- [ ] M6-T01: Label portable/native/ABI suites while preserving existing CTest names.
-- [ ] M6-T02: Add correctly instrumented Linux ASan/UBSan and manual/full tiers.
+- [x] M6-T01: Label portable/native/ABI suites while preserving existing CTest names.
+- [x] M6-T02: Add correctly instrumented Linux ASan/UBSan and manual/full tiers.
 - [ ] M6-T03: Demonstrate replacement coverage before reducing regular PR variants.
 - [ ] M6-T04: Compare jobs, runner minutes, critical path, cache and retry rate.
 - [ ] M6-T05: Preserve full release, Windows ABI, linkage and consumer qualification.
@@ -96,6 +96,8 @@ Parallel with M1/M2; owns `tests/platform`; integrates in M5.
 | M5-T01 | [Portability qualification](../../architecture/Portability.md#follow-up-platform-contract) | Supported/experimental checklist | Future native adapters | Published |
 | M5-T02 | [Testing architecture](../../architecture/Testing.md#test-layers) | Retain ABI, linkage, consumer and package layers | Windows and Linux | Requirements preserved |
 | M5-T04 | [Platform status](../../architecture/Build.md#platform-status) | Current support/limitations review | Windows, Linux and unsupported targets | Published |
+| M6-T01 | [`tests/CMakeLists.txt`](../../../tests/CMakeLists.txt) | `ctest --print-labels` and unchanged test-name audit | Portable, native, ABI, protocol and negative suites | Labels added without renaming tests |
+| M6-T02 | [Sanitizer workflow](../../../.github/workflows/sanitizer-qualification.yml) | `python3 scripts/linux/build_in_container.py --compiler clang --library static --sanitizers --out /tmp/ggpo-pr7-sanitizers` | Ubuntu 24.04 repository image; Clang 18; ASan+UBSan; production objects, 13 tests and installed C/C++ consumers | Initial run found zero-duration statistics and uninitialized round-trip state; both fixed with a focused regression; final PASS, 13/13 |
 | M7-T01 | [Testing architecture](../../architecture/Testing.md) and [Portability](../../architecture/Portability.md) | Documentation update against test target names | Current branch | Published |
 | M7-T02 | [PR #5](https://github.com/irregularthanis/ggpo-next/pull/5) | Ownership boundary review | Cross-host E2E | Referenced; no duplicate harness |
 | M7-T03 | [Portability qualification](../../architecture/Portability.md#follow-up-platform-contract) | Future adapter E2E gate | Future platforms | Documented |

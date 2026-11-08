@@ -44,6 +44,7 @@ if(WIN32)
     )
     ggpo_configure_test(ggpo_windows_public_layout)
     add_test(NAME windows_public_layout COMMAND ggpo_windows_public_layout)
+    set_tests_properties(windows_public_layout PROPERTIES LABELS "native;abi")
 
     add_executable(ggpo_windows_packet_layout
         baseline/windows/packet_layout.cpp
@@ -55,6 +56,7 @@ if(WIN32)
         ${CMAKE_CURRENT_SOURCE_DIR}/platform/fake
     )
     add_test(NAME windows_packet_layout COMMAND ggpo_windows_packet_layout)
+    set_tests_properties(windows_packet_layout PROPERTIES LABELS "native;abi;protocol")
     set(GGPO_SMOKE_PREFIX windows)
 else()
     set(GGPO_SMOKE_PREFIX linux)
@@ -74,6 +76,7 @@ add_test(NAME ${GGPO_SMOKE_PREFIX}_synctest_smoke COMMAND ${GGPO_SYNCTEST_TARGET
 set_tests_properties(${GGPO_SMOKE_PREFIX}_synctest_smoke PROPERTIES
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/synctest
     TIMEOUT 60
+    LABELS "native;core"
 )
 
 set(GGPO_PEER_TARGET ggpo_${GGPO_SMOKE_PREFIX}_peer_smoke)
@@ -89,7 +92,10 @@ add_test(NAME ${GGPO_SMOKE_PREFIX}_peer_loopback
             $<TARGET_FILE:${GGPO_PEER_TARGET}>
             --frames 180
 )
-set_tests_properties(${GGPO_SMOKE_PREFIX}_peer_loopback PROPERTIES TIMEOUT 90)
+set_tests_properties(${GGPO_SMOKE_PREFIX}_peer_loopback PROPERTIES
+    TIMEOUT 90
+    LABELS "native;network"
+)
 
 # Negative contracts prove the runner rejects lifecycle and state failures.
 add_test(NAME ${GGPO_SMOKE_PREFIX}_peer_negative_contracts
@@ -99,6 +105,7 @@ add_test(NAME ${GGPO_SMOKE_PREFIX}_peer_negative_contracts
 )
 set_tests_properties(${GGPO_SMOKE_PREFIX}_peer_negative_contracts PROPERTIES
     TIMEOUT 45
+    LABELS "native;negative"
 )
 
 # Build the production rollback core against a deterministic adapter. This is
@@ -146,6 +153,7 @@ add_test(NAME fake_platform_synctest COMMAND ggpo_fake_core_synctest)
 set_tests_properties(fake_platform_synctest PROPERTIES
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/fake-synctest
     TIMEOUT 60
+    LABELS "portable;core"
 )
 
 add_executable(ggpo_fake_platform_contract
@@ -158,6 +166,7 @@ target_include_directories(ggpo_fake_platform_contract PRIVATE
 )
 target_link_libraries(ggpo_fake_platform_contract PRIVATE ggpo_fake_core)
 add_test(NAME fake_platform_contract COMMAND ggpo_fake_platform_contract)
+set_tests_properties(fake_platform_contract PROPERTIES LABELS "portable;platform")
 
 # Focused portable-core contracts run against production algorithms and the
 # deterministic fake adapter; no native clock, socket, or filesystem is used.

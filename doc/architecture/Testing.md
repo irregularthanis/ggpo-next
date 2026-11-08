@@ -273,6 +273,11 @@ GCC/Clang × static/shared matrix inside that image. Each lane runs CTest,
 installs the SDK, builds and executes external C11/C++98 consumers, and audits
 the installed Linux library.
 
+[`sanitizer-qualification.yml`](../../.github/workflows/sanitizer-qualification.yml)
+runs manually and weekly. It uses the same image to instrument production GGPO,
+all 13 tests, and installed static-library consumers with Clang ASan and UBSan.
+Sanitizer findings fail immediately and the workflow retains CTest evidence.
+
 The GCC and Clang portable-header jobs also compile the public C11 and C++98
 consumers without linking an SDK. These remain header-portability gates.
 The Clang C++ gate suppresses only `-Wextern-c-compat`: C requires the documented
@@ -306,7 +311,8 @@ established by the frame, checksum, callback, and lifecycle assertions.
 - Native Windows↔Ubuntu and Windows↔SteamOS sessions require controlled hosts;
   ordinary isolated GitHub-hosted jobs cannot provide this network.
 - No macOS adapter or build exists.
-- No sanitizer job is configured.
+- Sanitizers qualify Linux Clang static builds; Windows and shared-library
+  sanitizer configurations are not currently automated.
 
 The focused core, API, protocol, and platform suites are tracked by the
 [shared-core testing plan](../planning/2026-11-07-shared_core_testing_ci/TECH_PLAN.md).
