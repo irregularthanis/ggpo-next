@@ -188,6 +188,7 @@ ggpo_add_portable_contract(ggpo_core_utilities_contract
     unit/core_utilities_test.cpp core_utilities_contract)
 ggpo_add_portable_contract(ggpo_protocol_contract
     unit/protocol_test.cpp protocol_contract)
+set_property(TEST protocol_contract APPEND PROPERTY LABELS protocol)
 
 # Public wrappers run against production backends and the fake platform so
 # lifecycle/error contracts remain deterministic and socket-free.
