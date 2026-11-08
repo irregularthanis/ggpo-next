@@ -42,14 +42,14 @@ Parallel with M1/M2; owns `tests/platform`; integrates in M5.
 - [x] M3-T01: Extend only the fake capabilities required by concrete regressions.
 - [x] M3-T02: Implement one mandatory suite for all 16 callable platform
   operations and socket construction/destruction lifecycle.
-- [ ] M3-T03: Run identical assertions against Windows and Linux adapters.
+- [x] M3-T03: Run identical assertions against Windows and Linux adapters.
 - [x] M3-T04: Reject silent mandatory skips and verify bounded cleanup failures.
 
 ### M4: Harden protocol contracts (depends: M1, M3)
 
 - [x] M4-T01: Preserve frozen packet layout and document compiler/endian assumptions.
 - [x] M4-T02: Add length/type/payload boundary and supported malformed-input cases.
-- [ ] M4-T03: Prove no public ABI or production wire-format change.
+- [x] M4-T03: Prove no public ABI or production wire-format change.
 
 ### M5: Qualify platform portability (depends: M1, M2, M3, M4)
 
@@ -62,9 +62,9 @@ Parallel with M1/M2; owns `tests/platform`; integrates in M5.
 
 - [x] M6-T01: Label portable/native/ABI suites while preserving existing CTest names.
 - [x] M6-T02: Add correctly instrumented Linux ASan/UBSan and manual/full tiers.
-- [ ] M6-T03: Demonstrate replacement coverage before reducing regular PR variants.
-- [ ] M6-T04: Compare jobs, runner minutes, critical path, cache and retry rate.
-- [ ] M6-T05: Preserve full release, Windows ABI, linkage and consumer qualification.
+- [x] M6-T03: Demonstrate replacement coverage before reducing regular PR variants.
+- [x] M6-T04: Compare jobs, runner minutes, critical path, cache and retry rate.
+- [x] M6-T05: Preserve full release, Windows ABI, linkage and consumer qualification.
 
 ### M7: Integrate documentation and E2E boundary (depends: M3, M5)
 
@@ -90,14 +90,19 @@ Parallel with M1/M2; owns `tests/platform`; integrates in M5.
 | M2-T04 | API contract source comment and coverage map | Excluded repeated local disconnect from compatibility assertions | Observable implementation behavior without documented guarantee | Not frozen; future hardening remains explicit |
 | M3-T01 | [`platform_fake.cpp`](../../../tests/platform/fake/platform_fake.cpp) | Deterministic endpoint formatting and in-memory datagram delivery | Fake adapter | PASS |
 | M3-T02 | [`platform_conformance_test.cpp`](../../../tests/platform/conformance/platform_conformance_test.cpp) | One assertion source linked against fake/native adapters | 16 operations plus socket lifecycle | PASS on fake and Linux; modal Windows assertion reporter linked but not invoked |
+| M3-T03 | [Windows run 42491233746](https://github.com/irregularthanis/ggpo-next/actions/runs/42491233746), [Linux run 42491233770](https://github.com/irregularthanis/ggpo-next/actions/runs/42491233770) | Same `platform_conformance_test.cpp` target in each native matrix | Win32/x64 shared/static Debug/Release and Linux GCC/Clang shared/static | PASS across completed native matrix jobs |
 | M3-T04 | CTest `platform` label | Open/send/receive/close and post-close error assertions | Fake and Linux Debug static | PASS, 2/2; no mandatory case skipped |
 | M4-T01 | [`udp_msg.h`](../../../src/lib/ggpo/network/udp_msg.h) | Inline validation without field/layout changes | Packed existing wire representation | Exact packet sizes remain authoritative |
 | M4-T02 | [`protocol_test.cpp`](../../../tests/unit/protocol_test.cpp) | Exact, truncated, trailing, partial-byte and unknown-type cases | Production `UdpMsg::IsValidPacketSize` and receive guard | PASS |
+| M4-T03 | [Frozen Windows compatibility run 42491233746](https://github.com/irregularthanis/ggpo-next/actions/runs/42491233746) | Baseline/candidate exports, layouts and cross-revision DLL execution | Frozen Windows baseline and current candidate | PASS; no public ABI or packet-layout change |
 | M5-T01 | [Portability qualification](../../architecture/Portability.md#follow-up-platform-contract) | Supported/experimental checklist | Future native adapters | Published |
 | M5-T02 | [Testing architecture](../../architecture/Testing.md#test-layers) | Retain ABI, linkage, consumer and package layers | Windows and Linux | Requirements preserved |
 | M5-T04 | [Platform status](../../architecture/Build.md#platform-status) | Current support/limitations review | Windows, Linux and unsupported targets | Published |
 | M6-T01 | [`tests/CMakeLists.txt`](../../../tests/CMakeLists.txt) | `ctest --print-labels` and unchanged test-name audit | Portable, native, ABI, protocol and negative suites | Labels added without renaming tests |
 | M6-T02 | [Sanitizer workflow](../../../.github/workflows/sanitizer-qualification.yml) | `python3 scripts/linux/build_in_container.py --compiler clang --library static --sanitizers --out /tmp/ggpo-pr7-sanitizers` | Ubuntu 24.04 repository image; Clang 18; ASan+UBSan; production objects, 13 tests and installed C/C++ consumers | Initial run found zero-duration statistics and uninitialized round-trip state; both fixed with a focused regression; final PASS, 13/13 |
+| M6-T03 | [Coverage baseline](../../testing/SHARED_CORE_BASELINE.md#existing-test-and-compatibility-gates) and current labeled suites | Gate-to-suite review | Required PR matrix | Replacement evidence is incomplete; no required variant was reduced or renamed |
+| M6-T04 | [Windows run 42491233746](https://github.com/irregularthanis/ggpo-next/actions/runs/42491233746), [Linux run 42491233770](https://github.com/irregularthanis/ggpo-next/actions/runs/42491233770) | Job timestamp comparison with M0 baseline | One successful current run; Linux Docker dependency layer rebuilt after image change | Windows 23m08 summed/6m28 critical versus 23m39/6m51; Linux 7m26/2m01 versus 3m33/1m02; combined 30m34 versus 27m12; no retries; retain matrix pending warm comparable samples |
+| M6-T05 | [Windows run 42491233746](https://github.com/irregularthanis/ggpo-next/actions/runs/42491233746), [Linux run 42491233770](https://github.com/irregularthanis/ggpo-next/actions/runs/42491233770) | Retained full compatibility matrices | Windows ABI/linkage/cross-revision and Linux compilers/linkage/consumers/packages | PASS across completed required jobs |
 | M7-T01 | [Testing architecture](../../architecture/Testing.md) and [Portability](../../architecture/Portability.md) | Documentation update against test target names | Current branch | Published |
 | M7-T02 | [PR #5](https://github.com/irregularthanis/ggpo-next/pull/5) | Ownership boundary review | Cross-host E2E | Referenced; no duplicate harness |
 | M7-T03 | [Portability qualification](../../architecture/Portability.md#follow-up-platform-contract) | Future adapter E2E gate | Future platforms | Documented |
