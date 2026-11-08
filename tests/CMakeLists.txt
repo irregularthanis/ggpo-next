@@ -158,3 +158,22 @@ target_include_directories(ggpo_fake_platform_contract PRIVATE
 )
 target_link_libraries(ggpo_fake_platform_contract PRIVATE ggpo_fake_core)
 add_test(NAME fake_platform_contract COMMAND ggpo_fake_platform_contract)
+
+# Focused portable-core contracts run against production algorithms and the
+# deterministic fake adapter; no native clock, socket, or filesystem is used.
+function(ggpo_add_portable_contract target source test_name)
+    add_executable(${target} ${source})
+    ggpo_configure_static_test(${target})
+    target_link_libraries(${target} PRIVATE ggpo_fake_core)
+    add_test(NAME ${test_name} COMMAND ${target})
+    set_tests_properties(${test_name} PROPERTIES LABELS "portable;core")
+endfunction()
+
+ggpo_add_portable_contract(ggpo_input_queue_contract
+    unit/input_queue_test.cpp input_queue_contract)
+ggpo_add_portable_contract(ggpo_sync_contract
+    unit/sync_contract_test.cpp sync_contract)
+ggpo_add_portable_contract(ggpo_timesync_contract
+    unit/timesync_test.cpp timesync_contract)
+ggpo_add_portable_contract(ggpo_core_utilities_contract
+    unit/core_utilities_test.cpp core_utilities_contract)

@@ -21,10 +21,10 @@ Architecture: [test layers](../../architecture/Testing.md#test-layers).
 
 Parallel with M2/M3; owns `tests/unit`; integrates in M5.
 
-- [ ] M1-T01: Test InputQueue ordering, prediction, mismatch, delay and wraparound.
-- [ ] M1-T02: Test Sync snapshot, rollback, replay, ownership and prediction limits.
-- [ ] M1-T03: Test TimeSync histories and container/bit-vector boundaries.
-- [ ] M1-T04: Prove independent expected results and exercised rollback paths.
+- [x] M1-T01: Test InputQueue ordering, prediction, mismatch, delay and wraparound.
+- [x] M1-T02: Test Sync snapshot, rollback, replay, ownership and prediction limits.
+- [x] M1-T03: Test TimeSync histories and container/bit-vector boundaries.
+- [x] M1-T04: Prove independent expected results and exercised rollback paths.
 
 ### M2: Add public API contracts (depends: M0)
 
@@ -80,3 +80,7 @@ Parallel with M1/M2; owns `tests/platform`; integrates in M5.
 | M0-T02 | [`SHARED_CORE_BASELINE.md`](../../testing/SHARED_CORE_BASELINE.md#portable-core) | Source and fake-contract audit | Portable core and `platform.h` | Core coverage classified; 16 operations plus lifecycle inventoried |
 | M0-T03 | [`SHARED_CORE_BASELINE.md`](../../testing/SHARED_CORE_BASELINE.md#ci-baseline) | Workflow/job timestamps and protected-check audit | Successful `master` runs 42423387489/42423387435 | 15 build/test jobs; 27m12s summed; 6m51s critical path |
 | M0-T04 | [`SHARED_CORE_BASELINE.md`](../../testing/SHARED_CORE_BASELINE.md#priority-order) | Gap ranking against retained gates | API/core/platform/protocol surfaces | P0/P1 order recorded; no lane removed |
+| M1-T01 | [`input_queue_test.cpp`](../../../tests/unit/input_queue_test.cpp) | Focused CTest contract | Confirmed/predicted/delayed/wrapped inputs | PASS |
+| M1-T02 | [`sync_contract_test.cpp`](../../../tests/unit/sync_contract_test.cpp) | Production `Sync` with independent state oracle | Two mismatches, repeated replay, snapshot eviction and prediction threshold | PASS |
+| M1-T03 | [`timesync_test.cpp`](../../../tests/unit/timesync_test.cpp), [`core_utilities_test.cpp`](../../../tests/unit/core_utilities_test.cpp) | Fixed history and boundary cases | TimeSync, ring/static buffers and bit vector | PASS |
+| M1-T04 | CTest `portable;core` plus full suite | `ctest --test-dir /tmp/ggpo-shared-core-build --output-on-failure` | Linux Debug static; GCC 16.2.1 | PASS, 9/9; rollback loads/replay counts and oracle convergence asserted |
