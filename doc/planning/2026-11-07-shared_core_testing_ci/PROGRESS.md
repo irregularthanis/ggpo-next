@@ -47,8 +47,8 @@ Parallel with M1/M2; owns `tests/platform`; integrates in M5.
 
 ### M4: Harden protocol contracts (depends: M1, M3)
 
-- [ ] M4-T01: Preserve frozen packet layout and document compiler/endian assumptions.
-- [ ] M4-T02: Add length/type/payload boundary and supported malformed-input cases.
+- [x] M4-T01: Preserve frozen packet layout and document compiler/endian assumptions.
+- [x] M4-T02: Add length/type/payload boundary and supported malformed-input cases.
 - [ ] M4-T03: Prove no public ABI or production wire-format change.
 
 ### M5: Qualify platform portability (depends: M1, M2, M3, M4)
@@ -91,3 +91,5 @@ Parallel with M1/M2; owns `tests/platform`; integrates in M5.
 | M3-T01 | [`platform_fake.cpp`](../../../tests/platform/fake/platform_fake.cpp) | Deterministic endpoint formatting and in-memory datagram delivery | Fake adapter | PASS |
 | M3-T02 | [`platform_conformance_test.cpp`](../../../tests/platform/conformance/platform_conformance_test.cpp) | One assertion source linked against fake/native adapters | 16 operations plus socket lifecycle | PASS on fake and Linux; modal Windows assertion reporter linked but not invoked |
 | M3-T04 | CTest `platform` label | Open/send/receive/close and post-close error assertions | Fake and Linux Debug static | PASS, 2/2; no mandatory case skipped |
+| M4-T01 | [`udp_msg.h`](../../../src/lib/ggpo/network/udp_msg.h) | Inline validation without field/layout changes | Packed existing wire representation | Exact packet sizes remain authoritative |
+| M4-T02 | [`protocol_test.cpp`](../../../tests/unit/protocol_test.cpp) | Exact, truncated, trailing, partial-byte and unknown-type cases | Production `UdpMsg::IsValidPacketSize` and receive guard | PASS |

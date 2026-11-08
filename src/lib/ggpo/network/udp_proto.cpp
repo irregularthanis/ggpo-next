@@ -298,6 +298,9 @@ UdpProtocol::HandlesMsg(ggpo_platform::UdpEndpoint &from,
 void
 UdpProtocol::OnMsg(UdpMsg *msg, int len)
 {
+   if (!msg || !msg->IsValidPacketSize(len)) {
+      return;
+   }
    bool handled = false;
    typedef bool (UdpProtocol::*DispatchFn)(UdpMsg *msg, int len);
    static const DispatchFn table[] = {
