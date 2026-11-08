@@ -2,7 +2,7 @@
 # the otherwise platform-neutral GGPO target.
 function(ggpo_configure_platform target)
 	target_sources(${target} PRIVATE
-		${CMAKE_CURRENT_SOURCE_DIR}/lib/ggpo/platform_windows.cpp
+		${PROJECT_SOURCE_DIR}/src/lib/ggpo/platform_windows.cpp
 	)
 	target_compile_options(${target} PRIVATE "/W4" "/WX")
 	target_compile_definitions(${target} PRIVATE

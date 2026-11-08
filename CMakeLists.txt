@@ -52,8 +52,14 @@ if(BUILD_TESTING AND GGPO_BUILD_SDK)
 				ggpo_linux_synctest_smoke
 				ggpo_linux_peer_smoke)
 		endif()
+		get_property(GGPO_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+		if(GGPO_MULTI_CONFIG)
+			set(GGPO_CTEST_CONFIG_ARGS -C $<CONFIG>)
+		else()
+			set(GGPO_CTEST_CONFIG_ARGS)
+		endif()
 		add_custom_target(ggpo_check ALL
-			COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>
+			COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure ${GGPO_CTEST_CONFIG_ARGS}
 			DEPENDS
 				${GGPO_PLATFORM_TEST_TARGETS}
 				${GGPO_PORTABLE_TEST_TARGETS}

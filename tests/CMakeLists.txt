@@ -202,7 +202,9 @@ set_tests_properties(fake_platform_conformance PROPERTIES LABELS "portable;platf
 add_executable(ggpo_native_platform_conformance
     platform/conformance/platform_conformance_test.cpp)
 ggpo_configure_test(ggpo_native_platform_conformance)
-target_link_libraries(ggpo_native_platform_conformance PRIVATE GGPO::GGPO)
+# Exercise the selected adapter directly.  Platform helpers are internal
+# implementation details and therefore are not exported by the Windows DLL.
+ggpo_configure_platform(ggpo_native_platform_conformance)
 add_test(NAME ${GGPO_SMOKE_PREFIX}_platform_conformance
     COMMAND ggpo_native_platform_conformance)
 set_tests_properties(${GGPO_SMOKE_PREFIX}_platform_conformance
