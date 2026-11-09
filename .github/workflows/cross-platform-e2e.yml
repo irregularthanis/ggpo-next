@@ -27,7 +27,7 @@ jobs:
           cmake -S . -B build/e2e -G Ninja \
             -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
           cmake --build build/e2e --target ggpo_linux_peer_smoke --parallel 2
-          install -D -m 0755 build/e2e/tests/ggpo_linux_peer_smoke \
+          install -D -m 0755 build/e2e/bin/x64/Release/ggpo_linux_peer_smoke \
             build/evidence/peer/ggpo_peer_smoke
           sha256sum build/evidence/peer/ggpo_peer_smoke \
             > build/evidence/peer/sha256.txt
@@ -54,7 +54,7 @@ jobs:
           cmake -S . -B build/e2e -A x64 -DBUILD_SHARED_LIBS=OFF
           cmake --build build/e2e --config Release --target ggpo_windows_peer_smoke --parallel 2
           New-Item -ItemType Directory -Force build/evidence/peer | Out-Null
-          Copy-Item build/e2e/tests/Release/ggpo_windows_peer_smoke.exe `
+          Copy-Item build/e2e/bin/x64/Release/ggpo_windows_peer_smoke.exe `
             build/evidence/peer/ggpo_peer_smoke.exe
           (Get-FileHash build/evidence/peer/ggpo_peer_smoke.exe -Algorithm SHA256).Hash.ToLower() `
             | Set-Content build/evidence/peer/sha256.txt
