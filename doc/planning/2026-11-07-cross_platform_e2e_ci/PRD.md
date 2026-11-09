@@ -19,7 +19,7 @@ The selected Option B uses temporary Tailscale nodes and GitHub Actions coordina
 - Validate canonical state against both the other peer and an independent expected-state calculation.
 - Reject timeout, crash, missing/duplicate result, divergent state, wrong run identity, unexpected disconnect, and incomplete cleanup.
 - Upload a manifest, peer results, logs, hashes, environment identity, and a concise Actions summary.
-- Run the clean matrix on trusted `master` pushes and manual dispatch. Add deterministic latency/loss profiles as a nightly tier after clean execution is stable.
+- Run the clean matrix on trusted owner-authored same-repository PRs, `master` pushes, and manual dispatch. Add deterministic latency/loss profiles as a nightly tier after clean execution is stable.
 - Treat absent credentials or unavailable native evidence as incomplete, never as a pass.
 
 ## Success and constraints
@@ -39,7 +39,7 @@ This suite measures correctness, not latency or throughput. Direct WireGuard and
 ## Clarifications
 
 - Option B means GitHub-hosted native runners joined through ephemeral Tailscale nodes; no permanent coordinator.
-- Initial privileged triggers are `push` to `master` and `workflow_dispatch`. Same-repository PR execution is a later trust-policy decision; fork PR code never receives Tailscale credentials.
+- Privileged triggers are owner-authored same-repository PRs, `push` to `master`, and `workflow_dispatch`. Fork and non-owner PR code never receives Tailscale credentials.
 - The official Tailscale Action is pinned to commit `064b10558093f38325e838ddea35486bdc6b1d5c` (v4.4.0). Its documented OAuth nodes are ephemeral and removed after logout.
 - A run-scoped GitHub Deployment record bootstraps the Linux coordinator address. HMAC-authenticated control messages use a separate repository secret; deployment payloads never carry reusable credentials.
 - Clean-network interoperability is the merge gate for this work. Seeded latency/loss and proven rollback execution form the nightly follow-up tier.

@@ -38,9 +38,9 @@ Parallel with M1/M2; owns `.github/workflows/cross-platform-e2e.yml`; integrates
 - [ ] M3-T02: Join pinned ephemeral Tailscale nodes with least-privileged trusted-only triggers and grants.
 - [ ] M3-T03: Run concurrent agents and unconditional artifact/Deployment/process cleanup; final report cannot mask failed jobs.
 
-Current gate: the repository has none of the required `TS_OAUTH_CLIENT_ID`,
-`TS_OAUTH_SECRET`, or `GGPO_E2E_SESSION_SECRET` secrets, so native tailnet
-execution cannot be claimed until they are configured.
+Current gate: all three required repository secrets are configured. M3 remains
+open until the owner-only qualification workflow proves native tailnet startup,
+execution, evidence publication, and cleanup.
 
 ### M4: Qualify the clean native matrix (depends: M1, M2, M3)
 
@@ -60,7 +60,7 @@ execution cannot be claimed until they are configured.
 |---|---|---|---|---|
 | M0-T01 | [`result_schema.py`](../../../tests/e2e/result_schema.py), [technical plan](TECH_PLAN.md#contracts-and-flow) | Source contract and fixed-vector review | Schema 1 and schema 2 | Frozen |
 | M0-T02 | [`control.py`](../../../tests/e2e/control.py), [`rendezvous.py`](../../../tests/e2e/rendezvous.py), [workflow](../../../.github/workflows/cross-platform-e2e.yml) | Source contract review | Run/SHA/attempt/session-bound control | Frozen |
-| M0-T03 | [Technical plan security contract](TECH_PLAN.md#workflow-and-security) | Permission, trigger, secret, action-pin review | Trusted `push`/manual workflow | Frozen |
+| M0-T03 | [Technical plan security contract](TECH_PLAN.md#workflow-and-security) | Permission, trigger, secret, action-pin review | Owner-authored same-repository PR, trusted `push`, or manual workflow | Frozen |
 | M1-T01 | [`smoke_session.cpp`](../../../tests/smoke/smoke_session.cpp), [`test_result_schema.py`](../../../tests/e2e/test_result_schema.py) | `python3 tests/e2e/test_result_schema.py` | 9 schema/oracle cases | PASS |
 | M1-T02 | [`peer_smoke.cpp`](../../../tests/smoke/peer_smoke.cpp), [`run_schema2_loopback.py`](../../../tests/e2e/run_schema2_loopback.py) | `linux_peer_schema2_loopback` | 180-frame bounded barrier | PASS |
 | M1-T03 | `/tmp/ggpo-pr5-build` | `cmake -S . -B /tmp/ggpo-pr5-build -G Ninja -DCMAKE_BUILD_TYPE=Release`; build; `ctest --test-dir /tmp/ggpo-pr5-build --output-on-failure -C Release` | Linux Release; 9 registered tests | PASS, 9/9 (run twice: build-time check and explicit CTest) |

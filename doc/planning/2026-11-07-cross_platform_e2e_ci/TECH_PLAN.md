@@ -83,7 +83,7 @@ Build jobs upload one Release x64 executable bundle each, including shared libra
 uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c
 ```
 
-Required secrets are `TS_OAUTH_CLIENT_ID`, `TS_OAUTH_SECRET`, and `GGPO_E2E_SESSION_SECRET`. The Tailscale OAuth client has writable `auth_keys` only for `tag:ggpo-ci`; grants allow that tag only the E2E UDP/control ports. Workflow permissions are `contents: read`, `deployments: write`, and `actions: read`. No `pull_request_target` trigger is allowed.
+Required secrets are `TS_OAUTH_CLIENT_ID`, `TS_OAUTH_SECRET`, and `GGPO_E2E_SESSION_SECRET`. The Tailscale OAuth client has writable `auth_keys` only for `tag:ggpo-ci`; grants allow that tag only the E2E UDP/control ports. Workflow permissions are `contents: read`, `deployments: write`, and `actions: read`. Owner-authored same-repository PRs may qualify before merge; fork and non-owner PR jobs are skipped. No `pull_request_target` trigger is allowed.
 
 The final job runs with `if: always()`, downloads both evidence artifacts, and fails if either execution job failed or any scenario/result is missing. Artifacts contain no OAuth/HMAC material.
 
