@@ -2,12 +2,14 @@
 """Negative and completeness tests for cross-host control orchestration."""
 
 import copy
+import io
 import tempfile
 import unittest
 from pathlib import Path
 
 from control import MessageVerifier, derive_key, sign_message
 from peer_agent import PeerSupervisor
+from run_schema2_loopback import stage_runtime_bundle
 from run_matrix import generate_matrix, validate_matrix
 
 
@@ -71,6 +73,28 @@ class SupervisorTests(unittest.TestCase):
                     "executable": "missing", "result": "out/result.json",
                     "ready": "out/ready", "finalize": "out/finalize",
                 })
+
+    def test_cancel_closes_log_after_peer_already_exited(self):
+        with tempfile.TemporaryDirectory() as directory:
+            supervisor = PeerSupervisor(directory)
+            log = io.StringIO()
+            supervisor._log = log
+            supervisor.cancel({})
+            self.assertTrue(log.closed)
+
+    def test_runtime_bundle_copies_adjacent_windows_library(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            destination = root / "staged"
+            source.mkdir()
+            executable = source / "peer.exe"
+            library = source / "GGPO.dll"
+            executable.write_bytes(b"peer")
+            library.write_bytes(b"library")
+            staged = stage_runtime_bundle(executable, destination)
+            self.assertEqual(staged.read_bytes(), b"peer")
+            self.assertEqual((destination / "GGPO.dll").read_bytes(), b"library")
 
 
 if __name__ == "__main__":

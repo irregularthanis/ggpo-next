@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import shutil
 import socket
 import tempfile
 import time
@@ -20,6 +21,18 @@ def reserve_port():
     return port
 
 
+def stage_runtime_bundle(source, destination):
+    """Copy the peer and adjacent native shared libraries into its workspace."""
+    destination.mkdir(parents=True, exist_ok=True)
+    staged = destination / source.name
+    shutil.copy2(source, staged)
+    for pattern in ("*.dll", "*.so", "*.so.*", "*.dylib"):
+        for library in source.parent.glob(pattern):
+            shutil.copy2(library, destination / library.name)
+    staged.chmod(0o755)
+    return staged
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("executable", type=Path)
@@ -31,9 +44,7 @@ def main():
 
     with tempfile.TemporaryDirectory(prefix="ggpo-schema2-") as directory:
         root = Path(directory)
-        executable = root / args.executable.name
-        executable.write_bytes(args.executable.read_bytes())
-        executable.chmod(0o755)
+        executable = stage_runtime_bundle(args.executable.resolve(), root)
         peers = [PeerSupervisor(root), PeerSupervisor(root)]
         for player, peer in enumerate(peers, start=1):
             peer.prepare({"executable": executable.name,

@@ -18,6 +18,12 @@ class PeerSupervisor:
         self.workspace = Path(workspace).resolve()
         self.process = None
         self.command = None
+        self._log = None
+
+    def _close_log(self):
+        if self._log is not None:
+            self._log.close()
+            self._log = None
 
     def safe_path(self, value):
         candidate = (self.workspace / value).resolve()
@@ -91,7 +97,7 @@ class PeerSupervisor:
             raise ValueError(f"peer exited with {self.process.returncode}")
         if not self.command["result"].is_file():
             raise ValueError("peer result is missing")
-        self._log.close()
+        self._close_log()
         return json.loads(self.command["result"].read_text(encoding="utf-8"))
 
     def cancel(self, _arguments):
@@ -102,6 +108,7 @@ class PeerSupervisor:
             except subprocess.TimeoutExpired:
                 self.process.kill()
                 self.process.wait(timeout=5)
+        self._close_log()
         return {"cancelled": True}
 
     def shutdown(self, arguments):
