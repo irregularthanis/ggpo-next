@@ -82,6 +82,22 @@ class SupervisorTests(unittest.TestCase):
             supervisor.cancel({})
             self.assertTrue(log.closed)
 
+    def test_status_requires_a_complete_ready_state_snapshot(self):
+        with tempfile.TemporaryDirectory() as directory:
+            supervisor = PeerSupervisor(directory)
+            ready = Path(directory) / "peer.ready"
+            supervisor.command = {"ready": ready}
+            ready.write_text("ready\n", encoding="utf-8")
+            self.assertFalse(supervisor.status({})["ready"])
+            ready.write_text(
+                '{"frame":180,"canonical_checksum":1234}\n',
+                encoding="utf-8",
+            )
+            status = supervisor.status({})
+            self.assertTrue(status["ready"])
+            self.assertEqual(status["frame"], 180)
+            self.assertEqual(status["canonical_checksum"], 1234)
+
     def test_finalize_releases_a_prepared_peer(self):
         with tempfile.TemporaryDirectory() as directory:
             supervisor = PeerSupervisor(directory)

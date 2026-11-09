@@ -91,16 +91,19 @@ SafeIdentity(const char *value)
    return true;
 }
 
-// Create the local readiness marker consumed by the test-only coordinator.
+// Publish the current deterministic state for the test-only coordinator.
 static bool
-WriteMarker(const char *path)
+WriteReadyState(const char *path)
 {
    FILE *marker = fopen(path, "w");
    if (!marker) {
       fprintf(stderr, "could not create marker: %s\n", path);
       return false;
    }
-   fputs("ready\n", marker);
+   fprintf(marker,
+           "{\"frame\":%d,\"canonical_checksum\":%u}\n",
+           g_smoke_state.frame,
+           SmokeCanonicalChecksum(&g_smoke_state));
    fclose(marker);
    return true;
 }
@@ -327,13 +330,16 @@ main(int argc, char **argv)
    const char *ready_path = getenv("GGPO_SMOKE_READY_FILE");
    const char *finalize_path = getenv("GGPO_SMOKE_FINALIZE_FILE");
    if (ready_path || finalize_path) {
-      if (!ready_path || !finalize_path || !WriteMarker(ready_path)) {
+      if (!ready_path || !finalize_path || !WriteReadyState(ready_path)) {
          fprintf(stderr, "incomplete completion-barrier configuration\n");
          return 1;
       }
       start_time = TestTimeMs();
       while (!MarkerExists(finalize_path)) {
          ggpo_idle(g_smoke_session, 1);
+         if (!WriteReadyState(ready_path)) {
+            return 1;
+         }
          TestWaitMs(1);
          if (TestTimeMs() - start_time > 15000) {
             fprintf(stderr, "timed out waiting for completion barrier\n");

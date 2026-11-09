@@ -73,7 +73,7 @@ Proposed schema 2 adds fields without changing schema 1 readers:
 
 `SmokeCanonicalChecksum` serializes frame, accumulator, and disconnect flags as explicitly sized unsigned 32-bit little-endian values. A Python oracle independently applies the documented input sequence and transition and checks known vectors. The existing native-memory checksum remains available only for legacy schema 1 tests.
 
-At target frame, each fixture writes a ready marker and continues pumping GGPO. The coordinator releases a test-only finalize marker only after both peers are ready; peers then record state and close. This replaces the fixed delay as the success condition while keeping control traffic outside production UDP.
+At target frame, each fixture publishes a live frame/checksum snapshot and continues pumping GGPO. The coordinator releases test-only finalize markers only after both snapshots match the independent expected state; peers then record state and close. A boolean “target reached” marker is insufficient because rollback corrections can still be pending. This replaces the fixed delay as the success condition while keeping control traffic outside production UDP.
 
 ## Workflow and security
 
@@ -116,7 +116,7 @@ Critical path: M0 → M1/M2/M3 → M4 → M5. M1 owns smoke/result files, M2 own
 - GitHub Deployments are the proposed bootstrap record because they can be run-scoped, transient, queried while both jobs remain alive, and cleaned explicitly. A proof in M2 must confirm payload visibility/rate limits before workflow integration.
 - The public GGPO API, ABI, packed UDP messages, and production sources do not change.
 - Initial workflow execution is trusted-only. Enabling same-repository PRs requires a separate approval policy; fork PRs remain unprivileged.
-- Current GGPO code has no public confirmed-frame query. The fixture-level ready/finalize barrier plus independent expected state is the planned completion proof; M1 must reject it if source testing shows predicted state can still pass.
+- Current GGPO code has no public confirmed-frame query. Win32 CI proved that a boolean ready/finalize barrier can expose predicted state. The fixture therefore keeps publishing state while pumping GGPO and finalizes only when both peers match the independent oracle.
 
 ## References
 

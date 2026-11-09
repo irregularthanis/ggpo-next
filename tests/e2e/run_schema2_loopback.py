@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 
 from peer_agent import PeerSupervisor
-from result_schema import validate_pair
+from result_schema import expected_state, validate_pair
 
 
 def reserve_port():
@@ -41,6 +41,7 @@ def main():
     port1, port2 = reserve_port(), reserve_port()
     while port2 == port1:
         port2 = reserve_port()
+    expected_checksum = expected_state(args.frames)["canonical_checksum"]
 
     with tempfile.TemporaryDirectory(prefix="ggpo-schema2-") as directory:
         root = Path(directory)
@@ -67,7 +68,11 @@ def main():
             deadline = time.monotonic() + 45
             while time.monotonic() < deadline:
                 statuses = [peer.status({}) for peer in peers]
-                if all(status["ready"] for status in statuses):
+                if all(
+                    status["ready"] and status["frame"] == args.frames and
+                    status["canonical_checksum"] == expected_checksum
+                    for status in statuses
+                ):
                     break
                 if any(status["returncode"] not in (None, 0) for status in statuses):
                     raise RuntimeError(f"peer exited before barrier: {statuses}")

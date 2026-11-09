@@ -11,7 +11,7 @@ from control import derive_key
 from control_client import ControlClient
 from peer_agent import PeerSupervisor
 from rendezvous import DeploymentRendezvous, GitHubTransport
-from result_schema import validate_pair
+from result_schema import expected_state, validate_pair
 
 
 def required_environment():
@@ -58,6 +58,7 @@ def main():
     run_id = f"{os.environ['GITHUB_RUN_ID']}-{os.environ['GITHUB_RUN_ATTEMPT']}"
     common = {"scenario": args.scenario, "run_id": run_id,
               "session_id": args.session_id, "frames": args.frames}
+    expected_checksum = expected_state(args.frames)["canonical_checksum"]
     remote_prepared = False
     shutdown_sent = False
     try:
@@ -85,7 +86,12 @@ def main():
                 while time.monotonic() < deadline:
                     remote_status = remote.request("status")
                     local_status = local.status({})
-                    if remote_status["ready"] and local_status["ready"]:
+                    statuses = (remote_status, local_status)
+                    if all(
+                        status["ready"] and status["frame"] == args.frames and
+                        status["canonical_checksum"] == expected_checksum
+                        for status in statuses
+                    ):
                         break
                     if remote_status["returncode"] not in (None, 0) or \
                             local_status["returncode"] not in (None, 0):

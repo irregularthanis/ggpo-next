@@ -75,11 +75,26 @@ class PeerSupervisor:
         return {"pid": self.process.pid}
 
     def status(self, _arguments):
+        ready_state = None
+        if self.command and self.command["ready"].is_file():
+            try:
+                candidate = json.loads(
+                    self.command["ready"].read_text(encoding="utf-8")
+                )
+                if isinstance(candidate.get("frame"), int) and isinstance(
+                    candidate.get("canonical_checksum"), int
+                ):
+                    ready_state = candidate
+            except (OSError, ValueError, json.JSONDecodeError):
+                pass
         return {
             "prepared": self.command is not None,
             "running": self.process is not None and self.process.poll() is None,
             "returncode": None if self.process is None else self.process.poll(),
-            "ready": bool(self.command and self.command["ready"].exists()),
+            "ready": ready_state is not None,
+            "frame": None if ready_state is None else ready_state["frame"],
+            "canonical_checksum": None if ready_state is None else
+                ready_state["canonical_checksum"],
         }
 
     def finalize(self, _arguments):

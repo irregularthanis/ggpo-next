@@ -249,8 +249,10 @@ flowchart LR
 The role-1 runner publishes a run- and scenario-bound endpoint through a
 transient GitHub Deployment. [`host_agent.py`](../../tests/e2e/host_agent.py)
 accepts only authenticated lifecycle operations; production GGPO data still
-travels directly over UDP. At frame 180, both peers keep pumping GGPO until the
-coordinator observes both ready markers and releases the finalize markers.
+travels directly over UDP. At frame 180, both peers keep pumping GGPO and
+publishing frame/checksum snapshots. The coordinator releases the finalize
+markers only when both snapshots match the independent expected state; merely
+reaching frame 180 can still leave predicted inputs awaiting correction.
 
 [`compare_peer_results.py`](../../tests/smoke/compare_peer_results.py) retains
 schema-1 compatibility. Schema 2 additionally requires matching run/session
