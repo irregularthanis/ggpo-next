@@ -34,17 +34,16 @@ Parallel with M1/M3; owns `tests/e2e`; integrates at M4.
 
 Parallel with M1/M2; owns `.github/workflows/cross-platform-e2e.yml`; integrates at M4.
 
-- [ ] M3-T01: Build and hash native Linux/Windows Release x64 peer bundles from one commit.
-- [ ] M3-T02: Join pinned ephemeral Tailscale nodes with least-privileged trusted-only triggers and grants.
-- [ ] M3-T03: Run concurrent agents and unconditional artifact/Deployment/process cleanup; final report cannot mask failed jobs.
+- [x] M3-T01: Build and hash native Linux/Windows Release x64 peer bundles from one commit.
+- [x] M3-T02: Join pinned ephemeral Tailscale nodes with least-privileged trusted-only triggers and grants.
+- [x] M3-T03: Run concurrent agents and unconditional artifact/Deployment/process cleanup; final report cannot mask failed jobs.
 
-Current gate: all three required repository secrets are configured. M3 remains
-open until the owner-only qualification workflow proves native tailnet startup,
-execution, evidence publication, and cleanup.
+All required secrets are configured and the first owner-only native run passed.
+M4 qualification is at 1/3 consecutive clean runs.
 
 ### M4: Qualify the clean native matrix (depends: M1, M2, M3)
 
-- [ ] M4-T01: Pass LL, WW, LW, and WL with exactly 180 frames, canonical/oracle state, expected events, and clean closure.
+- [x] M4-T01: Pass LL, WW, LW, and WL with exactly 180 frames, canonical/oracle state, expected events, and clean closure.
 - [ ] M4-T02: Pass three consecutive trusted runs with complete manifests, hashes, logs, summaries, and no orphan resources.
 - [ ] M4-T03: Update testing/networking/portability docs and record workflow evidence before making the check required.
 
@@ -67,3 +66,7 @@ execution, evidence publication, and cleanup.
 | M2-T01 | [`run_matrix.py`](../../../tests/e2e/run_matrix.py), [`control.py`](../../../tests/e2e/control.py), [`peer_agent.py`](../../../tests/e2e/peer_agent.py) | Source review plus `test_orchestration.py` | Four ordered platform roles; authenticated allow-list; bounded supervisor lifecycle | PASS |
 | M2-T02 | [Deployment `7659683890`](https://api.github.com/repos/irregularthanis/ggpo-next/deployments/7659683890), [`test_rendezvous.py`](../../../tests/e2e/test_rendezvous.py) | Publish, discover exact payload by environment/ref, then mark inactive | Transient non-production record bound to repository, SHA, run, attempt, and session | PASS; payload visible and record retired |
 | M2-T03 | [`test_orchestration.py`](../../../tests/e2e/test_orchestration.py), [`test_rendezvous.py`](../../../tests/e2e/test_rendezvous.py) | `python3 tests/e2e/test_orchestration.py`; `python3 tests/e2e/test_rendezvous.py` | 22 focused control, matrix, manifest, lifecycle, identity, and failure cases | PASS, 22/22 |
+| M3-T01 | [Native E2E run `42723244592`](https://github.com/irregularthanis/ggpo-next/actions/runs/42723244592) | Native Release x64 Linux/Windows build jobs; SHA-256 and toolchain artifacts | PR merge SHA `9d8a562c4c27d5b573844b9edb5fe6590766f97d` | PASS |
+| M3-T02 | [Eight native role jobs](https://github.com/irregularthanis/ggpo-next/actions/runs/42723244592) | Pinned Tailscale action; `tag:ggpo-ci`; TCP 24871 and UDP 24872–24873 | Four ephemeral scenario pairs | PASS |
+| M3-T03 | [Complete manifest artifact](https://github.com/irregularthanis/ggpo-next/actions/runs/42723244592/artifacts/13721662369) | Final fail-closed report plus unconditional action/process/Deployment cleanup | 11 evidence artifacts; four Deployment records | PASS; all Deployments inactive |
+| M4-T01 | [Complete manifest artifact](https://github.com/irregularthanis/ggpo-next/actions/runs/42723244592/artifacts/13721662369) | Validate all role reports against the independent oracle | LL, WW, LW, WL; 180 frames each | PASS; checksum `2109130363`, clean closure, no disconnects |
