@@ -74,8 +74,12 @@ def main():
                 time.sleep(0.05)
             else:
                 raise TimeoutError("schema 2 peers did not reach barrier")
-            results = [peer.collect({"finalize": True, "timeout": 20})
-                       for peer in peers]
+            # Release both peers before waiting for either one. Releasing and
+            # collecting sequentially lets the unreleased peer continue
+            # applying late rollback corrections after its counterpart exits.
+            for peer in peers:
+                peer.finalize({})
+            results = [peer.collect({"timeout": 20}) for peer in peers]
             report = validate_pair(
                 results[0], results[1], args.frames,
                 scenario="linux-linux", run_id="local-1",

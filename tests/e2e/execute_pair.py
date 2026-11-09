@@ -94,8 +94,11 @@ def main():
                 else:
                     raise TimeoutError("both peers did not reach the completion barrier")
 
-                local.command["finalize"].write_text("finalize\n", encoding="utf-8")
-                player1 = remote.request("collect", {"finalize": True, "timeout": 20})
+                # Release both peers before collecting either result so one
+                # side cannot keep correcting state after the other exits.
+                local.finalize({})
+                remote.request("finalize")
+                player1 = remote.request("collect", {"timeout": 20})
                 local.process.wait(timeout=20)
                 player2 = local.collect({})
                 report = validate_pair(

@@ -82,11 +82,18 @@ class PeerSupervisor:
             "ready": bool(self.command and self.command["ready"].exists()),
         }
 
+    def finalize(self, _arguments):
+        if self.command is None or self.process is None:
+            raise ValueError("peer has not launched")
+        self.command["finalize"].write_text("finalize\n", encoding="utf-8")
+        return {"finalized": True}
+
     def collect(self, _arguments):
         if self.process is None:
             raise ValueError("peer has not launched")
         if _arguments.get("finalize"):
-            self.command["finalize"].write_text("finalize\n", encoding="utf-8")
+            self.finalize({})
+        if self.process.poll() is None and "timeout" in _arguments:
             try:
                 self.process.wait(timeout=int(_arguments.get("timeout", 20)))
             except subprocess.TimeoutExpired as error:

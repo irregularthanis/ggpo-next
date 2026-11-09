@@ -82,6 +82,19 @@ class SupervisorTests(unittest.TestCase):
             supervisor.cancel({})
             self.assertTrue(log.closed)
 
+    def test_finalize_releases_a_prepared_peer(self):
+        with tempfile.TemporaryDirectory() as directory:
+            supervisor = PeerSupervisor(directory)
+            supervisor.command = {
+                "finalize": Path(directory) / "peer.finalize",
+            }
+            supervisor.process = object()
+            self.assertEqual(supervisor.finalize({}), {"finalized": True})
+            self.assertEqual(
+                supervisor.command["finalize"].read_text(encoding="utf-8"),
+                "finalize\n",
+            )
+
     def test_runtime_bundle_copies_adjacent_windows_library(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
