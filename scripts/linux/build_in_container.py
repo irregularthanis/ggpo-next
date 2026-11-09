@@ -25,6 +25,8 @@ def main():
     parser.add_argument("--skip-image-build", action="store_true")
     parser.add_argument("--packages", action="store_true",
                         help="create and verify raw, DEB, and RPM SDK packages")
+    parser.add_argument("--sanitizers", action="store_true",
+                        help="instrument GGPO and tests with ASan and UBSan")
     parser.add_argument("--jobs", type=int, default=max(1, os.cpu_count() or 1))
     args = parser.parse_args()
 
@@ -52,10 +54,19 @@ def main():
     cc, cxx = (("gcc", "g++") if args.compiler == "gcc"
                else ("clang", "clang++"))
     shared = "ON" if args.library == "shared" else "OFF"
+    sanitizer_flags = ""
+    if args.sanitizers:
+        flags = "-fsanitize=address,undefined -fno-omit-frame-pointer"
+        sanitizer_flags = (
+            f"-DCMAKE_C_FLAGS='{flags}' -DCMAKE_CXX_FLAGS='{flags}' "
+            f"-DCMAKE_EXE_LINKER_FLAGS='{flags}' "
+            f"-DCMAKE_SHARED_LINKER_FLAGS='{flags}' "
+        )
     commands = [
         f"cmake -S /src -B /out/build -G Ninja "
         f"-DCMAKE_C_COMPILER={cc} -DCMAKE_CXX_COMPILER={cxx} "
         f"-DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS={shared} "
+        f"{sanitizer_flags}"
         "-DGGPO_BUILD_SDK=ON -DGGPO_BUILD_VECTORWAR=OFF "
         "-DGGPO_RUN_TESTS_ON_BUILD=ON -DBUILD_TESTING=ON "
         "-DCMAKE_INSTALL_PREFIX=/out/install",
@@ -64,15 +75,19 @@ def main():
         "cmake --install /out/build",
         f"cmake -S /src/tests/consumer -B /out/consumer -G Ninja "
         f"-DCMAKE_C_COMPILER={cc} -DCMAKE_CXX_COMPILER={cxx} "
+        f"{sanitizer_flags}"
         "-DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/out/install",
         f"cmake --build /out/consumer --parallel {args.jobs}",
         "LD_LIBRARY_PATH=/out/install/lib /out/consumer/ggpo_installed_c11",
         "LD_LIBRARY_PATH=/out/install/lib /out/consumer/ggpo_installed_cpp98",
-        "python3 /src/scripts/ci/audit_linux_sdk.py /out/install",
+    ]
+    if not args.sanitizers:
+        commands.append("python3 /src/scripts/ci/audit_linux_sdk.py /out/install")
+    commands.extend([
         f"{cc} --version | head -n 1",
         "cmake --version | head -n 1",
         "ninja --version",
-    ]
+    ])
     if args.packages:
         commands.append(
             "python3 /src/scripts/ci/package_linux_sdk.py "
@@ -81,15 +96,23 @@ def main():
             f"--cc {cc} --cxx {cxx} --jobs {args.jobs}"
         )
     container_command = " && ".join(commands)
-    run([
+    docker_command = [
         "docker", "run", "--rm",
         "--user", f"{os.getuid()}:{os.getgid()}",
         "--env", "HOME=/tmp",
+    ]
+    if args.sanitizers:
+        docker_command.extend([
+            "--env", "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1",
+            "--env", "UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1",
+        ])
+    docker_command.extend([
         "--volume", f"{repo}:/src:ro",
         "--volume", f"{output}:/out",
         "--workdir", "/src",
         args.image, "sh", "-euxc", container_command,
     ])
+    run(docker_command)
     print(f"Linux build output: {output}")
     print(f"Installed SDK: {output / 'install'}")
     if args.packages:

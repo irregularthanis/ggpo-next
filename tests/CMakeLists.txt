@@ -62,6 +62,7 @@ if(WIN32)
     )
     ggpo_configure_test(ggpo_windows_public_layout)
     add_test(NAME windows_public_layout COMMAND ggpo_windows_public_layout)
+    set_tests_properties(windows_public_layout PROPERTIES LABELS "native;abi")
 
     add_executable(ggpo_windows_packet_layout
         baseline/windows/packet_layout.cpp
@@ -73,6 +74,7 @@ if(WIN32)
         ${CMAKE_CURRENT_SOURCE_DIR}/platform/fake
     )
     add_test(NAME windows_packet_layout COMMAND ggpo_windows_packet_layout)
+    set_tests_properties(windows_packet_layout PROPERTIES LABELS "native;abi;protocol")
     set(GGPO_SMOKE_PREFIX windows)
 else()
     set(GGPO_SMOKE_PREFIX linux)
@@ -92,6 +94,7 @@ add_test(NAME ${GGPO_SMOKE_PREFIX}_synctest_smoke COMMAND ${GGPO_SYNCTEST_TARGET
 set_tests_properties(${GGPO_SMOKE_PREFIX}_synctest_smoke PROPERTIES
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/synctest
     TIMEOUT 60
+    LABELS "native;core"
 )
 
 set(GGPO_PEER_TARGET ggpo_${GGPO_SMOKE_PREFIX}_peer_smoke)
@@ -107,7 +110,10 @@ add_test(NAME ${GGPO_SMOKE_PREFIX}_peer_loopback
             $<TARGET_FILE:${GGPO_PEER_TARGET}>
             --frames 180
 )
-set_tests_properties(${GGPO_SMOKE_PREFIX}_peer_loopback PROPERTIES TIMEOUT 90)
+set_tests_properties(${GGPO_SMOKE_PREFIX}_peer_loopback PROPERTIES
+    TIMEOUT 90
+    LABELS "native;network"
+)
 
 # Exercise the portable result schema and two-peer completion barrier locally.
 add_test(NAME ${GGPO_SMOKE_PREFIX}_peer_schema2_loopback
@@ -128,6 +134,7 @@ add_test(NAME ${GGPO_SMOKE_PREFIX}_peer_negative_contracts
 )
 set_tests_properties(${GGPO_SMOKE_PREFIX}_peer_negative_contracts PROPERTIES
     TIMEOUT 45
+    LABELS "native;negative"
 )
 
 # Build the production rollback core against a deterministic adapter. This is
@@ -175,6 +182,7 @@ add_test(NAME fake_platform_synctest COMMAND ggpo_fake_core_synctest)
 set_tests_properties(fake_platform_synctest PROPERTIES
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/fake-synctest
     TIMEOUT 60
+    LABELS "portable;core"
 )
 
 add_executable(ggpo_fake_platform_contract
@@ -187,3 +195,70 @@ target_include_directories(ggpo_fake_platform_contract PRIVATE
 )
 target_link_libraries(ggpo_fake_platform_contract PRIVATE ggpo_fake_core)
 add_test(NAME fake_platform_contract COMMAND ggpo_fake_platform_contract)
+set_tests_properties(fake_platform_contract PROPERTIES LABELS "portable;platform")
+
+# Focused portable-core contracts run against production algorithms and the
+# deterministic fake adapter; no native clock, socket, or filesystem is used.
+function(ggpo_add_portable_contract target source test_name)
+    add_executable(${target} ${source})
+    ggpo_configure_static_test(${target})
+    target_link_libraries(${target} PRIVATE ggpo_fake_core)
+    add_test(NAME ${test_name} COMMAND ${target})
+    set_tests_properties(${test_name} PROPERTIES LABELS "portable;core")
+endfunction()
+
+ggpo_add_portable_contract(ggpo_input_queue_contract
+    unit/input_queue_test.cpp input_queue_contract)
+ggpo_add_portable_contract(ggpo_sync_contract
+    unit/sync_contract_test.cpp sync_contract)
+ggpo_add_portable_contract(ggpo_timesync_contract
+    unit/timesync_test.cpp timesync_contract)
+ggpo_add_portable_contract(ggpo_core_utilities_contract
+    unit/core_utilities_test.cpp core_utilities_contract)
+ggpo_add_portable_contract(ggpo_protocol_contract
+    unit/protocol_test.cpp protocol_contract)
+set_property(TEST protocol_contract APPEND PROPERTY LABELS protocol)
+
+# Public wrappers run against production backends and the fake platform so
+# lifecycle/error contracts remain deterministic and socket-free.
+add_executable(ggpo_public_api_contract
+    contract/public_api_contract_test.cpp
+)
+ggpo_configure_static_test(ggpo_public_api_contract)
+target_link_libraries(ggpo_public_api_contract PRIVATE ggpo_fake_core)
+add_test(NAME public_api_contract COMMAND ggpo_public_api_contract)
+set_tests_properties(public_api_contract PROPERTIES LABELS "portable;api")
+
+# Compile one assertion source against both the fake and selected native
+# adapters so platform drift cannot hide behind OS-specific test logic.
+add_executable(ggpo_fake_platform_conformance
+    platform/conformance/platform_conformance_test.cpp)
+ggpo_configure_static_test(ggpo_fake_platform_conformance)
+target_link_libraries(ggpo_fake_platform_conformance PRIVATE ggpo_fake_core)
+add_test(NAME fake_platform_conformance COMMAND ggpo_fake_platform_conformance)
+set_tests_properties(fake_platform_conformance PROPERTIES LABELS "portable;platform")
+
+add_executable(ggpo_native_platform_conformance
+    platform/conformance/platform_conformance_test.cpp)
+ggpo_configure_test(ggpo_native_platform_conformance)
+# Exercise the selected adapter directly.  Platform helpers are internal
+# implementation details and therefore are not exported by the Windows DLL.
+ggpo_configure_platform(ggpo_native_platform_conformance)
+add_test(NAME ${GGPO_SMOKE_PREFIX}_platform_conformance
+    COMMAND ggpo_native_platform_conformance)
+set_tests_properties(${GGPO_SMOKE_PREFIX}_platform_conformance
+    PROPERTIES LABELS "native;platform")
+
+# Export every portable contract target so the root test-on-build target builds
+# the executables before invoking CTest on multi-config generators such as MSVC.
+set(GGPO_PORTABLE_TEST_TARGETS
+    ggpo_input_queue_contract
+    ggpo_sync_contract
+    ggpo_timesync_contract
+    ggpo_core_utilities_contract
+    ggpo_protocol_contract
+    ggpo_public_api_contract
+    ggpo_fake_platform_conformance
+    ggpo_native_platform_conformance
+    PARENT_SCOPE
+)

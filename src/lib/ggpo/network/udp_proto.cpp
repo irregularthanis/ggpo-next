@@ -21,24 +21,31 @@ static const int UDP_SHUTDOWN_TIMER = 5000;
 static const int MAX_SEQ_DISTANCE = (1 << 15);
 
 UdpProtocol::UdpProtocol() :
-   _local_frame_advantage(0),
-   _remote_frame_advantage(0),
-   _queue(-1),
+   _udp(NULL),
    _magic_number(0),
+   _queue(-1),
    _remote_magic_number(0),
+   _connected(false),
+   _send_latency(0),
+   _oop_percent(0),
+   _round_trip_time(0),
    _packets_sent(0),
    _bytes_sent(0),
+   _kbps_sent(0),
    _stats_start_time(0),
+   _local_connect_status(NULL),
+   _current_state(Syncing),
+   _local_frame_advantage(0),
+   _remote_frame_advantage(0),
    _last_send_time(0),
+   _last_recv_time(0),
    _shutdown_timeout(0),
+   _disconnect_event_sent(0),
    _disconnect_timeout(0),
    _disconnect_notify_start(0),
    _disconnect_notify_sent(false),
-   _disconnect_event_sent(false),
-   _connected(false),
    _next_send_seq(0),
-   _next_recv_seq(0),
-   _udp(NULL)
+   _next_recv_seq(0)
 {
    _last_sent_input.init(-1, NULL, 1);
    _last_received_input.init(-1, NULL, 1);
@@ -298,6 +305,9 @@ UdpProtocol::HandlesMsg(ggpo_platform::UdpEndpoint &from,
 void
 UdpProtocol::OnMsg(UdpMsg *msg, int len)
 {
+   if (!msg || !msg->IsValidPacketSize(len)) {
+      return;
+   }
    bool handled = false;
    typedef bool (UdpProtocol::*DispatchFn)(UdpMsg *msg, int len);
    static const DispatchFn table[] = {
@@ -354,10 +364,16 @@ UdpProtocol::UpdateNetworkStats(void)
       _stats_start_time = now;
    }
 
+   int elapsed_ms = now - _stats_start_time;
    int total_bytes_sent = _bytes_sent + (UDP_HEADER_SIZE * _packets_sent);
-   float seconds = (float)((now - _stats_start_time) / 1000.0);
-   float Bps = total_bytes_sent / seconds;
-   float udp_overhead = (float)(100.0 * (UDP_HEADER_SIZE * _packets_sent) / _bytes_sent);
+   float seconds = elapsed_ms > 0 ? (float)(elapsed_ms / 1000.0) : 0.0f;
+   float Bps = seconds > 0.0f ? total_bytes_sent / seconds : 0.0f;
+   float udp_overhead = _bytes_sent > 0
+      ? (float)(100.0 * (UDP_HEADER_SIZE * _packets_sent) / _bytes_sent)
+      : 0.0f;
+   float packets_per_second = elapsed_ms > 0
+      ? (float)_packets_sent * 1000 / elapsed_ms
+      : 0.0f;
 
    _kbps_sent = int(Bps / 1024);
 
@@ -365,7 +381,7 @@ UdpProtocol::UpdateNetworkStats(void)
        "KB Sent: %.2f    UDP Overhead: %.2f %%.\n",
        _kbps_sent, 
        _packets_sent,
-       (float)_packets_sent * 1000 / (now - _stats_start_time),
+       packets_per_second,
        total_bytes_sent / 1024.0,
        udp_overhead);
 }

@@ -1,0 +1,108 @@
+# PROGRESS — Shared-core testing and CI consolidation
+
+Status: In progress
+
+[Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
+
+## Milestones
+
+### M0: Freeze coverage and CI baselines
+
+Architecture: [test layers](../../architecture/Testing.md#test-layers).
+
+- [x] M0-T01: Inventory all 16 public exports and classify existing coverage.
+- [x] M0-T02: Inventory portable components and all 16 callable platform
+  operations plus socket lifecycle.
+- [x] M0-T03: Record current tests, compatibility gates, job count, runner minutes,
+  critical path, cache behavior and retry/failure evidence.
+- [x] M0-T04: Prioritize missing contracts without removing any test or lane.
+
+### M1: Add deterministic core contracts (depends: M0)
+
+Parallel with M2/M3; owns `tests/unit`; integrates in M5.
+
+- [x] M1-T01: Test InputQueue ordering, prediction, mismatch, delay and wraparound.
+- [x] M1-T02: Test Sync snapshot, rollback, replay, ownership and prediction limits.
+- [x] M1-T03: Test TimeSync histories and container/bit-vector boundaries.
+- [x] M1-T04: Prove independent expected results and exercised rollback paths.
+
+### M2: Add public API contracts (depends: M0)
+
+Parallel with M1/M3; owns `tests/contract`; integrates in M5.
+
+- [x] M2-T01: Classify backend/lifecycle/error behavior for every export.
+- [x] M2-T02: Add creation, registration, input and frame-lifecycle contracts.
+- [x] M2-T03: Add close/disconnect/stats/config/logging and cleanup contracts.
+- [x] M2-T04: Keep unspecified inputs distinct from stable compatibility behavior.
+
+### M3: Build reusable platform conformance (depends: M0)
+
+Parallel with M1/M2; owns `tests/platform`; integrates in M5.
+
+- [x] M3-T01: Extend only the fake capabilities required by concrete regressions.
+- [x] M3-T02: Implement one mandatory suite for all 16 callable platform
+  operations and socket construction/destruction lifecycle.
+- [x] M3-T03: Run identical assertions against Windows and Linux adapters.
+- [x] M3-T04: Reject silent mandatory skips and verify bounded cleanup failures.
+
+### M4: Harden protocol contracts (depends: M1, M3)
+
+- [x] M4-T01: Preserve frozen packet layout and document compiler/endian assumptions.
+- [x] M4-T02: Add length/type/payload boundary and supported malformed-input cases.
+- [x] M4-T03: Prove no public ABI or production wire-format change.
+
+### M5: Qualify platform portability (depends: M1, M2, M3, M4)
+
+- [x] M5-T01: Define the supported/experimental adapter checklist.
+- [x] M5-T02: Preserve Windows ABI/DLL and Linux ABI/package requirements.
+- [ ] M5-T03: Prove a future adapter reuses core, API and conformance suites.
+- [x] M5-T04: Publish platform limitations and native qualification evidence.
+
+### M6: Consolidate CI from evidence (depends: M1, M2, M3, M4, M5)
+
+- [x] M6-T01: Label portable/native/ABI suites while preserving existing CTest names.
+- [x] M6-T02: Add correctly instrumented Linux ASan/UBSan and manual/full tiers.
+- [x] M6-T03: Demonstrate replacement coverage before reducing regular PR variants.
+- [x] M6-T04: Compare jobs, runner minutes, critical path, cache and retry rate.
+- [x] M6-T05: Preserve full release, Windows ABI, linkage and consumer qualification.
+
+### M7: Integrate documentation and E2E boundary (depends: M3, M5)
+
+- [x] M7-T01: Update Testing, Build and Portability with verified commands/targets.
+- [x] M7-T02: Cross-reference PR #5’s peer artifacts, result schema and ownership.
+- [x] M7-T03: Document future-platform E2E qualification without duplicating its harness.
+
+## Evidence ledger
+
+| Task | Commit / artifact | Command / method | Environment / input | Result |
+|---|---|---|---|---|
+| M0-T01 | [`SHARED_CORE_BASELINE.md`](../../testing/SHARED_CORE_BASELINE.md#public-api) | Header-to-test call-site audit | `d427210`; 16 exports | 8 called by smoke paths; 8 have no direct runtime test |
+| M0-T02 | [`SHARED_CORE_BASELINE.md`](../../testing/SHARED_CORE_BASELINE.md#portable-core) | Source and fake-contract audit | Portable core and `platform.h` | Core coverage classified; 16 operations plus lifecycle inventoried |
+| M0-T03 | [`SHARED_CORE_BASELINE.md`](../../testing/SHARED_CORE_BASELINE.md#ci-baseline) | Workflow/job timestamps and protected-check audit | Successful `master` runs 42423387489/42423387435 | 15 build/test jobs; 27m12s summed; 6m51s critical path |
+| M0-T04 | [`SHARED_CORE_BASELINE.md`](../../testing/SHARED_CORE_BASELINE.md#priority-order) | Gap ranking against retained gates | API/core/platform/protocol surfaces | P0/P1 order recorded; no lane removed |
+| M1-T01 | [`input_queue_test.cpp`](../../../tests/unit/input_queue_test.cpp) | Focused CTest contract | Confirmed/predicted/delayed/wrapped inputs | PASS |
+| M1-T02 | [`sync_contract_test.cpp`](../../../tests/unit/sync_contract_test.cpp) | Production `Sync` with independent state oracle | Two mismatches, repeated replay, snapshot eviction and prediction threshold | PASS |
+| M1-T03 | [`timesync_test.cpp`](../../../tests/unit/timesync_test.cpp), [`core_utilities_test.cpp`](../../../tests/unit/core_utilities_test.cpp) | Fixed history and boundary cases | TimeSync, ring/static buffers and bit vector | PASS |
+| M1-T04 | CTest `portable;core` plus full suite | `ctest --test-dir /tmp/ggpo-shared-core-build --output-on-failure` | Linux Debug static; GCC 16.2.1 | PASS, 9/9; rollback loads/replay counts and oracle convergence asserted |
+| M2-T01 | [API coverage map](TECH_PLAN.md#public-api-coverage-map) | Header/backend/source classification | All 16 exports and three backends | Covered, partial, missing and unspecified behavior separated |
+| M2-T02 | [`public_api_contract_test.cpp`](../../../tests/contract/public_api_contract_test.cpp) | Fake-platform production backends plus retained smoke tests | P2P, SyncTest and spectator lifecycle | PASS |
+| M2-T03 | [`public_api_contract_test.cpp`](../../../tests/contract/public_api_contract_test.cpp) | Null guards, valid P2P configuration, handles, logging and terminal cleanup | All public wrappers | PASS |
+| M2-T04 | API contract source comment and coverage map | Excluded repeated local disconnect from compatibility assertions | Observable implementation behavior without documented guarantee | Not frozen; future hardening remains explicit |
+| M3-T01 | [`platform_fake.cpp`](../../../tests/platform/fake/platform_fake.cpp) | Deterministic endpoint formatting and in-memory datagram delivery | Fake adapter | PASS |
+| M3-T02 | [`platform_conformance_test.cpp`](../../../tests/platform/conformance/platform_conformance_test.cpp) | One assertion source linked against fake/native adapters | 16 operations plus socket lifecycle | PASS on fake and Linux; modal Windows assertion reporter linked but not invoked |
+| M3-T03 | [Windows run 42491233746](https://github.com/irregularthanis/ggpo-next/actions/runs/42491233746), [Linux run 42491233770](https://github.com/irregularthanis/ggpo-next/actions/runs/42491233770) | Same `platform_conformance_test.cpp` target in each native matrix | Win32/x64 shared/static Debug/Release and Linux GCC/Clang shared/static | PASS across completed native matrix jobs |
+| M3-T04 | CTest `platform` label | Open/send/receive/close and post-close error assertions | Fake and Linux Debug static | PASS, 2/2; no mandatory case skipped |
+| M4-T01 | [`udp_msg.h`](../../../src/lib/ggpo/network/udp_msg.h) | Inline validation without field/layout changes | Packed existing wire representation | Exact packet sizes remain authoritative |
+| M4-T02 | [`protocol_test.cpp`](../../../tests/unit/protocol_test.cpp) | Exact, truncated, trailing, partial-byte and unknown-type cases | Production `UdpMsg::IsValidPacketSize` and receive guard | PASS |
+| M4-T03 | [Frozen Windows compatibility run 42491233746](https://github.com/irregularthanis/ggpo-next/actions/runs/42491233746) | Baseline/candidate exports, layouts and cross-revision DLL execution | Frozen Windows baseline and current candidate | PASS; no public ABI or packet-layout change |
+| M5-T01 | [Portability qualification](../../architecture/Portability.md#follow-up-platform-contract) | Supported/experimental checklist | Future native adapters | Published |
+| M5-T02 | [Testing architecture](../../architecture/Testing.md#test-layers) | Retain ABI, linkage, consumer and package layers | Windows and Linux | Requirements preserved |
+| M5-T04 | [Platform status](../../architecture/Build.md#platform-status) | Current support/limitations review | Windows, Linux and unsupported targets | Published |
+| M6-T01 | [`tests/CMakeLists.txt`](../../../tests/CMakeLists.txt) | `ctest --print-labels` and unchanged test-name audit | Portable, native, ABI, protocol and negative suites | Labels added without renaming tests |
+| M6-T02 | [Sanitizer workflow](../../../.github/workflows/sanitizer-qualification.yml) | `python3 scripts/linux/build_in_container.py --compiler clang --library static --sanitizers --out /tmp/ggpo-pr7-sanitizers` | Ubuntu 24.04 repository image; Clang 18; ASan+UBSan; production objects, 13 tests and installed C/C++ consumers | Initial run found zero-duration statistics and uninitialized round-trip state; both fixed with a focused regression; final PASS, 13/13 |
+| M6-T03 | [Coverage baseline](../../testing/SHARED_CORE_BASELINE.md#existing-test-and-compatibility-gates) and current labeled suites | Gate-to-suite review | Required PR matrix | Replacement evidence is incomplete; no required variant was reduced or renamed |
+| M6-T04 | [Windows run 42491233746](https://github.com/irregularthanis/ggpo-next/actions/runs/42491233746), [Linux run 42491233770](https://github.com/irregularthanis/ggpo-next/actions/runs/42491233770) | Job timestamp comparison with M0 baseline | One successful current run; Linux Docker dependency layer rebuilt after image change | Windows 23m08 summed/6m28 critical versus 23m39/6m51; Linux 7m26/2m01 versus 3m33/1m02; combined 30m34 versus 27m12; no retries; retain matrix pending warm comparable samples |
+| M6-T05 | [Windows run 42491233746](https://github.com/irregularthanis/ggpo-next/actions/runs/42491233746), [Linux run 42491233770](https://github.com/irregularthanis/ggpo-next/actions/runs/42491233770) | Retained full compatibility matrices | Windows ABI/linkage/cross-revision and Linux compilers/linkage/consumers/packages | PASS across completed required jobs |
+| M7-T01 | [Testing architecture](../../architecture/Testing.md) and [Portability](../../architecture/Portability.md) | Documentation update against test target names | Current branch | Published |
+| M7-T02 | [PR #5](https://github.com/irregularthanis/ggpo-next/pull/5) | Ownership boundary review | Cross-host E2E | Referenced; no duplicate harness |
+| M7-T03 | [Portability qualification](../../architecture/Portability.md#follow-up-platform-contract) | Future adapter E2E gate | Future platforms | Documented |

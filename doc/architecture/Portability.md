@@ -102,10 +102,15 @@ portable core sources and the public header remain shared.
 | --- | --- |
 | Platform CMake module | Owns native sources, private definitions, and system libraries |
 | Platform adapter | Implements time, wait, configuration, diagnostics, filesystem, network lifetime, endpoints, and nonblocking UDP |
-| Fake-adapter suite | Existing rollback, failure, and cleanup tests remain green |
-| Native conformance | Adapter contract and local two-peer UDP loopback pass |
+| Shared contracts | Core, public API, protocol, and fake-adapter suites remain green |
+| Native conformance | The shared [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) and local two-peer UDP loopback pass |
 | Public package | C11/C++98 consumers link only `GGPO::GGPO` and installed headers |
 | Interoperability | Same-platform peers and native Windows-to-platform sessions pass |
+
+An adapter is **experimental** while any mandatory shared/native contract,
+package/consumer check, documented limitation, or CI lane is missing. It becomes
+**supported** only when all rows above have reproducible evidence. Cross-host
+result and orchestration ownership remains with [PR #5](https://github.com/irregularthanis/ggpo-next/pull/5).
 
 The Windows [compatibility workflow](../../.github/workflows/windows-compatibility.yml)
 remains required while another adapter is introduced.

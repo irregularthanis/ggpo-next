@@ -4,6 +4,7 @@
 
 - [Purpose](#purpose)
 - [Test layers](#test-layers)
+- [Shared coverage and platform normalization](#shared-coverage-and-platform-normalization)
 - [Execution flow](#execution-flow)
 - [Windows compatibility baseline](#windows-compatibility-baseline)
 - [Runtime fixtures](#runtime-fixtures)
@@ -28,30 +29,59 @@ behavior-changing refactor pass.
 | Public ABI | Public sizes, offsets, enum values, callback order, and DLL exports | [`public_layout.cpp`](../../tests/baseline/windows/public_layout.cpp), [`exports-x64.txt`](../../tests/baseline/windows/exports-x64.txt) | Compiled header and shared DLL |
 | Installed consumers | C11 and C++98 compile/link use only installed SDK files | [`tests/consumer`](../../tests/consumer/CMakeLists.txt), [`verify_installed_consumers.ps1`](../../scripts/ci/verify_installed_consumers.ps1) | Installed header and shared/static library |
 | Wire layout | Packed `UdpMsg` sizes, offsets, and representative packet lengths | [`packet_layout.cpp`](../../tests/baseline/windows/packet_layout.cpp) | Internal protocol structures |
+| Portable core | Queue prediction, rollback/replay, time sync, containers, and bit encoding | [`tests/unit`](../../tests/unit/input_queue_test.cpp) | Production algorithms with deterministic state |
+| Public API | Session construction, lifecycle, null guards, configuration, and logging | [`public_api_contract_test.cpp`](../../tests/contract/public_api_contract_test.cpp) | Production backends with fake services |
+| Protocol safety | Exact packet sizes and truncated, trailing, or unknown messages | [`protocol_test.cpp`](../../tests/unit/protocol_test.cpp) | Production packet validator and receive guard |
 | Platform contract | Virtual clock/wait, fallbacks, endpoint/socket results, failure, and cleanup | [`platform_fake_test.cpp`](../../tests/platform/fake/platform_fake_test.cpp) | Deterministic fake adapter |
+| Native conformance | One clock/config/endpoint/UDP assertion source | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | Fake, Windows, and Linux adapters |
 | Platform-free rollback | Production core linked without the Windows adapter | [`platform_fake.cpp`](../../tests/platform/fake/platform_fake.cpp), [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | Fake adapter and production rollback core |
 | Rollback behavior | Save, restore, synchronized input, replay, and deterministic final state | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | SyncTest backend without sockets |
-| Windows transport | Handshake, events, prediction, rollback, UDP delivery, and shutdown | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Two GGPO processes over localhost |
+| Native transport | Handshake, events, prediction, rollback, UDP delivery, and shutdown | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Two Windows or Linux GGPO processes over localhost |
 | Negative peer contracts | Startup, timeout, checksum mismatch, and shutdown failures are rejected | [`peer_runner_negative.py`](../../tests/smoke/peer_runner_negative.py) | Fault-injected real peer processes |
 | Build compatibility | x64/Win32, shared/static, Debug/Release | [`windows-compatibility.yml`](../../.github/workflows/windows-compatibility.yml) | Eight Windows build variants |
 | Linux transport | The same peer contract through POSIX UDP | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`platform_linux.cpp`](../../src/lib/ggpo/platform_linux.cpp) | Two native Linux processes |
 | Linux package | GCC/Clang, static/shared, installed consumers and ABI ceiling | [`linux-compatibility.yml`](../../.github/workflows/linux-compatibility.yml) | Shared Ubuntu 24.04 image |
-| Cross-host | Native Windows and Linux peers converge | [`compare_peer_results.py`](../../tests/smoke/compare_peer_results.py) | Controlled Windows↔Ubuntu/SteamOS hosts |
+| Cross-host | Native Windows and Linux peers converge | [`compare_peer_results.py`](../../tests/smoke/compare_peer_results.py) | Manual controlled Windows↔Ubuntu/SteamOS hosts; automation belongs to [PR #5](https://github.com/irregularthanis/ggpo-next/pull/5) |
 
 The shared/static lanes are both required. Shared builds additionally validate
 DLL exports and import linkage; static builds ensure consumers do not depend on
 DLL-only definitions or lifecycle behavior.
 
+## Shared coverage and platform normalization
+
+[`public_api_contract_test.cpp`](../../tests/contract/public_api_contract_test.cpp)
+calls all 16 exports declared by [`ggponet.h`](../../src/include/ggponet.h).
+It shares one fake-platform production core across Windows and Linux builds, so
+null-session, construction, backend lifecycle, configuration, logging, and
+cleanup expectations do not diverge by host.
+
+This is complete API *entry-point* coverage, not every combination of backend,
+state, and argument. Deeper behavior is divided deliberately:
+
+- the shared API contract covers common wrapper and lifecycle behavior;
+- SyncTest and focused core contracts cover rollback and replay;
+- native peer tests cover real platform sockets and two-process sessions; and
+- Windows-only fixtures cover frozen ABI, exports, and packet layout.
+
+[`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp)
+is the single assertion source compiled against the fake, Windows, and Linux
+adapters. It exercises clocks, waits, process identity, configuration defaults,
+directory handling, endpoints, network lifetime, and UDP lifecycle. All 16
+callable platform operations plus socket construction/destruction are linked.
+`AssertFailed` is link-checked but not invoked because the Windows contract
+opens a modal diagnostic; platform setup and system-library linkage remain
+adapter-specific.
+
 ## Execution flow
 
 ```mermaid
 flowchart TD
-    Configure["Configure<br/>Windows<br/>build<br/>tests enabled"]
-    Build["Build GGPO,<br/>Vector War<br/>and<br/>compatibility<br/>fixtures"]
-    Layout["Public and<br/>packet<br/>layout checks"]
-    Sync["Deterministic<br/>SyncTest smoke"]
-    Fake["Fake adapter<br/>contract and<br/>core SyncTest"]
-    Peers["Two-process<br/>Windows<br/>UDP loopback<br/>smoke"]
+    Configure["Configure build<br/>tests enabled"]
+    Build["Build GGPO and<br/>registered fixtures"]
+    Portable["Shared portable<br/>core, API and<br/>protocol contracts"]
+    Conformance["Same platform<br/>conformance source<br/>fake and native"]
+    Native["Native SyncTest,<br/>negative cases and<br/>two-process loopback"]
+    Layout["Windows only<br/>public ABI, exports<br/>and packet layout"]
     Consumers["Install SDK;<br/>compile and link<br/>C11 and C++98<br/>consumers"]
     Capture["Capture<br/>exports,<br/>layouts,<br/>hashes<br/>and<br/>environment"]
     Noise{"Repeated<br/>timing<br/>requested?"}
@@ -59,14 +89,14 @@ flowchart TD
     Evidence["Upload<br/>compatibility<br/>evidence"]
 
     Configure --> Build
+    Build --> Portable
+    Build --> Conformance
+    Build --> Native
     Build --> Layout
-    Build --> Sync
-    Build --> Fake
-    Build --> Peers
-    Peers --> Consumers --> Capture
+    Native --> Consumers --> Capture
+    Portable --> Capture
+    Conformance --> Capture
     Layout --> Capture
-    Sync --> Capture
-    Fake --> Capture
     Capture --> Noise
     Noise -->|"yes"| Repeat --> Evidence
     Noise -->|"no"| Evidence
@@ -131,7 +161,8 @@ This is a test simulation, not a model of a real game's state or performance.
 
 ### Deterministic SyncTest
 
-[`windows_synctest_smoke`](../../tests/smoke/synctest_smoke.cpp) creates two
+The platform-named SyncTest fixture, implemented by
+[`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp), creates two
 local players and submits fixed inputs for 90 frames. It advances the same
 inputs through a direct reference state and through GGPO, then requires:
 
@@ -153,8 +184,8 @@ lifetime calls.
 ### Two-process loopback
 
 [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) reserves two ephemeral
-localhost ports and launches two copies of
-[`windows_peer_loopback`](../../tests/smoke/peer_smoke.cpp). Each process owns
+localhost ports and launches two copies of the native
+[`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp) executable. Each process owns
 one local player and treats the other as remote.
 
 ```mermaid
@@ -242,6 +273,14 @@ cross_host_orchestration_contract
 cross_host_rendezvous_contract
 fake_platform_synctest
 fake_platform_contract
+input_queue_contract
+sync_contract
+timesync_contract
+core_utilities_contract
+protocol_contract
+public_api_contract
+fake_platform_conformance
+linux_platform_conformance
 ```
 
 Windows retains these entries:
@@ -258,11 +297,27 @@ cross_host_orchestration_contract
 cross_host_rendezvous_contract
 fake_platform_synctest
 fake_platform_contract
+input_queue_contract
+sync_contract
+timesync_contract
+core_utilities_contract
+protocol_contract
+public_api_contract
+fake_platform_conformance
+windows_platform_conformance
 ```
 
 With `BUILD_TESTING=ON` and the default `GGPO_RUN_TESTS_ON_BUILD=ON`, the
 `ggpo_check` target runs these tests as part of the normal build. Packaging or
 consumer-only builds can disable execution explicitly.
+
+CTest labels select contract families without changing their stable names:
+
+```bash
+ctest --test-dir build -L portable --output-on-failure
+ctest --test-dir build -L native --output-on-failure
+ctest --test-dir build -L abi --output-on-failure   # Windows layout fixtures
+```
 
 [`windows_compatibility_baseline.ps1`](../../scripts/ci/windows_compatibility_baseline.ps1)
 configures, builds, runs CTest, installs the SDK, compiles and links the two
@@ -285,6 +340,11 @@ builds [`docker/linux/Dockerfile`](../../docker/linux/Dockerfile), then runs the
 GCC/Clang × static/shared matrix inside that image. Each lane runs CTest,
 installs the SDK, builds and executes external C11/C++98 consumers, and audits
 the installed Linux library.
+
+[`sanitizer-qualification.yml`](../../.github/workflows/sanitizer-qualification.yml)
+runs manually and weekly. It uses the same image to instrument production GGPO,
+all 13 tests, and installed static-library consumers with Clang ASan and UBSan.
+Sanitizer findings fail immediately and the workflow retains CTest evidence.
 
 The GCC and Clang portable-header jobs also compile the public C11 and C++98
 consumers without linking an SDK. These remain header-portability gates.
@@ -321,16 +381,17 @@ established by the frame, checksum, callback, and lifecycle assertions.
 
 ## Current limits and follow-ups
 
-- No focused unit tests yet cover `InputQueue`, `Sync`, bit vectors, ring
-  buffers, or time synchronization.
-- No malformed/truncated packet suite validates parser rejection.
 - No spectator, disconnect/resume, simulated loss, or multi-player automated
   session exists.
 - The automated matrix covers native Windows↔Ubuntu, but not SteamOS hardware.
 - The clean cross-platform workflow does not inject latency or packet loss;
   deterministic impairment remains a follow-up after clean-run qualification.
 - No macOS adapter or build exists.
-- No sanitizer job is configured.
+- Sanitizers qualify Linux Clang static builds; Windows and shared-library
+  sanitizer configurations are not currently automated.
+
+The focused core, API, protocol, and platform suites are tracked by the
+[shared-core testing plan](../planning/2026-11-07-shared_core_testing_ci/TECH_PLAN.md).
 
 The platform-extraction plan tracks those additions in the
 [technical plan](../planning/2026-11-06-platform_agnostic_core/TECH_PLAN.md) and

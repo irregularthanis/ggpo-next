@@ -13,7 +13,10 @@ static int network_shutdowns = 0;
 
 struct ggpo_platform::UdpSocket::Impl {
    bool open;
-   Impl() : open(false) { }
+   char data[256];
+   int bytes;
+   UdpEndpoint from;
+   Impl() : open(false), bytes(0) { memset(&from, 0, sizeof(from)); }
 };
 
 uint32 ggpo_platform::MonotonicTimeMs() { return fake_time_ms; }
@@ -35,13 +38,20 @@ bool ggpo_platform::NetworkStartup()
 }
 void ggpo_platform::NetworkShutdown() { ++network_shutdowns; }
 
-bool ggpo_platform::ParseUdpEndpoint(const char *, uint16 port,
+bool ggpo_platform::ParseUdpEndpoint(const char *address, uint16 port,
                                      UdpEndpoint *endpoint)
 {
-   if (!endpoint) {
+   unsigned int a, b, c, d;
+   char trailing;
+   if (!address || !endpoint ||
+       sscanf(address, "%u.%u.%u.%u%c", &a, &b, &c, &d, &trailing) != 4 ||
+       a > 255 || b > 255 || c > 255 || d > 255) {
       return false;
    }
-   memset(endpoint->address, 0, sizeof(endpoint->address));
+   endpoint->address[0] = (uint8)a;
+   endpoint->address[1] = (uint8)b;
+   endpoint->address[2] = (uint8)c;
+   endpoint->address[3] = (uint8)d;
    endpoint->port = port;
    return true;
 }
@@ -53,11 +63,14 @@ bool ggpo_platform::SameUdpEndpoint(const UdpEndpoint &left,
           left.port == right.port;
 }
 
-void ggpo_platform::FormatUdpEndpoint(const UdpEndpoint &, char *buffer,
+void ggpo_platform::FormatUdpEndpoint(const UdpEndpoint &endpoint, char *buffer,
                                       int length)
 {
-   if (length > 0) {
-      buffer[0] = '\0';
+   if (buffer && length > 0) {
+      snprintf(buffer, length, "%u.%u.%u.%u:%u",
+               endpoint.address[0], endpoint.address[1],
+               endpoint.address[2], endpoint.address[3], endpoint.port);
+      buffer[length - 1] = '\0';
    }
 }
 
@@ -77,16 +90,39 @@ bool ggpo_platform::UdpSocket::OpenAndBind(uint16 requested_port, int,
    return true;
 }
 ggpo_platform::IoResult ggpo_platform::UdpSocket::Send(
-   const void *, int, const UdpEndpoint &)
+   const void *data, int bytes, const UdpEndpoint &to)
 {
-   return _impl->open ? IO_OK : IO_ERROR;
+   if (!_impl->open || !data || bytes < 0 || bytes > (int)sizeof(_impl->data)) {
+      return IO_ERROR;
+   }
+   memcpy(_impl->data, data, bytes);
+   _impl->bytes = bytes;
+   _impl->from = to;
+   return IO_OK;
 }
 ggpo_platform::IoResult ggpo_platform::UdpSocket::Receive(
-   void *, int, int *, UdpEndpoint *)
+   void *data, int capacity, int *bytes, UdpEndpoint *from)
 {
-   return _impl->open ? IO_WOULD_BLOCK : IO_ERROR;
+   if (!_impl->open) {
+      return IO_ERROR;
+   }
+   if (_impl->bytes == 0) {
+      return IO_WOULD_BLOCK;
+   }
+   if (!data || capacity < _impl->bytes || !bytes || !from) {
+      return IO_ERROR;
+   }
+   memcpy(data, _impl->data, _impl->bytes);
+   *bytes = _impl->bytes;
+   *from = _impl->from;
+   _impl->bytes = 0;
+   return IO_OK;
 }
-void ggpo_platform::UdpSocket::Close() { _impl->open = false; }
+void ggpo_platform::UdpSocket::Close()
+{
+   _impl->open = false;
+   _impl->bytes = 0;
+}
 
 void ggpo_test::ResetFakePlatform()
 {

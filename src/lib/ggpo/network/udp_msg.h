@@ -8,6 +8,8 @@
 #ifndef _UDP_MSG_H
 #define _UDP_MSG_H
 
+#include <stddef.h>
+
 #define MAX_COMPRESSED_BITS       4096
 #define UDP_MSG_MAX_PLAYERS          4
 
@@ -76,6 +78,21 @@ struct UdpMsg
    } u;
 
 public:
+   bool IsValidPacketSize(int len) {
+      const int header_size = (int)sizeof(hdr);
+      if (len < header_size || hdr.type < SyncRequest || hdr.type > InputAck) {
+         return false;
+      }
+      if (hdr.type == Input) {
+         const int prefix = (int)((char *)&u.input.bits - (char *)&u.input);
+         if (len < header_size + prefix ||
+             u.input.num_bits > (int)sizeof(u.input.bits) * 8) {
+            return false;
+         }
+      }
+      return len == PacketSize();
+   }
+
    int PacketSize() {
       return sizeof(hdr) + PayloadSize();
    }
