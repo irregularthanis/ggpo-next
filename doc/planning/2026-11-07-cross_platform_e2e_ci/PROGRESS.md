@@ -38,8 +38,8 @@ Parallel with M1/M2; owns `.github/workflows/cross-platform-e2e.yml`; integrates
 - [x] M3-T02: Join pinned ephemeral Tailscale nodes with least-privileged trusted-only triggers and grants.
 - [x] M3-T03: Run concurrent agents and unconditional artifact/Deployment/process cleanup; final report cannot mask failed jobs.
 
-All required secrets are configured and the first owner-only native run passed.
-M4 qualification is at 1/3 consecutive clean runs.
+All required secrets are configured and two consecutive owner-only native runs
+passed. M4 qualification is at 2/3 consecutive clean runs.
 
 ### M4: Qualify the clean native matrix (depends: M1, M2, M3)
 
@@ -70,3 +70,4 @@ M4 qualification is at 1/3 consecutive clean runs.
 | M3-T02 | [Eight native role jobs](https://github.com/irregularthanis/ggpo-next/actions/runs/42723244592) | Pinned Tailscale action; `tag:ggpo-ci`; TCP 24871 and UDP 24872–24873 | Four ephemeral scenario pairs | PASS |
 | M3-T03 | [Complete manifest artifact](https://github.com/irregularthanis/ggpo-next/actions/runs/42723244592/artifacts/13721662369) | Final fail-closed report plus unconditional action/process/Deployment cleanup | 11 evidence artifacts; four Deployment records | PASS; all Deployments inactive |
 | M4-T01 | [Complete manifest artifact](https://github.com/irregularthanis/ggpo-next/actions/runs/42723244592/artifacts/13721662369) | Validate all role reports against the independent oracle | LL, WW, LW, WL; 180 frames each | PASS; checksum `2109130363`, clean closure, no disconnects |
+| M4-T02 (2/3) | [Native E2E run `42723789745`](https://github.com/irregularthanis/ggpo-next/actions/runs/42723789745), [manifest](https://github.com/irregularthanis/ggpo-next/actions/runs/42723789745/artifacts/13721219229) | Repeat the complete clean matrix and verify cleanup | Second consecutive LL/WW/LW/WL run; four Deployments | PASS; manifest complete and all Deployments inactive |

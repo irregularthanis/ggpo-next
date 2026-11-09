@@ -41,7 +41,7 @@ behavior-changing refactor pass.
 | Build compatibility | x64/Win32, shared/static, Debug/Release | [`windows-compatibility.yml`](../../.github/workflows/windows-compatibility.yml) | Eight Windows build variants |
 | Linux transport | The same peer contract through POSIX UDP | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`platform_linux.cpp`](../../src/lib/ggpo/platform_linux.cpp) | Two native Linux processes |
 | Linux package | GCC/Clang, static/shared, installed consumers and ABI ceiling | [`linux-compatibility.yml`](../../.github/workflows/linux-compatibility.yml) | Shared Ubuntu 24.04 image |
-| Cross-host | Native Windows and Linux peers converge | [`compare_peer_results.py`](../../tests/smoke/compare_peer_results.py) | Manual controlled Windows↔Ubuntu/SteamOS hosts; automation belongs to [PR #5](https://github.com/irregularthanis/ggpo-next/pull/5) |
+| Cross-host | Native Windows and Linux peers converge | [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml), [`tests/e2e`](../../tests/e2e) | Native GitHub-hosted Windows↔Ubuntu matrix over ephemeral Tailscale nodes |
 
 The shared/static lanes are both required. Shared builds additionally validate
 DLL exports and import linkage; static builds ensure consumers do not depend on
@@ -254,11 +254,17 @@ publishing frame/checksum snapshots. The coordinator releases the finalize
 markers only when both snapshots match the independent expected state; merely
 reaching frame 180 can still leave predicted inputs awaiting correction.
 
-[`compare_peer_results.py`](../../tests/smoke/compare_peer_results.py) retains
-schema-1 compatibility. Schema 2 additionally requires matching run/session
-identity, the expected platform roles, independent oracle checksum, one running
+[`result_schema.py`](../../tests/e2e/result_schema.py) retains schema-1
+compatibility and validates schema 2. The latter requires matching run/session
+identity, expected platform roles, independent oracle checksum, one running
 event, no unexpected disconnect, clean session close, and zero exit status.
-Wine is not native Windows interoperability evidence.
+[`compare_peer_results.py`](../../tests/smoke/compare_peer_results.py) exposes
+that validator for standalone result files. Wine is not native Windows
+interoperability evidence.
+
+See [Native cross-platform qualification](CrossPlatformTesting.md) for the
+complete scenario matrix, build artifacts, control/data boundaries, completion
+protocol, security model, failure contracts, evidence, and execution guide.
 
 ## Build and CI integration
 
@@ -362,8 +368,9 @@ The trusted-only [native E2E workflow](../../.github/workflows/cross-platform-e2
 builds static Release x64 peers on their native runners. It joins ephemeral
 Tailscale nodes with a commit-pinned action, executes all four ordered platform
 roles, uploads per-role evidence, and rejects a missing, duplicate, or failed
-scenario in an unconditional final job. It requires repository secrets and is
-not triggered by pull requests.
+scenario in an unconditional final job. It runs for owner-authored
+same-repository PRs, trusted `master` pushes, and manual dispatch; fork and
+non-owner PR jobs are skipped.
 
 ## Evidence and interpretation
 

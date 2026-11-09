@@ -22,7 +22,8 @@ protocol, and platform layer. Start with the [architecture overview](Overview.md
 | [Synchronization](Synchronization.md) | Input prediction, saved states, rollback, and confirmation |
 | [Networking](Networking.md) | UDP transport, peer protocol, messages, acknowledgements, and time sync |
 | [API reference](API.md) | Public types, callbacks, events, errors, and functions |
-| [Testing](Testing.md) | SyncTest, Vector War, and the current validation gaps |
+| [Testing](Testing.md) | Layered ABI, core, platform, transport, package, and CI contracts |
+| [Native cross-platform qualification](CrossPlatformTesting.md) | Linux/Windows matrix, deterministic oracle, CI security, evidence, and cleanup |
 | [Vector War](VectorWar.md) | End-to-end walkthrough of the sample application's GGPO integration |
 | [Portability](Portability.md) | Platform boundaries relevant to a multiplatform port |
 
