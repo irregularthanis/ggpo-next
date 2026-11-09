@@ -7,7 +7,8 @@ import json
 
 
 ALLOWED_OPERATIONS = {
-    "prepare", "launch-peer", "status", "collect", "cancel", "shutdown",
+    "prepare", "launch-peer", "status", "finalize", "collect", "cancel",
+    "shutdown",
 }
 
 

@@ -51,7 +51,7 @@ flowchart TD
 
 The rendezvous environment is `ggpo-e2e-<run_id>-<attempt>`. Linux publishes only its Tailscale IPv4, control port, repository, SHA, run ID, and attempt in a transient Deployment payload. Windows polls that exact environment with a bounded deadline. Linux marks it inactive during unconditional cleanup.
 
-Control requests contain `session_id`, monotonically increasing nonce, operation, arguments, and HMAC. Both jobs derive the HMAC key from `GGPO_E2E_SESSION_SECRET` plus repository/SHA/run/attempt. Agents allow only prepare, launch-peer, status, collect, cancel, and shutdown; executable/result paths must remain under the downloaded workspace.
+Control requests contain `session_id`, monotonically increasing nonce, operation, arguments, and HMAC. Both jobs derive the HMAC key from `GGPO_E2E_SESSION_SECRET` plus repository/SHA/run/attempt. Agents allow only prepare, launch-peer, status, finalize, collect, cancel, and shutdown; executable/result paths must remain under the downloaded workspace.
 
 Proposed schema 2 adds fields without changing schema 1 readers:
 

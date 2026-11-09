@@ -2,15 +2,24 @@
 """Negative and completeness tests for cross-host control orchestration."""
 
 import copy
+import hashlib
+import hmac
 import io
+import json
 import tempfile
 import unittest
 from pathlib import Path
 
-from control import MessageVerifier, derive_key, sign_message
+from control import MessageVerifier, _payload, derive_key, sign_message
 from peer_agent import PeerSupervisor
 from run_schema2_loopback import stage_runtime_bundle
 from run_matrix import generate_matrix, validate_matrix
+from validate_manifest import build_manifest
+
+
+class ExitedProcess:
+    def poll(self):
+        return 17
 
 
 class ControlTests(unittest.TestCase):
@@ -21,6 +30,13 @@ class ControlTests(unittest.TestCase):
     def test_valid_message_passes(self):
         self.assertEqual(MessageVerifier(self.key, "session").verify(self.message),
                          ("status", {}))
+
+    def test_finalize_is_an_authenticated_allow_list_operation(self):
+        message = sign_message(self.key, "session", 1, "finalize")
+        self.assertEqual(
+            MessageVerifier(self.key, "session").verify(message),
+            ("finalize", {}),
+        )
 
     def test_bad_mac_fails(self):
         message = copy.deepcopy(self.message)
@@ -42,6 +58,32 @@ class ControlTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not allowed"):
             sign_message(self.key, "session", 1, "shell", {"command": "whoami"})
 
+    def test_unknown_raw_operation_and_non_object_arguments_fail(self):
+        verifier = MessageVerifier(self.key, "session")
+        unknown = copy.deepcopy(self.message)
+        unknown["operation"] = "shell"
+        with self.assertRaisesRegex(ValueError, "not allowed"):
+            verifier.verify(unknown)
+        malformed = sign_message(self.key, "session", 2, "status")
+        malformed["arguments"] = []
+        malformed["mac"] = hmac.new(
+            self.key, _payload(malformed), hashlib.sha256
+        ).hexdigest()
+        with self.assertRaisesRegex(ValueError, "must be an object"):
+            verifier.verify(malformed)
+
+    def test_key_is_bound_to_repository_revision_and_run(self):
+        contexts = (
+            ("other/repo", "abc", "42", "1"),
+            ("owner/repo", "def", "42", "1"),
+            ("owner/repo", "abc", "43", "1"),
+            ("owner/repo", "abc", "42", "2"),
+        )
+        for context in contexts:
+            verifier = MessageVerifier(derive_key("secret", *context), "session")
+            with self.assertRaisesRegex(ValueError, "invalid control MAC"):
+                verifier.verify(copy.deepcopy(self.message))
+
 
 class MatrixTests(unittest.TestCase):
     def test_complete_ordered_matrix(self):
@@ -56,6 +98,35 @@ class MatrixTests(unittest.TestCase):
         duplicate = generate_matrix() + [generate_matrix()[0]]
         with self.assertRaisesRegex(ValueError, "duplicate"):
             validate_matrix(duplicate)
+
+    def test_manifest_rejects_missing_duplicate_and_failed_reports(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+
+            def write_report(name, scenario, result="pass"):
+                target = root / name / "report.json"
+                target.parent.mkdir()
+                target.write_text(
+                    json.dumps({
+                        "scenario": scenario, "result": result,
+                    }),
+                    encoding="utf-8",
+                )
+
+            write_report("ll", "linux-linux")
+            with self.assertRaisesRegex(ValueError, "incomplete"):
+                build_manifest(root)
+            write_report("ww", "windows-windows")
+            write_report("lw", "linux-windows")
+            write_report("wl", "windows-linux")
+            self.assertEqual(build_manifest(root)["result"], "pass")
+            write_report("duplicate", "linux-linux")
+            with self.assertRaisesRegex(ValueError, "duplicate"):
+                build_manifest(root)
+            (root / "duplicate" / "report.json").unlink()
+            write_report("failed", "linux-linux", result="fail")
+            with self.assertRaisesRegex(ValueError, "non-passing"):
+                build_manifest(root)
 
 
 class SupervisorTests(unittest.TestCase):
@@ -73,6 +144,27 @@ class SupervisorTests(unittest.TestCase):
                     "executable": "missing", "result": "out/result.json",
                     "ready": "out/ready", "finalize": "out/finalize",
                 })
+
+    def test_all_prepared_artifact_paths_must_stay_in_workspace(self):
+        with tempfile.TemporaryDirectory() as directory:
+            executable = Path(directory) / "peer"
+            executable.write_text("fixture", encoding="utf-8")
+            for field in ("result", "ready", "finalize"):
+                arguments = {
+                    "executable": "peer", "result": "result.json",
+                    "ready": "ready.json", "finalize": "finalize",
+                }
+                arguments[field] = "../escape"
+                with self.assertRaisesRegex(ValueError, "escapes"):
+                    PeerSupervisor(directory).prepare(arguments)
+
+    def test_crashed_peer_is_visible_to_coordinator(self):
+        with tempfile.TemporaryDirectory() as directory:
+            supervisor = PeerSupervisor(directory)
+            supervisor.process = ExitedProcess()
+            status = supervisor.status({})
+            self.assertFalse(status["running"])
+            self.assertEqual(status["returncode"], 17)
 
     def test_cancel_closes_log_after_peer_already_exited(self):
         with tempfile.TemporaryDirectory() as directory:

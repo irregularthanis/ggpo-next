@@ -41,14 +41,21 @@ class RendezvousTests(unittest.TestCase):
         self.assertEqual(self.rendezvous.retire(deployment_id)["state"], "inactive")
 
     def test_wrong_identity_is_ignored_and_times_out(self):
-        self.transport.deployments.append({
-            "id": 1, "environment": self.rendezvous.environment,
-            "payload": {"repository": "other/repo", "sha": "abc123",
-                        "run_id": "42", "attempt": "1",
-                        "session_id": "linux-windows"},
-        })
-        with self.assertRaisesRegex(TimeoutError, "before deadline"):
-            self.rendezvous.discover(deadline_seconds=0, poll_seconds=0)
+        valid = {"repository": "owner/repo", "sha": "abc123",
+                 "run_id": "42", "attempt": "1",
+                 "session_id": "linux-windows"}
+        for field, wrong in (("repository", "other/repo"), ("sha", "wrong"),
+                             ("run_id", "43"), ("attempt", "2"),
+                             ("session_id", "windows-linux")):
+            payload = dict(valid)
+            payload[field] = wrong
+            self.transport.deployments = [{
+                "id": 1, "environment": self.rendezvous.environment,
+                "payload": payload,
+            }]
+            with self.subTest(field=field), self.assertRaisesRegex(
+                    TimeoutError, "before deadline"):
+                self.rendezvous.discover(deadline_seconds=0, poll_seconds=0)
 
     def test_duplicate_exact_records_fail_closed(self):
         self.rendezvous.publish("100.64.0.1", 24871)

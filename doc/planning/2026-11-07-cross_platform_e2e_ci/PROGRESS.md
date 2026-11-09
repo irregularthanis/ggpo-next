@@ -26,9 +26,9 @@ Parallel with M2/M3; owns `tests/smoke` and schema/oracle code; integrates at M4
 
 Parallel with M1/M3; owns `tests/e2e`; integrates at M4.
 
-- [ ] M2-T01: Implement platform-generated LL/WW/LW/WL matrix, allow-listed agents, HMAC messages, deadlines, and child cleanup.
-- [ ] M2-T02: Prove the transient GitHub Deployment publish/discover/inactive lifecycle and bounded API behavior.
-- [ ] M2-T03: Reject wrong run/SHA/session, bad MAC, replay, unsafe path/command, timeout, crash, and missing/duplicate result.
+- [x] M2-T01: Implement platform-generated LL/WW/LW/WL matrix, allow-listed agents, HMAC messages, deadlines, and child cleanup.
+- [x] M2-T02: Prove the transient GitHub Deployment publish/discover/inactive lifecycle and bounded API behavior.
+- [x] M2-T03: Reject wrong run/SHA/session, bad MAC, replay, unsafe path/command, timeout, crash, and missing/duplicate result.
 
 ### M3: Wire native GitHub-hosted runners (depends: M0)
 
@@ -37,6 +37,10 @@ Parallel with M1/M2; owns `.github/workflows/cross-platform-e2e.yml`; integrates
 - [ ] M3-T01: Build and hash native Linux/Windows Release x64 peer bundles from one commit.
 - [ ] M3-T02: Join pinned ephemeral Tailscale nodes with least-privileged trusted-only triggers and grants.
 - [ ] M3-T03: Run concurrent agents and unconditional artifact/Deployment/process cleanup; final report cannot mask failed jobs.
+
+Current gate: the repository has none of the required `TS_OAUTH_CLIENT_ID`,
+`TS_OAUTH_SECRET`, or `GGPO_E2E_SESSION_SECRET` secrets, so native tailnet
+execution cannot be claimed until they are configured.
 
 ### M4: Qualify the clean native matrix (depends: M1, M2, M3)
 
@@ -60,3 +64,6 @@ Parallel with M1/M2; owns `.github/workflows/cross-platform-e2e.yml`; integrates
 | M1-T01 | [`smoke_session.cpp`](../../../tests/smoke/smoke_session.cpp), [`test_result_schema.py`](../../../tests/e2e/test_result_schema.py) | `python3 tests/e2e/test_result_schema.py` | 9 schema/oracle cases | PASS |
 | M1-T02 | [`peer_smoke.cpp`](../../../tests/smoke/peer_smoke.cpp), [`run_schema2_loopback.py`](../../../tests/e2e/run_schema2_loopback.py) | `linux_peer_schema2_loopback` | 180-frame bounded barrier | PASS |
 | M1-T03 | `/tmp/ggpo-pr5-build` | `cmake -S . -B /tmp/ggpo-pr5-build -G Ninja -DCMAKE_BUILD_TYPE=Release`; build; `ctest --test-dir /tmp/ggpo-pr5-build --output-on-failure -C Release` | Linux Release; 9 registered tests | PASS, 9/9 (run twice: build-time check and explicit CTest) |
+| M2-T01 | [`run_matrix.py`](../../../tests/e2e/run_matrix.py), [`control.py`](../../../tests/e2e/control.py), [`peer_agent.py`](../../../tests/e2e/peer_agent.py) | Source review plus `test_orchestration.py` | Four ordered platform roles; authenticated allow-list; bounded supervisor lifecycle | PASS |
+| M2-T02 | [Deployment `7659683890`](https://api.github.com/repos/irregularthanis/ggpo-next/deployments/7659683890), [`test_rendezvous.py`](../../../tests/e2e/test_rendezvous.py) | Publish, discover exact payload by environment/ref, then mark inactive | Transient non-production record bound to repository, SHA, run, attempt, and session | PASS; payload visible and record retired |
+| M2-T03 | [`test_orchestration.py`](../../../tests/e2e/test_orchestration.py), [`test_rendezvous.py`](../../../tests/e2e/test_rendezvous.py) | `python3 tests/e2e/test_orchestration.py`; `python3 tests/e2e/test_rendezvous.py` | 22 focused control, matrix, manifest, lifecycle, identity, and failure cases | PASS, 22/22 |
