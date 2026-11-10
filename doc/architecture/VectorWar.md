@@ -352,7 +352,7 @@ interactive host. [`HeadlessVectorWarHost`](../../src/apps/vectorwar/headless_ho
 supplies fixed bounds, frame-indexed input, monotonic time, and no renderer.
 
 The local fixture launches two processes for 180 frames, forces a bounded input
-delay to exercise rollback, and requires canonical checksum `f823dc4b` on both
+delay to exercise rollback, and requires canonical checksum `b3381958` on both
 peers. See the [testing contract](Testing.md#vector-war-application-loopback).
 
 ## End-to-end two-player example

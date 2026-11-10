@@ -1,4 +1,5 @@
 #include "headless_host.h"
+#include "vectorwar_inputs.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -21,7 +22,9 @@ Renderer *HeadlessVectorWarHost::CreateRenderer() { return NULL; }
 int
 HeadlessVectorWarHost::ReadLocalInput(int frame) const
 {
-   return ((frame + 1) * (_player * 17 + 3)) ^ (frame << _player);
+   /* Rotation exercises distinct per-player inputs without invoking libm in
+    * movement, keeping the native cross-platform oracle bit-exact. */
+   return ((frame / 15 + _player) % 2) ? INPUT_ROTATE_LEFT : INPUT_ROTATE_RIGHT;
 }
 
 unsigned int

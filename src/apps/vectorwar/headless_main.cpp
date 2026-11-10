@@ -59,6 +59,14 @@ main(int argc, char **argv)
       return WriteResult(argv[5], local_player, target_frames,
                          (unsigned int)local_player, 1, 0, 1, 1) ? 0 : 1;
    }
+   if (fault && strcmp(fault, "no_rollback") == 0) {
+      return WriteResult(argv[5], local_player, target_frames,
+                         0xB3381958U, 1, 0, 0, 1) ? 0 : 1;
+   }
+   if (fault && strcmp(fault, "shutdown") == 0) {
+      fprintf(stderr, "fault: shutdown\n");
+      return 92;
+   }
 
 #if defined(_WIN32)
    WSADATA winsock_data;
@@ -133,17 +141,10 @@ main(int argc, char **argv)
    const int loads = VectorWar_LoadCount();
    int replay_frames = VectorWar_ReplayFrameCount();
    const int running_events = VectorWar_RunningEventCount();
-   if (fault && strcmp(fault, "no_rollback") == 0) {
-      replay_frames = 0;
-   }
    VectorWar_Exit();
 #if defined(_WIN32)
    WSACleanup();
 #endif
-   if (fault && strcmp(fault, "shutdown") == 0) {
-      fprintf(stderr, "fault: shutdown\n");
-      return 92;
-   }
    if (!WriteResult(argv[5], local_player, frame, checksum, saves, loads,
                     replay_frames, running_events)) {
       return 1;

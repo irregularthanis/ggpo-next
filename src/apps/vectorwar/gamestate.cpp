@@ -48,8 +48,20 @@ GameState::Init(const VectorWarBounds &bounds, int num_players)
       double cost, sint, theta;
 
       theta = (double)heading * PI / 180;
-      cost = ::cos(theta);
-      sint = ::sin(theta);
+      /* Cardinal starts are exact on every supported compiler. This avoids
+       * seeding rollback state with platform-libm rounding differences. */
+      if (heading == 0) {
+         cost = 1; sint = 0;
+      } else if (heading == 90) {
+         cost = 0; sint = 1;
+      } else if (heading == 180) {
+         cost = -1; sint = 0;
+      } else if (heading == 270) {
+         cost = 0; sint = -1;
+      } else {
+         cost = ::cos(theta);
+         sint = ::sin(theta);
+      }
 
       _ships[i].position.x = (w / 2) + r * cost;
       _ships[i].position.y = (h / 2) + r * sint;

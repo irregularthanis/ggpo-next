@@ -13,13 +13,13 @@ struct ExpectedCheckpoint {
 };
 
 static const ExpectedCheckpoint kExpected[] = {
-   { 1, 944604021u },
-   { 30, 306558125u },
-   { 60, 2355124154u },
-   { 90, 698220596u },
-   { 120, 4253659091u },
-   { 150, 3896099009u },
-   { 180, 2918525657u },
+   { 1, 2171217371u },
+   { 30, 3703441302u },
+   { 60, 3529340798u },
+   { 90, 3925171079u },
+   { 120, 3746018346u },
+   { 150, 3780635078u },
+   { 180, 225756240u },
 };
 
 /* Keep inputs deterministic while exercising movement, rotation and bullets. */

@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "smoke"))
 from run_peer_smoke import run_pair
 
 
-EXPECTED_FRAME_180_CHECKSUM = 0xF823DC4B
+EXPECTED_FRAME_180_CHECKSUM = 0xB3381958
 
 
 def run_vectorwar_pair(executable, fault_a=None, fault_b=None,

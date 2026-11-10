@@ -154,7 +154,7 @@ and frame loop. Player 2 starts submitting after a bounded delay so rollback is
 an explicit fixture contract rather than a scheduler accident.
 
 [`run_headless_loopback.py`](../../tests/vectorwar/run_headless_loopback.py)
-requires both peers to reach frame 180 and canonical checksum `f823dc4b`, report
+requires both peers to reach frame 180 and canonical checksum `b3381958`, report
 one running event, and record at least one replayed frame. The fixture continues
 pumping both sessions before collecting results so late authoritative inputs
 can converge.
