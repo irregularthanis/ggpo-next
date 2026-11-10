@@ -63,12 +63,12 @@ CreateMainWindow(HINSTANCE hInstance)
 }
 
 void
-RunMainLoop(HWND hwnd)
+RunMainLoop()
 {
    MSG msg = { 0 };
-   int start, next, now;
+   int next, now;
 
-   start = next = now = timeGetTime();
+   next = now = timeGetTime();
    while(1) {
       while(PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
          TranslateMessage(&msg); 
@@ -178,7 +178,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
       VectorWar_Init(&host, local_port, num_players, players, num_spectators);
    }
-   RunMainLoop(hwnd);
+   RunMainLoop();
    VectorWar_Exit();
    WSACleanup();
    DestroyWindow(hwnd);
