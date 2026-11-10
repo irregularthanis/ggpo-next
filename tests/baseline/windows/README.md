@@ -38,6 +38,8 @@ peer timings. Hashes identify artifacts; they are not an equality contract.
 `-NoiseRuns` repeats the loopback scenario to characterize same-build timing
 variation. It is evidence for designing later A/B comparisons, not a performance
 benchmark or pass threshold.
+CI does not pass it; every matrix lane runs the same single loopback, so use it
+only for local timing studies.
 
 The authoritative compatibility contract is the export/layout report plus the
 deterministic SyncTest and peer results. The compatibility matrix qualifies both x64 and
