@@ -46,6 +46,8 @@ if(BUILD_TESTING AND GGPO_BUILD_SDK)
 				ggpo_windows_peer_smoke)
 		else()
 			set(GGPO_PLATFORM_TEST_TARGETS
+				ggpo_linux_public_layout
+				ggpo_linux_packet_layout
 				ggpo_linux_synctest_smoke
 				ggpo_linux_peer_smoke)
 		endif()

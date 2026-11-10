@@ -77,6 +77,38 @@ if(WIN32)
     set_tests_properties(windows_packet_layout PROPERTIES LABELS "native;abi;protocol")
     set(GGPO_SMOKE_PREFIX windows)
 else()
+    # Linux counterparts reuse the same frozen assertions: the public layout
+    # matches on LP64, and the packed wire layout must be byte-identical for
+    # Linux<->Windows peers to interoperate.
+    add_executable(ggpo_linux_public_layout
+        baseline/windows/public_layout.cpp
+    )
+    ggpo_configure_test(ggpo_linux_public_layout)
+    add_test(NAME linux_public_layout COMMAND ggpo_linux_public_layout)
+    set_tests_properties(linux_public_layout PROPERTIES LABELS "native;abi")
+
+    add_executable(ggpo_linux_packet_layout
+        baseline/windows/packet_layout.cpp
+        platform/fake/platform_fake.cpp
+        platform/fake/platform_fake.h
+    )
+    ggpo_configure_test(ggpo_linux_packet_layout)
+    target_include_directories(ggpo_linux_packet_layout PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/platform/fake
+    )
+    add_test(NAME linux_packet_layout COMMAND ggpo_linux_packet_layout)
+    set_tests_properties(linux_packet_layout PROPERTIES LABELS "native;abi;protocol")
+
+    # Shared builds freeze the dynamic ggpo_* export set like the DLL manifest.
+    if(BUILD_SHARED_LIBS)
+        add_test(NAME linux_exports
+            COMMAND ${PYTHON_EXECUTABLE}
+                    ${CMAKE_CURRENT_SOURCE_DIR}/baseline/linux/check_exports.py
+                    $<TARGET_FILE:GGPO>
+                    ${CMAKE_CURRENT_SOURCE_DIR}/baseline/linux/exports.txt
+        )
+        set_tests_properties(linux_exports PROPERTIES LABELS "native;abi")
+    endif()
     set(GGPO_SMOKE_PREFIX linux)
 endif()
 
@@ -315,6 +347,25 @@ if(WIN32)
         COMMAND ggpo_vectorwar_win32_host_contract)
     set_tests_properties(windows_vectorwar_gui_host_contract PROPERTIES
         LABELS "native;platform;sample;vectorwar-host")
+elseif(TARGET VectorWar)
+    # find_package targets are directory-scoped; resolve SDL2 here as well.
+    find_package(SDL2 REQUIRED)
+    add_executable(ggpo_vectorwar_sdl_host_contract
+        vectorwar/sdl_host_contract_test.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_host.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_renderer.cpp
+    )
+    ggpo_configure_test(ggpo_vectorwar_sdl_host_contract)
+    target_include_directories(ggpo_vectorwar_sdl_host_contract PRIVATE
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar
+    )
+    target_link_libraries(ggpo_vectorwar_sdl_host_contract PRIVATE
+        GGPO::GGPO SDL2::SDL2)
+    add_test(NAME linux_vectorwar_gui_host_contract
+        COMMAND ggpo_vectorwar_sdl_host_contract)
+    set_tests_properties(linux_vectorwar_gui_host_contract PROPERTIES
+        ENVIRONMENT "SDL_VIDEODRIVER=dummy"
+        LABELS "native;platform;sample;vectorwar-host")
 endif()
 
 # Launch two instances of the real Vector War application core over native
@@ -360,5 +411,8 @@ if(TARGET VectorWarHeadless)
 endif()
 if(TARGET ggpo_vectorwar_win32_host_contract)
     list(APPEND GGPO_PORTABLE_TEST_TARGETS ggpo_vectorwar_win32_host_contract)
+endif()
+if(TARGET ggpo_vectorwar_sdl_host_contract)
+    list(APPEND GGPO_PORTABLE_TEST_TARGETS ggpo_vectorwar_sdl_host_contract)
 endif()
 set(GGPO_PORTABLE_TEST_TARGETS ${GGPO_PORTABLE_TEST_TARGETS} PARENT_SCOPE)
