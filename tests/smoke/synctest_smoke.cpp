@@ -104,6 +104,14 @@ main(void)
               SmokeChecksum(&expected));
       return 1;
    }
+   // Keep the native serializer pinned to the independently documented
+   // cross-platform oracle vector for this exact 90-frame workload.
+   if (SmokeCanonicalChecksum(&g_smoke_state) != 0x8fe1122cu) {
+      fprintf(stderr,
+              "canonical checksum mismatch: expected=8fe1122c actual=%08x\n",
+              SmokeCanonicalChecksum(&g_smoke_state));
+      return 1;
+   }
    if (g_smoke_metrics.loads == 0 || g_smoke_metrics.replay_frames == 0 ||
        g_smoke_metrics.running_events != 1) {
       fprintf(stderr,

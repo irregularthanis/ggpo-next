@@ -1,6 +1,7 @@
 #include "smoke_session.h"
 #include "types.h"
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,26 +72,107 @@ CheckResult(GGPOErrorCode result, const char *operation)
    return true;
 }
 
+// Accept only identity strings that can be embedded in fixture JSON without
+// escaping; orchestration rejects all other values before launching peers.
+static bool
+SafeIdentity(const char *value)
+{
+   const unsigned char *cursor = (const unsigned char *)value;
+   if (!value || !*value) {
+      return false;
+   }
+   while (*cursor) {
+      if (!isalnum(*cursor) && *cursor != '-' && *cursor != '_' &&
+          *cursor != '.') {
+         return false;
+      }
+      cursor++;
+   }
+   return true;
+}
+
+// Publish the current deterministic state for the test-only coordinator.
+static bool
+WriteReadyState(const char *path)
+{
+   FILE *marker = fopen(path, "w");
+   if (!marker) {
+      fprintf(stderr, "could not create marker: %s\n", path);
+      return false;
+   }
+   fprintf(marker,
+           "{\"frame\":%d,\"canonical_checksum\":%u}\n",
+           g_smoke_state.frame,
+           SmokeCanonicalChecksum(&g_smoke_state));
+   fclose(marker);
+   return true;
+}
+
+// Check a coordinator marker without changing the production GGPO protocol.
+static bool
+MarkerExists(const char *path)
+{
+   FILE *marker = fopen(path, "r");
+   if (!marker) {
+      return false;
+   }
+   fclose(marker);
+   return true;
+}
+
 // Persist the final peer state for independent cross-host comparison.
 static bool
-WriteResult(const char *path, int player)
+WriteResult(const char *path, int player, bool session_closed)
 {
+   const char *scenario = getenv("GGPO_SMOKE_SCENARIO");
+   const char *run_id = getenv("GGPO_SMOKE_RUN_ID");
+   const char *session_id = getenv("GGPO_SMOKE_SESSION_ID");
+   const char *platform = getenv("GGPO_SMOKE_PLATFORM");
+   bool schema2 = scenario || run_id || session_id || platform;
    FILE *output = fopen(path, "w");
    if (!output) {
       fprintf(stderr, "could not open result file: %s\n", path);
       return false;
    }
-   fprintf(output,
-           "{\"player\":%d,\"frame\":%d,\"checksum\":%u,"
-           "\"saves\":%d,\"loads\":%d,\"replay_frames\":%d,"
-           "\"running_events\":%d}\n",
-           player,
-           g_smoke_state.frame,
-           SmokeChecksum(&g_smoke_state),
-           g_smoke_metrics.saves,
-           g_smoke_metrics.loads,
-           g_smoke_metrics.replay_frames,
-           g_smoke_metrics.running_events);
+   if (schema2) {
+      if (!SafeIdentity(scenario) || !SafeIdentity(run_id) ||
+          !SafeIdentity(session_id) || !SafeIdentity(platform)) {
+         fprintf(stderr, "invalid schema 2 identity\n");
+         fclose(output);
+         return false;
+      }
+      fprintf(output,
+              "{\"schema\":2,\"scenario\":\"%s\","
+              "\"run_id\":\"%s\",\"session_id\":\"%s\","
+              "\"player\":%d,\"platform\":\"%s\","
+              "\"frames\":%d,\"canonical_checksum\":%u,"
+              "\"native_checksum\":%u,\"saves\":%d,\"loads\":%d,"
+              "\"replay_frames\":%d,\"running_events\":%d,"
+              "\"unexpected_disconnects\":%d,"
+              "\"session_closed\":%s,\"exit_code\":0}\n",
+              scenario, run_id, session_id, player, platform,
+              g_smoke_state.frame,
+              SmokeCanonicalChecksum(&g_smoke_state),
+              SmokeChecksum(&g_smoke_state),
+              g_smoke_metrics.saves,
+              g_smoke_metrics.loads,
+              g_smoke_metrics.replay_frames,
+              g_smoke_metrics.running_events,
+              g_smoke_metrics.unexpected_disconnects,
+              session_closed ? "true" : "false");
+   } else {
+      fprintf(output,
+              "{\"player\":%d,\"frame\":%d,\"checksum\":%u,"
+              "\"saves\":%d,\"loads\":%d,\"replay_frames\":%d,"
+              "\"running_events\":%d}\n",
+              player,
+              g_smoke_state.frame,
+              SmokeChecksum(&g_smoke_state),
+              g_smoke_metrics.saves,
+              g_smoke_metrics.loads,
+              g_smoke_metrics.replay_frames,
+              g_smoke_metrics.running_events);
+   }
    fclose(output);
    return true;
 }
@@ -141,7 +223,7 @@ main(int argc, char **argv)
       g_smoke_state.frame = target_frames;
       g_smoke_state.accumulator = (unsigned int)local_player;
       g_smoke_metrics.running_events = 1;
-      return WriteResult(argv[5], local_player) ? 0 : 1;
+      return WriteResult(argv[5], local_player, false) ? 0 : 1;
    }
    if (FaultEnabled("shutdown")) {
       fprintf(stderr, "fault: shutdown\n");
@@ -242,22 +324,34 @@ main(int argc, char **argv)
       }
    }
 
-   // Give late packets and callbacks a bounded drain window before recording
-   // the result and closing the session.
-   for (int settle = 0; settle < 1000; settle++) {
-      ggpo_idle(g_smoke_session, 1);
-      TestWaitMs(1);
+   // E2E runs use a coordinator barrier so neither peer records success while
+   // its counterpart is still advancing. Legacy loopback retains its bounded
+   // drain to preserve existing invocations.
+   const char *ready_path = getenv("GGPO_SMOKE_READY_FILE");
+   const char *finalize_path = getenv("GGPO_SMOKE_FINALIZE_FILE");
+   if (ready_path || finalize_path) {
+      if (!ready_path || !finalize_path || !WriteReadyState(ready_path)) {
+         fprintf(stderr, "incomplete completion-barrier configuration\n");
+         return 1;
+      }
+      start_time = TestTimeMs();
+      while (!MarkerExists(finalize_path)) {
+         ggpo_idle(g_smoke_session, 1);
+         if (!WriteReadyState(ready_path)) {
+            return 1;
+         }
+         TestWaitMs(1);
+         if (TestTimeMs() - start_time > 15000) {
+            fprintf(stderr, "timed out waiting for completion barrier\n");
+            return 1;
+         }
+      }
+   } else {
+      for (int settle = 0; settle < 1000; settle++) {
+         ggpo_idle(g_smoke_session, 1);
+         TestWaitMs(1);
+      }
    }
-
-   if (!WriteResult(argv[5], local_player)) {
-      return 1;
-   }
-   printf("peer-smoke: player=%d frame=%d checksum=%08x loads=%d replay=%d\n",
-          local_player,
-          g_smoke_state.frame,
-          SmokeChecksum(&g_smoke_state),
-          g_smoke_metrics.loads,
-          g_smoke_metrics.replay_frames);
 
    if (!CheckResult(ggpo_close_session(g_smoke_session),
                     "ggpo_close_session")) {
@@ -268,5 +362,14 @@ main(int argc, char **argv)
    // Balance the fixture's startup reference after GGPO closes its session.
    WSACleanup();
 #endif
+   if (!WriteResult(argv[5], local_player, true)) {
+      return 1;
+   }
+   printf("peer-smoke: player=%d frame=%d checksum=%08x loads=%d replay=%d\n",
+          local_player,
+          g_smoke_state.frame,
+          SmokeCanonicalChecksum(&g_smoke_state),
+          g_smoke_metrics.loads,
+          g_smoke_metrics.replay_frames);
    return 0;
 }

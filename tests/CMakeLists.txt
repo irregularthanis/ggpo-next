@@ -1,5 +1,23 @@
 find_package(PythonInterp 3 REQUIRED)
 
+# Validate the platform-neutral result schema and its independent state oracle.
+add_test(NAME cross_host_result_contract
+    COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/e2e/test_result_schema.py
+)
+
+# Reject incomplete matrices and unauthenticated or unsafe control requests.
+add_test(NAME cross_host_orchestration_contract
+    COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/e2e/test_orchestration.py
+)
+
+# Prove the run-scoped Deployment record fails closed on stale/duplicate data.
+add_test(NAME cross_host_rendezvous_contract
+    COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/e2e/test_rendezvous.py
+)
+
 set(GGPO_SMOKE_COMMON
     smoke/smoke_session.cpp
     smoke/smoke_session.h
@@ -95,6 +113,17 @@ add_test(NAME ${GGPO_SMOKE_PREFIX}_peer_loopback
 set_tests_properties(${GGPO_SMOKE_PREFIX}_peer_loopback PROPERTIES
     TIMEOUT 90
     LABELS "native;network"
+)
+
+# Exercise the portable result schema and two-peer completion barrier locally.
+add_test(NAME ${GGPO_SMOKE_PREFIX}_peer_schema2_loopback
+    COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/e2e/run_schema2_loopback.py
+            $<TARGET_FILE:${GGPO_PEER_TARGET}>
+            --frames 180
+)
+set_tests_properties(${GGPO_SMOKE_PREFIX}_peer_schema2_loopback PROPERTIES
+    TIMEOUT 90
 )
 
 # Negative contracts prove the runner rejects lifecycle and state failures.
