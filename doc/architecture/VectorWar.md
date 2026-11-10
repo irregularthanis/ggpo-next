@@ -380,6 +380,9 @@ runs the same executable for Linux↔Linux, Windows↔Windows, Linux↔Windows, 
 Windows↔Linux. It adds run/scenario/platform identity and a completion barrier:
 both peers continue pumping GGPO until their corrected frame-180 checksums match
 the frozen Vector War oracle, then the coordinator permits clean shutdown.
+Runner address discovery (ephemeral Tailscale nodes and a run-scoped GitHub
+Deployment record) is described in
+[Native cross-platform qualification](CrossPlatformTesting.md#address-discovery).
 
 ## Interactive platform frontends
 

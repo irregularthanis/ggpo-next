@@ -29,8 +29,11 @@ the native matrix detects differences in socket adapters, compilers, byte
 representation, scheduling, and cross-host transport.
 
 The implementation is [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml).
-The fixture is [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), not Vector
-War or an application benchmark.
+It runs two fixtures through the same orchestration: the generic GGPO peer
+[`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp) and the real Vector War
+application core, [`VectorWarHeadless`](../../src/apps/vectorwar/headless_main.cpp)
+(see [Vector War](VectorWar.md#headless-application-contract)). Neither is a
+performance benchmark.
 
 ## What the suite proves
 
@@ -42,7 +45,7 @@ War or an application benchmark.
 | Role symmetry | Each mixed-platform pair runs in both player orders | Detects behavior tied to host role |
 | Deterministic convergence | Both peers match an independent canonical oracle | Detects prediction, rollback, serialization, or input divergence |
 | Lifecycle | One running event, clean close, zero unexpected disconnects | Detects incomplete sessions hidden by a matching checksum |
-| Completeness | Final manifest requires exactly LL, WW, LW, and WL | Prevents a partial matrix from appearing successful |
+| Completeness | Final manifest requires exactly LL, WW, LW, and WL for both fixtures | Prevents a partial matrix from appearing successful |
 | Cleanup | Firewall removal, process cancellation, Deployment retirement, and ephemeral logout run unconditionally | Keeps failed CI runs from leaving durable test infrastructure |
 
 A pass does not certify Internet matchmaking, NAT traversal, performance,
@@ -61,13 +64,16 @@ input timing, and platform-specific behavior.
 | WL | Windows | Linux | 180 frames and canonical convergence |
 
 [`run_matrix.py`](../../tests/e2e/run_matrix.py) defines and validates the four
-ordered assignments. The workflow expands each scenario into a role-1 host job
-and a role-2 coordinator job, producing eight native execution jobs.
+ordered assignments. The workflow runs them for each fixture: `smoke` scenarios
+are named `linux-linux` etc., and Vector War scenarios `vectorwar-linux-linux`
+etc. Each scenario expands into a role-1 host job and a role-2 coordinator job,
+producing sixteen native execution jobs (eight per fixture).
 
 ## Components
 
 | Component | Responsibility | Source |
 | --- | --- | --- |
+| Vector War fixture | Runs the production Vector War session, callbacks, rollback, and frame loop without a renderer; must reach checksum `b3381958` at frame 180 | [`headless_main.cpp`](../../src/apps/vectorwar/headless_main.cpp) |
 | Native peer fixture | Starts GGPO, submits deterministic inputs, pumps transport, publishes state, and records results | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp) |
 | Test simulation | Implements save/load/free/advance callbacks and canonical state hashing | [`smoke_session.cpp`](../../tests/smoke/smoke_session.cpp) |
 | Result oracle | Independently computes expected state and validates schema 2 | [`result_schema.py`](../../tests/e2e/result_schema.py) |
@@ -87,9 +93,9 @@ flowchart TD
     WindowsBuild["Windows runner<br/>static Release x64<br/>native peer"]
     LinuxArtifact["Linux bundle<br/>peer, SHA-256,<br/>toolchain"]
     WindowsArtifact["Windows bundle<br/>peer, SHA-256,<br/>toolchain"]
-    Matrix["Eight role jobs<br/>LL, WW, LW, WL"]
+    Matrix["Sixteen role jobs<br/>LL, WW, LW, WL<br/>x smoke, vectorwar"]
     Tailnet["Ephemeral tailnet<br/>tag:ggpo-ci"]
-    Reports["Four role-2<br/>scenario reports"]
+    Reports["Eight role-2<br/>scenario reports"]
     Manifest["Fail-closed<br/>complete manifest"]
 
     Source --> LinuxBuild --> LinuxArtifact --> Matrix
@@ -97,8 +103,8 @@ flowchart TD
     Matrix --> Tailnet --> Reports --> Manifest
 ```
 
-The build jobs compile only [`ggpo_linux_peer_smoke`](../../tests/CMakeLists.txt)
-or `ggpo_windows_peer_smoke`. Each uploads the executable, SHA-256, and selected
+The build jobs compile [`ggpo_linux_peer_smoke`](../../tests/CMakeLists.txt)
+or `ggpo_windows_peer_smoke`, plus `VectorWarHeadless`. Each uploads the executable, SHA-256, and selected
 toolchain metadata. Execution jobs download the bundle matching their native
 runner; no cross-compiled peer is used as qualification evidence.
 
@@ -124,6 +130,25 @@ flowchart LR
     Results --> Coordinator
 ```
 
+### Address discovery
+
+Hosted runners have no stable or mutually reachable addresses, so the workflow
+never uses runner hostnames or public IPs:
+
+1. Every execution job joins an ephemeral tailnet as `tag:ggpo-ci` using the
+   Tailscale OAuth secrets, then records its own address with `tailscale ip -4`.
+2. Role 1 starts [`host_agent.py`](../../tests/e2e/host_agent.py), which
+   publishes that address as a transient GitHub Deployment keyed to the exact
+   run ID and scenario ([`rendezvous.py`](../../tests/e2e/rendezvous.py)).
+3. Role 2's [`execute_pair.py`](../../tests/e2e/execute_pair.py) discovers that
+   record, rejecting stale, duplicate, or mismatched records, and connects to
+   the role-1 agent on TCP `24871` with run-bound HMAC authentication.
+4. Role 2 passes its own tailnet address over the control channel, and both
+   peers are launched with each other's tailnet address on UDP `24872–24873`.
+   Windows jobs open only those ports in the firewall for the run.
+5. Cleanup removes the firewall rules, cancels processes, retires the
+   Deployment, and logs the ephemeral node out, including on failure.
+
 The control plane never carries GGPO input packets. It starts peers, observes
 state, releases finalization, collects results, and requests cleanup. Production
 [`UdpProtocol`](../../src/lib/ggpo/network/udp_proto.cpp) traffic travels
@@ -140,6 +165,10 @@ applies both synchronized inputs to a small game-owned state containing:
 
 [`SmokeCanonicalChecksum`](../../tests/smoke/smoke_session.cpp) serializes these
 values as three unsigned little-endian 32-bit integers before hashing them.
+The Vector War fixture instead uses
+[`VectorWarCanonicalChecksum`](../../src/apps/vectorwar/state_contract.cpp)
+over its padding-independent game state and must match the frozen frame-180
+value `b3381958`.
 [`expected_state()`](../../tests/e2e/result_schema.py) independently reproduces
 the input sequence and state transition in Python.
 
@@ -243,11 +272,11 @@ The workflow publishes:
 
 | Artifact | Contents | Use |
 | --- | --- | --- |
-| `e2e-peer-linux` | ELF peer, SHA-256, toolchain | Identifies the Linux executable |
-| `e2e-peer-windows` | PE peer, SHA-256, toolchain | Identifies the Windows executable |
+| `e2e-peer-linux` | ELF peer and Vector War fixture, SHA-256, toolchain | Identifies the Linux executables |
+| `e2e-peer-windows` | PE peer and Vector War fixture, SHA-256, toolchain | Identifies the Windows executables |
 | `e2e-<scenario>-role1` | Host log and lifecycle evidence | Diagnoses role-1 startup and transport |
 | `e2e-<scenario>-role2` | Coordinator log and validated `report.json` | Proves one complete scenario |
-| `e2e-complete-manifest` | Exactly four passing scenario reports | Merge-level qualification evidence |
+| `e2e-complete-manifest` | Exactly eight passing scenario reports (four per fixture) | Merge-level qualification evidence |
 
 Schema-2 results record frame, canonical and native checksums, save/load/replay
 counts, running events, disconnects, close state, and exit status. Exact
