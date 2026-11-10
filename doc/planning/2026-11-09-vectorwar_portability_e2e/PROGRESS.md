@@ -1,6 +1,6 @@
 # PROGRESS — Portable Vector War and application E2E
 
-Status: Planned
+Status: M0 implementation in progress
 
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
@@ -10,11 +10,11 @@ Status: Planned
 
 Architecture: [Vector War](../../architecture/VectorWar.md).
 
-- [ ] M0-T01: Record the current Windows CLI, controls, player/spectator modes,
+- [x] M0-T01: Record the current Windows CLI, controls, player/spectator modes,
   diagnostics, and shutdown behavior.
 - [ ] M0-T02: Add a controlled scripted-input baseline with fixed arena bounds,
   canonical encoding, checkpoints, and final digest.
-- [ ] M0-T03: Freeze the portable app/host/renderer/result contracts and record
+- [x] M0-T03: Freeze the portable app/host/renderer/result contracts and record
   attributable material selected from upstream PR #57.
 
 ### M1: Extract the portable application core (depends: M0)
@@ -55,3 +55,5 @@ Parallel with M2; owns headless host, scripted inputs, result schema, and local 
 
 | Task | Commit / artifact | Command / method | Environment / input | Result |
 | --- | --- | --- | --- | --- |
+| M0-T01 | [`53b2b3e`](https://github.com/irregularthanis/ggpo-next/commit/53b2b3e6d2587d25b519234519ea93e5ca24b528), [Vector War architecture](../../architecture/VectorWar.md) | Source and feature-boundary audit | Existing Win32 sample at `5184cbf` | Current CLI, controls, modes, diagnostics, state, and lifecycle recorded |
+| M0-T03 | [Technical plan contracts](TECH_PLAN.md#contracts-and-flow), [upstream PR #57](https://github.com/pond3r/ggpo/pull/57) | Host-boundary and attribution review | C++98 app; Windows/Linux targets | Portable host/result boundary frozen; SDL2 app-only reuse scope recorded |
