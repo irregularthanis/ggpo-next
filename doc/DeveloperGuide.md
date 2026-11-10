@@ -95,14 +95,14 @@ Install the package matching the required linkage:
 
 ```bash
 # Debian or Ubuntu, shared SDK
-sudo apt install ./ggpo-0.2.0-linux-x86_64-shared.deb
+sudo apt install ./ggpo-0.3.0-linux-x86_64-shared.deb
 # Debian or Ubuntu, static SDK
-sudo apt install ./ggpo-0.2.0-linux-x86_64-static.deb
+sudo apt install ./ggpo-0.3.0-linux-x86_64-static.deb
 
 # Fedora or another RPM-family system, shared SDK
-sudo dnf install ./ggpo-0.2.0-linux-x86_64-shared.rpm
+sudo dnf install ./ggpo-0.3.0-linux-x86_64-shared.rpm
 # Fedora or another RPM-family system, static SDK
-sudo dnf install ./ggpo-0.2.0-linux-x86_64-static.rpm
+sudo dnf install ./ggpo-0.3.0-linux-x86_64-static.rpm
 ```
 
 Run one command for the chosen package format and linkage, not both linkage
@@ -122,20 +122,20 @@ Use the raw archive for an unprivileged, application-local, or CI installation:
 
 ```bash
 sha256sum --check SHA256SUMS --ignore-missing
-tar -xzf ggpo-0.2.0-linux-x86_64-shared.tar.gz
+tar -xzf ggpo-0.3.0-linux-x86_64-shared.tar.gz
 cmake -S . -B build \
-  -DCMAKE_PREFIX_PATH="$PWD/ggpo-0.2.0-linux-x86_64-shared"
+  -DCMAKE_PREFIX_PATH="$PWD/ggpo-0.3.0-linux-x86_64-shared"
 cmake --build build --parallel
 ```
 
 The extracted shared SDK contains:
 
 ```text
-ggpo-0.2.0-linux-x86_64-shared/
+ggpo-0.3.0-linux-x86_64-shared/
 ├── include/ggponet.h
 ├── lib/libGGPO.so -> libGGPO.so.0
-├── lib/libGGPO.so.0 -> libGGPO.so.0.2.0
-├── lib/libGGPO.so.0.2.0
+├── lib/libGGPO.so.0 -> libGGPO.so.0.3.0
+├── lib/libGGPO.so.0.3.0
 ├── lib/cmake/GGPO/
 └── share/GGPO/
     ├── LICENSE
@@ -251,12 +251,12 @@ For an extracted tarball or a source-built SDK, identify its install prefix:
 ```bash
 # Compile the application against the extracted shared SDK.
 cmake -S . -B build-shared \
-  -DCMAKE_PREFIX_PATH=/path/to/ggpo-0.2.0-linux-x86_64-shared
+  -DCMAKE_PREFIX_PATH=/path/to/ggpo-0.3.0-linux-x86_64-shared
 cmake --build build-shared --parallel
 
 # Compile the same application against the extracted static SDK.
 cmake -S . -B build-static \
-  -DCMAKE_PREFIX_PATH=/path/to/ggpo-0.2.0-linux-x86_64-static
+  -DCMAKE_PREFIX_PATH=/path/to/ggpo-0.3.0-linux-x86_64-static
 cmake --build build-static --parallel
 ```
 
@@ -266,7 +266,7 @@ link dependencies. With the raw shared SDK during development, expose its
 runtime library when launching:
 
 ```bash
-LD_LIBRARY_PATH=/path/to/ggpo-0.2.0-linux-x86_64-shared/lib \
+LD_LIBRARY_PATH=/path/to/ggpo-0.3.0-linux-x86_64-shared/lib \
   ./build-shared/application_x
 ```
 
