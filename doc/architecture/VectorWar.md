@@ -23,20 +23,22 @@
 
 Vector War is GGPO's reference game integration under
 [`src/apps/vectorwar`](../../src/apps/vectorwar). It is a small deterministic
-four-ship simulation with a Windows host loop and renderer. It demonstrates how
+four-ship simulation with a portable application core and a Windows host. It demonstrates how
 an application owns game state and presentation while GGPO owns input prediction,
 network synchronization, saved checkpoints, and rollback scheduling.
 
-It is not part of the public API and is currently Windows-only. The reusable
-contract is [`ggponet.h`](../../src/include/ggponet.h); Vector War is one concrete
-consumer.
+It is not part of the public API. The reusable contract is
+[`ggponet.h`](../../src/include/ggponet.h); Vector War is one concrete consumer.
+The interactive frontend remains Windows-only while its session and simulation
+core is also compiled on Linux.
 
 ## Component map
 
 ```mermaid
 flowchart TD
     Main["main.cpp<br/>Win32 process<br/>and 60 Hz<br/>loop"]
-    Host["vectorwar.cpp<br/>GGPO<br/>integration"]
+    Platform["Win32VectorWarHost<br/>window, input,<br/>clock and diagnostics"]
+    Host["VectorWarCore<br/>portable GGPO<br/>integration"]
     Game["GameState<br/>deterministic<br/>simulation"]
     NonGame["NonGameState<br/>connection and<br/>UI data"]
     Renderer["GDIRenderer<br/>presentation<br/>only"]
@@ -44,7 +46,7 @@ flowchart TD
     API["ggponet.h<br/>public API"]
     Session["GGPOSession<br/>P2P,<br/>spectator,<br/>or SyncTest"]
 
-    Main --> Host
+    Main --> Platform --> Host
     Host --> Game
     Host --> NonGame
     Host --> Renderer
@@ -58,7 +60,8 @@ flowchart TD
 
 | Piece | Responsibility | Source |
 | --- | --- | --- |
-| Process host | Window, command line, Winsock, message loop, frame schedule | [`main.cpp`](../../src/apps/vectorwar/main.cpp) |
+| Process host | Window, command line, Winsock, message loop, frame schedule | [`main.cpp`](../../src/apps/vectorwar/main.cpp), [`win32_host.cpp`](../../src/apps/vectorwar/win32_host.cpp) |
+| Host contract | Bounds, input, renderer creation, clock, sleep, and diagnostics | [`vectorwar_host.h`](../../src/apps/vectorwar/vectorwar_host.h) |
 | GGPO adapter | Session lifecycle, callbacks, input submission, simulation/render split | [`vectorwar.cpp`](../../src/apps/vectorwar/vectorwar.cpp), [`vectorwar.h`](../../src/apps/vectorwar/vectorwar.h) |
 | Deterministic state | Frame, platform-neutral arena bounds, ships, bullets, health, score | [`gamestate.h`](../../src/apps/vectorwar/gamestate.h), [`gamestate.cpp`](../../src/apps/vectorwar/gamestate.cpp) |
 | Non-rollback state | Player handles, connection progress, timeouts, displayed checksums | [`nongamestate.h`](../../src/apps/vectorwar/nongamestate.h) |
@@ -68,9 +71,9 @@ flowchart TD
 ## Build and launch
 
 [`src/apps/vectorwar/CMakeLists.txt`](../../src/apps/vectorwar/CMakeLists.txt)
-builds the `VectorWar` Windows executable and links it to `GGPO::GGPO`. The SDK's
-Windows platform layer carries `winmm` and `ws2_32` transitively. The root build
-adds Vector War only when `GGPO_BUILD_VECTORWAR` and `WIN32` are both true.
+builds portable `VectorWarCore` whenever `GGPO_BUILD_VECTORWAR` is enabled. On
+Windows it also builds the `VectorWar` executable from that core and the Win32
+host. The SDK's Windows platform layer carries `winmm` and `ws2_32` transitively.
 
 The command line is parsed by [`wWinMain`](../../src/apps/vectorwar/main.cpp):
 
@@ -183,8 +186,8 @@ sequenceDiagram
     participant GS as GameState
     participant Draw as Renderer
 
-    MainLoop->>VW: VectorWar_<br/>RunFrame(hwnd)
-    VW->>VW: ReadInputs<br/>(hwnd)
+    MainLoop->>VW: VectorWar_<br/>RunFrame()
+    VW->>VW: host reads<br/>local input
     VW->>GGPO: ggpo_add_<br/>local_input()
     VW->>GGPO: ggpo_<br/>synchronize_<br/>input()
     GGPO-->>VW: all player<br/>inputs and<br/>disconnect<br/>flags

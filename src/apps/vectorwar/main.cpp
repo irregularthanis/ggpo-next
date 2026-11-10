@@ -4,7 +4,7 @@
 #   include <crtdbg.h>
 #endif
 #include "vectorwar.h"
-#include "ggpo_perfmon.h"
+#include "win32_host.h"
 
 LRESULT CALLBACK
 MainWindowProc(HWND hwnd,
@@ -17,7 +17,7 @@ MainWindowProc(HWND hwnd,
       return 1;
    case WM_KEYDOWN:
       if (wParam == 'P') {
-         ggpoutil_perfmon_toggle();
+         VectorWar_TogglePerformanceMonitor();
       } else if (wParam == VK_ESCAPE) {
          VectorWar_Exit();
 		 PostQuitMessage(0);
@@ -80,7 +80,7 @@ RunMainLoop(HWND hwnd)
       now = timeGetTime();
       VectorWar_Idle(max(0, next - now - 1));
       if (now >= next) {
-         VectorWar_RunFrame(hwnd);
+         VectorWar_RunFrame();
          next = now + (1000 / 60);
       }
    }
@@ -100,6 +100,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_ int)
 {
    HWND hwnd = CreateMainWindow(hInstance);
+   Win32VectorWarHost host(hwnd);
    int offset = 1, local_player = 0;
    WSADATA wd = { 0 };
    wchar_t wide_ip_buffer[128];
@@ -135,7 +136,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
          return 1;
       }
       wcstombs_s(nullptr, host_ip, ARRAYSIZE(host_ip), wide_ip_buffer, _TRUNCATE);
-      VectorWar_InitSpectator(hwnd, local_port, num_players, host_ip, host_port);
+      VectorWar_InitSpectator(&host, local_port, num_players, host_ip, host_port);
    } else {
       GGPOPlayer players[GGPO_MAX_SPECTATORS + GGPO_MAX_PLAYERS];
 
@@ -175,7 +176,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
          ::SetWindowPos(hwnd, NULL, window_offsets[local_player].x, window_offsets[local_player].y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
       }
 
-      VectorWar_Init(hwnd, local_port, num_players, players, num_spectators);
+      VectorWar_Init(&host, local_port, num_players, players, num_spectators);
    }
    RunMainLoop(hwnd);
    VectorWar_Exit();

@@ -1,31 +1,19 @@
-#include <windows.h>
-#include <gl/gl.h>
-#include <gl/glu.h>
 #include <math.h>
 #include <stdio.h>
-#include "gdi_renderer.h"
+#include <stdlib.h>
+#include <string.h>
+#include "nongamestate.h"
+#include "renderer.h"
 #include "vectorwar.h"
-#include "ggpo_perfmon.h"
 
 //#define SYNC_TEST    // test: turn on synctest
 #define MAX_PLAYERS     64
 
-GameState gs = { 0 };
-NonGameState ngs = { 0 };
+GameState gs;
+NonGameState ngs;
 Renderer *renderer = NULL;
 GGPOSession *ggpo = NULL;
-
-/* Convert the current client area once; rollback state stores no HWND/RECT. */
-static VectorWarBounds
-GetGameBounds(HWND hwnd)
-{
-   RECT rect = { 0 };
-   GetClientRect(hwnd, &rect);
-   VectorWarBounds bounds = {
-      (int)rect.left, (int)rect.top, (int)rect.right, (int)rect.bottom
-   };
-   return bounds;
-}
+VectorWarHost *host = NULL;
 
 /* 
  * Simple checksum function stolen from wikipedia:
@@ -61,7 +49,7 @@ fletcher32_checksum(short *data, size_t len)
  * The begin game callback.  We don't need to do anything special here,
  * so just return true.
  */
-bool __cdecl
+bool GGPO_CALL
 vw_begin_game_callback(const char *)
 {
    return true;
@@ -73,7 +61,7 @@ vw_begin_game_callback(const char *)
  * Notification from GGPO that something has happened.  Update the status
  * text at the bottom of the screen to notify the user.
  */
-bool __cdecl
+bool GGPO_CALL
 vw_on_event_callback(GGPOEvent *info)
 {
    int progress;
@@ -90,11 +78,13 @@ vw_on_event_callback(GGPOEvent *info)
       break;
    case GGPO_EVENTCODE_RUNNING:
       ngs.SetConnectState(Running);
-      renderer->SetStatusText("");
+      if (renderer) {
+         renderer->SetStatusText("");
+      }
       break;
    case GGPO_EVENTCODE_CONNECTION_INTERRUPTED:
       ngs.SetDisconnectTimeout(info->u.connection_interrupted.player,
-                               timeGetTime(),
+                               (int)host->NowMs(),
                                info->u.connection_interrupted.disconnect_timeout);
       break;
    case GGPO_EVENTCODE_CONNECTION_RESUMED:
@@ -104,7 +94,7 @@ vw_on_event_callback(GGPOEvent *info)
       ngs.SetConnectState(info->u.disconnected.player, Disconnected);
       break;
    case GGPO_EVENTCODE_TIMESYNC:
-      Sleep(1000 * info->u.timesync.frames_ahead / 60);
+      host->SleepMs(1000 * info->u.timesync.frames_ahead / 60);
       break;
    }
    return true;
@@ -117,7 +107,7 @@ vw_on_event_callback(GGPOEvent *info)
  * Notification from GGPO we should step foward exactly 1 frame
  * during a rollback.
  */
-bool __cdecl
+bool GGPO_CALL
 vw_advance_frame_callback(int)
 {
    int inputs[MAX_SHIPS] = { 0 };
@@ -135,7 +125,7 @@ vw_advance_frame_callback(int)
  *
  * Makes our current state match the state passed in by GGPO.
  */
-bool __cdecl
+bool GGPO_CALL
 vw_load_game_state_callback(unsigned char *buffer, int len)
 {
    memcpy(&gs, buffer, len);
@@ -148,7 +138,7 @@ vw_load_game_state_callback(unsigned char *buffer, int len)
  * Save the current state to a buffer and return it to GGPO via the
  * buffer and len parameters.
  */
-bool __cdecl
+bool GGPO_CALL
 vw_save_game_state_callback(unsigned char **buffer, int *len, int *checksum, int)
 {
    *len = sizeof(gs);
@@ -166,11 +156,11 @@ vw_save_game_state_callback(unsigned char **buffer, int *len, int *checksum, int
  *
  * Log the gamestate.  Used by the synctest debugging tool.
  */
-bool __cdecl
+bool GGPO_CALL
 vw_log_game_state(char *filename, unsigned char *buffer, int)
 {
-   FILE* fp = nullptr;
-   fopen_s(&fp, filename, "w");
+   FILE* fp = NULL;
+   fp = fopen(filename, "w");
    if (fp) {
       GameState *gamestate = (GameState *)buffer;
       fprintf(fp, "GameState object.\n");
@@ -204,7 +194,7 @@ vw_log_game_state(char *filename, unsigned char *buffer, int)
  *
  * Free a save state buffer previously returned in vw_save_game_state_callback.
  */
-void __cdecl 
+void GGPO_CALL
 vw_free_buffer(void *buffer)
 {
    free(buffer);
@@ -218,17 +208,20 @@ vw_free_buffer(void *buffer)
  * the video renderer and creates a new network session.
  */
 void
-VectorWar_Init(HWND hwnd, unsigned short localport, int num_players, GGPOPlayer *players, int num_spectators)
+VectorWar_Init(VectorWarHost *application_host, unsigned short localport,
+               int num_players, GGPOPlayer *players, int num_spectators)
 {
    GGPOErrorCode result;
-   renderer = new GDIRenderer(hwnd);
+   host = application_host;
+   renderer = host->CreateRenderer();
 
    // Initialize the game state
-   gs.Init(GetGameBounds(hwnd), num_players);
+   gs.Init(host->GetGameBounds(), num_players);
    ngs.num_players = num_players;
 
    // Fill in a ggpo callbacks structure to pass to start_session.
-   GGPOSessionCallbacks cb = { 0 };
+   GGPOSessionCallbacks cb;
+   memset(&cb, 0, sizeof(cb));
    cb.begin_game      = vw_begin_game_callback;
    cb.advance_frame	 = vw_advance_frame_callback;
    cb.load_game_state = vw_load_game_state_callback;
@@ -264,9 +257,12 @@ VectorWar_Init(HWND hwnd, unsigned short localport, int num_players, GGPOPlayer 
          ngs.players[i].connect_progress = 0;
       }
    }
+   (void)result;
 
-   ggpoutil_perfmon_init(hwnd);
-   renderer->SetStatusText("Connecting to peers.");
+   host->InitializePerformanceMonitor();
+   if (renderer) {
+      renderer->SetStatusText("Connecting to peers.");
+   }
 }
 
 /*
@@ -275,17 +271,21 @@ VectorWar_Init(HWND hwnd, unsigned short localport, int num_players, GGPOPlayer 
  * Create a new spectator session
  */
 void
-VectorWar_InitSpectator(HWND hwnd, unsigned short localport, int num_players, char *host_ip, unsigned short host_port)
+VectorWar_InitSpectator(VectorWarHost *application_host, unsigned short localport,
+                        int num_players, char *host_ip,
+                        unsigned short host_port)
 {
    GGPOErrorCode result;
-   renderer = new GDIRenderer(hwnd);
+   host = application_host;
+   renderer = host->CreateRenderer();
 
    // Initialize the game state
-   gs.Init(GetGameBounds(hwnd), num_players);
+   gs.Init(host->GetGameBounds(), num_players);
    ngs.num_players = num_players;
 
    // Fill in a ggpo callbacks structure to pass to start_session.
-   GGPOSessionCallbacks cb = { 0 };
+   GGPOSessionCallbacks cb;
+   memset(&cb, 0, sizeof(cb));
    cb.begin_game      = vw_begin_game_callback;
    cb.advance_frame	  = vw_advance_frame_callback;
    cb.load_game_state = vw_load_game_state_callback;
@@ -295,10 +295,13 @@ VectorWar_InitSpectator(HWND hwnd, unsigned short localport, int num_players, ch
    cb.log_game_state  = vw_log_game_state;
 
    result = ggpo_start_spectating(&ggpo, &cb, "vectorwar", num_players, sizeof(int), localport, host_ip, host_port);
+   (void)result;
 
-   ggpoutil_perfmon_init(hwnd);
+   host->InitializePerformanceMonitor();
 
-   renderer->SetStatusText("Starting new spectator session");
+   if (renderer) {
+      renderer->SetStatusText("Starting new spectator session");
+   }
 }
 
 
@@ -315,11 +318,13 @@ VectorWar_DisconnectPlayer(int player)
       char logbuf[128];
       GGPOErrorCode result = ggpo_disconnect_player(ggpo, ngs.players[player].handle);
       if (GGPO_SUCCEEDED(result)) {
-         sprintf_s(logbuf, ARRAYSIZE(logbuf), "Disconnected player %d.\n", player);
+         snprintf(logbuf, sizeof(logbuf), "Disconnected player %d.\n", player);
       } else {
-         sprintf_s(logbuf, ARRAYSIZE(logbuf), "Error while disconnecting player (err:%d).\n", result);
+         snprintf(logbuf, sizeof(logbuf), "Error while disconnecting player (err:%d).\n", result);
       }
-      renderer->SetStatusText(logbuf);
+      if (renderer) {
+         renderer->SetStatusText(logbuf);
+      }
    }
 }
 
@@ -332,7 +337,7 @@ VectorWar_DisconnectPlayer(int player)
 void
 VectorWar_DrawCurrentFrame()
 {
-   if (renderer != nullptr) {
+   if (renderer != NULL) {
       renderer->Draw(gs, ngs);
    }
 }
@@ -366,43 +371,11 @@ void VectorWar_AdvanceFrame(int inputs[], int disconnect_flags)
          handles[count++] = ngs.players[i].handle;
       }
    }
-   ggpoutil_perfmon_update(ggpo, handles, count);
-}
-
-
-/*
- * ReadInputs --
- *
- * Read the inputs for player 1 from the keyboard.  We never have to
- * worry about player 2.  GGPO will handle remapping his inputs 
- * transparently.
- */
-int
-ReadInputs(HWND hwnd)
-{
-   static const struct {
-      int      key;
-      int      input;
-   } inputtable[] = {
-      { VK_UP,       INPUT_THRUST },
-      { VK_DOWN,     INPUT_BREAK },
-      { VK_LEFT,     INPUT_ROTATE_LEFT },
-      { VK_RIGHT,    INPUT_ROTATE_RIGHT },
-      { 'D',         INPUT_FIRE },
-      { 'S',         INPUT_BOMB },
-   };
-   int i, inputs = 0;
-
-   if (GetForegroundWindow() == hwnd) {
-      for (i = 0; i < sizeof(inputtable) / sizeof(inputtable[0]); i++) {
-         if (GetAsyncKeyState(inputtable[i].key)) {
-            inputs |= inputtable[i].input;
-         }
-      }
+   if (host) {
+      host->UpdatePerformanceMonitor(ggpo, handles, count);
    }
-   
-   return inputs;
 }
+
 
 /*
  * VectorWar_RunFrame --
@@ -410,14 +383,14 @@ ReadInputs(HWND hwnd)
  * Run a single frame of the game.
  */
 void
-VectorWar_RunFrame(HWND hwnd)
+VectorWar_RunFrame()
 {
   GGPOErrorCode result = GGPO_OK;
   int disconnect_flags;
   int inputs[MAX_SHIPS] = { 0 };
 
   if (ngs.local_player_handle != GGPO_INVALID_HANDLE) {
-     int input = ReadInputs(hwnd);
+     int input = host ? host->ReadLocalInput() : 0;
 #if defined(SYNC_TEST)
      input = rand(); // test: use random inputs to demonstrate sync testing
 #endif
@@ -451,6 +424,14 @@ VectorWar_Idle(int time)
 }
 
 void
+VectorWar_TogglePerformanceMonitor()
+{
+   if (host) {
+      host->TogglePerformanceMonitor();
+   }
+}
+
+void
 VectorWar_Exit()
 {
    memset(&gs, 0, sizeof(gs));
@@ -462,4 +443,8 @@ VectorWar_Exit()
    }
    delete renderer;
    renderer = NULL;
+   if (host) {
+      host->ShutdownPerformanceMonitor();
+   }
+   host = NULL;
 }

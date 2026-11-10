@@ -1,13 +1,27 @@
 include(CMakeSources.cmake)
 
-add_executable(VectorWar WIN32 
+add_library(VectorWarCore STATIC
 	${GGPO_EXAMPLES_VECTORWAR_SRC}
 )
 
-add_common_flags(VectorWar)
-# Change the character set to unicode.
-add_definitions(-D_UNICODE -DUNICODE)
+add_common_flags(VectorWarCore)
+target_link_libraries(VectorWarCore PUBLIC GGPO::GGPO)
+target_include_directories(VectorWarCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+if(MSVC)
+	target_compile_options(VectorWarCore PRIVATE "/W4" "/WX")
+else()
+	target_compile_options(VectorWarCore PRIVATE -Wall -Wextra)
+endif()
 
-# Platform link requirements are carried by the SDK target.
-target_link_libraries(VectorWar LINK_PUBLIC GGPO::GGPO)
-target_compile_options(VectorWar PRIVATE "/W4" "/WX")
+if(WIN32)
+	add_executable(VectorWar WIN32
+		${GGPO_EXAMPLES_VECTORWAR_WIN32_INC}
+		${GGPO_EXAMPLES_VECTORWAR_WIN32_SRC}
+		${GGPO_EXAMPLES_VECTORWAR_WIN32RES}
+	)
+
+	add_common_flags(VectorWar)
+	target_compile_definitions(VectorWar PRIVATE _UNICODE UNICODE)
+	target_link_libraries(VectorWar PRIVATE VectorWarCore)
+	target_compile_options(VectorWar PRIVATE "/W4" "/WX")
+endif()
