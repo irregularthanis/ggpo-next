@@ -15,6 +15,7 @@
 - [8. Rendering and diagnostics](#8-rendering-and-diagnostics)
 - [9. Spectators](#9-spectators)
 - [10. Shutdown](#10-shutdown)
+- [Headless application contract](#headless-application-contract)
 - [End-to-end two-player example](#end-to-end-two-player-example)
 - [What the sample demonstrates](#what-the-sample-demonstrates)
 - [Sample limitations](#sample-limitations)
@@ -23,28 +24,32 @@
 
 Vector War is GGPO's reference game integration under
 [`src/apps/vectorwar`](../../src/apps/vectorwar). It is a small deterministic
-four-ship simulation with a Windows host loop and renderer. It demonstrates how
+four-ship simulation with a portable application core and Windows (Win32/GDI)
+and Linux (SDL2) hosts. It demonstrates how
 an application owns game state and presentation while GGPO owns input prediction,
 network synchronization, saved checkpoints, and rollback scheduling.
 
-It is not part of the public API and is currently Windows-only. The reusable
-contract is [`ggponet.h`](../../src/include/ggponet.h); Vector War is one concrete
-consumer.
+It is not part of the public API. The reusable contract is
+[`ggponet.h`](../../src/include/ggponet.h); Vector War is one concrete consumer.
+Every participant runs the same executable and connects directly to the other
+peers in a full mesh; there is no authoritative server. Spectators receive
+confirmed inputs from one serving peer.
 
 ## Component map
 
 ```mermaid
 flowchart TD
-    Main["main.cpp<br/>Win32 process<br/>and 60 Hz<br/>loop"]
-    Host["vectorwar.cpp<br/>GGPO<br/>integration"]
+    Main["main.cpp (Win32)<br/>sdl_main.cpp (Linux)<br/>headless_main.cpp<br/>process and<br/>60 Hz loop"]
+    Platform["Win32 / SDL /<br/>Headless<br/>VectorWarHost<br/>window, input,<br/>clock and diagnostics"]
+    Host["VectorWarCore<br/>portable GGPO<br/>integration"]
     Game["GameState<br/>deterministic<br/>simulation"]
     NonGame["NonGameState<br/>connection and<br/>UI data"]
-    Renderer["GDIRenderer<br/>presentation<br/>only"]
+    Renderer["GDIRenderer /<br/>SDLVectorWarRenderer<br/>presentation<br/>only"]
     Perf["GGPO perf<br/>monitor<br/>network<br/>statistics"]
     API["ggponet.h<br/>public API"]
     Session["GGPOSession<br/>P2P,<br/>spectator,<br/>or SyncTest"]
 
-    Main --> Host
+    Main --> Platform --> Host
     Host --> Game
     Host --> NonGame
     Host --> Renderer
@@ -58,29 +63,42 @@ flowchart TD
 
 | Piece | Responsibility | Source |
 | --- | --- | --- |
-| Process host | Window, command line, Winsock, message loop, frame schedule | [`main.cpp`](../../src/apps/vectorwar/main.cpp) |
+| Process host (Windows) | Window, command line, Winsock, message loop, frame schedule | [`main.cpp`](../../src/apps/vectorwar/main.cpp), [`win32_host.cpp`](../../src/apps/vectorwar/win32_host.cpp) |
+| Process host (Linux) | SDL window, command line, event loop, frame schedule | [`sdl_main.cpp`](../../src/apps/vectorwar/sdl_main.cpp), [`sdl_host.cpp`](../../src/apps/vectorwar/sdl_host.cpp) |
+| Process host (headless) | Renderer-free E2E fixture with run identity and reports | [`headless_main.cpp`](../../src/apps/vectorwar/headless_main.cpp), [`headless_host.cpp`](../../src/apps/vectorwar/headless_host.cpp) |
+| Host contract | Bounds, input, renderer creation, clock, sleep, and diagnostics | [`vectorwar_host.h`](../../src/apps/vectorwar/vectorwar_host.h) |
 | GGPO adapter | Session lifecycle, callbacks, input submission, simulation/render split | [`vectorwar.cpp`](../../src/apps/vectorwar/vectorwar.cpp), [`vectorwar.h`](../../src/apps/vectorwar/vectorwar.h) |
-| Deterministic state | Frame, arena bounds, ships, bullets, health, score | [`gamestate.h`](../../src/apps/vectorwar/gamestate.h), [`gamestate.cpp`](../../src/apps/vectorwar/gamestate.cpp) |
+| Deterministic state | Frame, platform-neutral arena bounds, ships, bullets, health, score | [`gamestate.h`](../../src/apps/vectorwar/gamestate.h), [`gamestate.cpp`](../../src/apps/vectorwar/gamestate.cpp) |
 | Non-rollback state | Player handles, connection progress, timeouts, displayed checksums | [`nongamestate.h`](../../src/apps/vectorwar/nongamestate.h) |
-| Rendering | Draw current simulation and connection state | [`renderer.h`](../../src/apps/vectorwar/renderer.h), [`gdi_renderer.cpp`](../../src/apps/vectorwar/gdi_renderer.cpp) |
+| Rendering | Draw current simulation and connection state | [`renderer.h`](../../src/apps/vectorwar/renderer.h), [`gdi_renderer.cpp`](../../src/apps/vectorwar/gdi_renderer.cpp), [`sdl_renderer.cpp`](../../src/apps/vectorwar/sdl_renderer.cpp) |
 | Network monitor | Display ping, bandwidth, queues, and frame advantage | [`ggpo_perfmon.cpp`](../../src/apps/vectorwar/ggpo_perfmon.cpp) |
 
 ## Build and launch
 
 [`src/apps/vectorwar/CMakeLists.txt`](../../src/apps/vectorwar/CMakeLists.txt)
-builds the `VectorWar` Windows executable and links it to `GGPO::GGPO`. The SDK's
-Windows platform layer carries `winmm` and `ws2_32` transitively. The root build
-adds Vector War only when `GGPO_BUILD_VECTORWAR` and `WIN32` are both true.
+builds portable `VectorWarCore` and the `VectorWarHeadless` fixture whenever
+`GGPO_BUILD_VECTORWAR` is enabled. The `VectorWar` GUI executable is built from
+the same core with the Win32 host on Windows and with the SDL2 host on Linux
+(SDL2 development files are required). The SDK's Windows platform layer carries
+`winmm` and `ws2_32` transitively.
 
-The command line is parsed by [`wWinMain`](../../src/apps/vectorwar/main.cpp):
+Both GUIs accept the same command line, parsed by
+[`wWinMain`](../../src/apps/vectorwar/main.cpp) on Windows and
+[`main`](../../src/apps/vectorwar/sdl_main.cpp) on Linux:
 
 ```text
-VectorWar.exe <local-port> <player-count> \
+VectorWar <local-port> <player-count> \
   ('local' | <remote-ip>:<remote-port>)* \
   [<spectator-ip>:<spectator-port> ...]
+VectorWar <local-port> <player-count> spectate <host-ip>:<host-port>
 ```
 
-Repository scripts provide complete topologies:
+The Linux binary also accepts `--frontend-smoke`, which opens and closes the SDL
+window/renderer (used in CI with `SDL_VIDEODRIVER=dummy`).
+
+Repository scripts provide complete topologies on Windows; on Linux run the
+equivalent commands in separate terminals (see the
+[Developer Guide](../DeveloperGuide.md)):
 
 | Script | Processes |
 | --- | --- |
@@ -91,7 +109,9 @@ Repository scripts provide complete topologies:
 
 ## 1. Process startup
 
-[`wWinMain`](../../src/apps/vectorwar/main.cpp) performs the platform work:
+[`wWinMain`](../../src/apps/vectorwar/main.cpp) performs the platform work on
+Windows (the steps below); [`sdl_main.cpp`](../../src/apps/vectorwar/sdl_main.cpp)
+follows the same sequence on Linux with an SDL window and no Winsock step:
 
 1. Create the 640×480 Win32 window.
 2. Start Winsock with `WSAStartup`.
@@ -118,8 +138,9 @@ flowchart TD
     Loop --> Exit
 ```
 
-[`RunMainLoop`](../../src/apps/vectorwar/main.cpp) drains Win32 messages, gives
-remaining time to `VectorWar_Idle`, and targets one game frame every 16 ms.
+[`RunMainLoop`](../../src/apps/vectorwar/main.cpp) drains Win32 messages (SDL
+events on Linux), gives remaining time to `VectorWar_Idle`, and targets one game
+frame every 16 ms.
 
 ## 2. Session and callback setup
 
@@ -177,14 +198,14 @@ integration example:
 
 ```mermaid
 sequenceDiagram
-    participant MainLoop as Win32<br/>frame loop
+    participant MainLoop as Host<br/>frame loop
     participant VW as Vector War<br/>adapter
     participant GGPO as GGPO<br/>session
     participant GS as GameState
     participant Draw as Renderer
 
-    MainLoop->>VW: VectorWar_<br/>RunFrame(hwnd)
-    VW->>VW: ReadInputs<br/>(hwnd)
+    MainLoop->>VW: VectorWar_<br/>RunFrame()
+    VW->>VW: host reads<br/>local input
     VW->>GGPO: ggpo_add_<br/>local_input()
     VW->>GGPO: ggpo_<br/>synchronize_<br/>input()
     GGPO-->>VW: all player<br/>inputs and<br/>disconnect<br/>flags
@@ -255,6 +276,14 @@ the complete `GameState` with `memcpy`. [`vw_load_game_state_callback`](../../sr
 restores it the same way. This is safe for this sample because `GameState` contains
 fixed arrays and values rather than owning pointers.
 
+The host converts its window client area (Win32 client rectangle or SDL
+window size) into explicit
+[`VectorWarBounds`](../../src/apps/vectorwar/gamestate.h) before initialization,
+so rollback state no longer contains `HWND` or `RECT`. The portable
+[`VectorWarCanonicalChecksum`](../../src/apps/vectorwar/state_contract.cpp)
+provides a padding-independent test representation; GGPO's current save/load
+callback still copies the complete in-process state.
+
 ## 7. Simulation
 
 [`GameState::Update`](../../src/apps/vectorwar/gamestate.cpp) increments the frame
@@ -286,9 +315,11 @@ thrust, brake, left/right rotation, fire, and an unused bomb bit.
 ## 8. Rendering and diagnostics
 
 [`Renderer`](../../src/apps/vectorwar/renderer.h) receives `GameState` and
-`NonGameState` by reference and must not advance either. The current
+`NonGameState` by reference and must not advance either. On Windows,
 [`GDIRenderer`](../../src/apps/vectorwar/gdi_renderer.cpp) draws ships, bullets,
-connection status, checksums, and text into the Win32 window.
+connection status, checksums, and text into the Win32 window. On Linux,
+[`SDLVectorWarRenderer`](../../src/apps/vectorwar/sdl_renderer.cpp) draws the
+same scene into an SDL window.
 
 `VectorWar_AdvanceFrame` computes a checksum after each simulation step and stores
 it in `ngs` for display. This displayed checksum is diagnostic state; the saved
@@ -333,6 +364,68 @@ then calls `WSACleanup` and destroys the window. `ggpo_close_session()` is the
 operation that deletes the selected backend and releases its saved states,
 queues, endpoints, and socket.
 
+## Headless application contract
+
+[`VectorWarHeadless`](../../src/apps/vectorwar/headless_main.cpp) uses the same
+`VectorWarCore`, GGPO callbacks, native UDP session, and frame functions as the
+interactive host. [`HeadlessVectorWarHost`](../../src/apps/vectorwar/headless_host.cpp)
+supplies fixed bounds, frame-indexed input, monotonic time, and no renderer.
+
+The local fixture launches two processes for 180 frames, forces a bounded input
+delay to exercise rollback, and requires canonical checksum `b3381958` on both
+peers. See the [testing contract](Testing.md#vector-war-application-loopback).
+
+The [native cross-host workflow](../../.github/workflows/cross-platform-e2e.yml)
+runs the same executable for Linux↔Linux, Windows↔Windows, Linux↔Windows, and
+Windows↔Linux. It adds run/scenario/platform identity and a completion barrier:
+both peers continue pumping GGPO until their corrected frame-180 checksums match
+the frozen Vector War oracle, then the coordinator permits clean shutdown.
+Runner address discovery (ephemeral Tailscale nodes and a run-scoped GitHub
+Deployment record) is described in
+[Native cross-platform qualification](CrossPlatformTesting.md#address-discovery).
+
+## Interactive platform frontends
+
+Windows retains the native Win32/GDI frontend in [`main.cpp`](../../src/apps/vectorwar/main.cpp)
+and [`win32_host.cpp`](../../src/apps/vectorwar/win32_host.cpp). Linux uses the
+SDL2 event loop and renderer in [`sdl_main.cpp`](../../src/apps/vectorwar/sdl_main.cpp),
+[`sdl_host.cpp`](../../src/apps/vectorwar/sdl_host.cpp), and
+[`sdl_renderer.cpp`](../../src/apps/vectorwar/sdl_renderer.cpp). Both select the
+same `VectorWarCore`, GGPO callbacks, rollback state, controls, and topology.
+
+```mermaid
+flowchart TD
+    subgraph Windows["Windows: VectorWar.exe"]
+        WinMain["main.cpp<br/>wWinMain and<br/>Win32 message loop"]
+        WinHost["Win32VectorWarHost<br/>win32_host.cpp"]
+        GDI["GDIRenderer<br/>gdi_renderer.cpp"]
+        WinMain --> WinHost --> GDI
+    end
+    subgraph Linux["Linux: vectorwar"]
+        SdlMain["sdl_main.cpp<br/>main and<br/>SDL event loop"]
+        SdlHost["SDLVectorWarHost<br/>sdl_host.cpp"]
+        SdlDraw["SDLVectorWarRenderer<br/>sdl_renderer.cpp"]
+        SdlMain --> SdlHost --> SdlDraw
+    end
+    Contract["VectorWarHost contract<br/>bounds, input, renderer,<br/>clock, sleep, diagnostics"]
+    Core["VectorWarCore<br/>session, callbacks,<br/>rollback state, simulation"]
+    GGPO["GGPO SDK<br/>ggponet.h"]
+
+    WinHost -->|"implements"| Contract
+    SdlHost -->|"implements"| Contract
+    Contract --> Core --> GGPO
+```
+
+The Linux frontend draws ships, bullets, player colors, and health, and maps
+the same arrow, `D`, `S`, function-key, and Escape controls. Connection status
+is exposed in the window title. Its `--frontend-smoke` mode creates and tears
+down the real SDL window/renderer using SDL's dummy video driver, allowing CI
+to verify the GUI lifecycle without a desktop session.
+
+Release tags attach standalone GUI archives for Windows x64/x86 and Linux
+x86-64 alongside the SDK packages. The Linux executable requires the SDL2
+runtime supplied by the target distribution.
+
 ## End-to-end two-player example
 
 [`start_vectorwar_2p.cmd`](../../bin/start_vectorwar_2p.cmd) creates:
@@ -365,15 +458,16 @@ For frame 120:
 
 ## Sample limitations
 
-- The host, renderer, input devices, and launch scripts are Windows-specific.
-- The simulation uses raw `double`, native structure layout, and a window-derived
-  arena; cross-platform determinism has not been established.
+- Interactive hosts are qualified on Windows and Linux. Other desktop and
+  mobile frontends remain unsupported.
+- The simulation retains native `double` internally, but canonical state uses
+  explicit field encoding and the qualified 180-frame trace has a fixed oracle.
+  Other traces still require their own cross-platform qualification.
 - Raw `memcpy` serialization is not versioned and is unsuitable for pointers or
   dynamic containers.
 - The sample uses a full peer mesh rather than an authoritative server.
-- Vector War's window, renderer, and input path still require interactive
-  validation. Automated SDK tests separately cover SyncTest and two Windows
-  processes exchanging inputs over loopback UDP.
+- Automated tests cover the application core, native GUI lifecycle, and two
+  native processes exchanging scripted inputs over loopback UDP.
 
 Continue with the general [Runtime](Runtime.md), [Synchronization](Synchronization.md),
 and [API reference](API.md).

@@ -43,7 +43,11 @@ GDIRenderer::Draw(GameState &gs, NonGameState &ngs)
    HDC hdc = GetDC(_hwnd);
 
    FillRect(hdc, &_rc, (HBRUSH)GetStockObject(BLACK_BRUSH));
-   FrameRect(hdc, &gs._bounds, (HBRUSH)GetStockObject(WHITE_BRUSH));
+   RECT bounds = {
+      (LONG)gs._bounds.left, (LONG)gs._bounds.top,
+      (LONG)gs._bounds.right, (LONG)gs._bounds.bottom
+   };
+   FrameRect(hdc, &bounds, (HBRUSH)GetStockObject(WHITE_BRUSH));
 
    SetBkMode(hdc, TRANSPARENT);
    SelectObject(hdc, _font);

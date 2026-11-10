@@ -23,20 +23,13 @@ jobs:
       - name: Build and test the Windows compatibility baseline
         shell: pwsh
         run: |
-          $noiseRuns = 0
-          if ("${{ matrix.architecture }}" -eq "x64" -and
-              "${{ matrix.shared }}" -eq "ON" -and
-              "${{ matrix.configuration }}" -eq "Release") {
-            $noiseRuns = 10
-          }
           ./scripts/ci/windows_compatibility_baseline.ps1 `
             -Architecture "${{ matrix.architecture }}" `
             -Shared "${{ matrix.shared }}" `
             -Configuration "${{ matrix.configuration }}" `
             -Generator "Visual Studio 17 2022" `
             -BuildDirectory "build/windows-compatibility" `
-            -EvidenceDirectory "build/windows-compatibility-evidence" `
-            -NoiseRuns $noiseRuns
+            -EvidenceDirectory "build/windows-compatibility-evidence"
 
       - name: Upload Windows compatibility evidence
         if: always()

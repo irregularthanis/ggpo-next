@@ -18,6 +18,15 @@ GGPO's tests freeze Windows compatibility while qualifying the shared core and
 Linux adapter. They protect public ABI, packed protocol data, deterministic
 rollback, and real loopback sessions without requiring Vector War.
 
+### Linux counterparts
+
+Linux compiles the same two layout sources as `linux_public_layout` and
+`linux_packet_layout`; the frozen values are identical on LP64, and the packed
+wire layout must stay byte-identical for Linux↔Windows peers. Shared builds also
+run `linux_exports`, which compares `nm -D` `ggpo_*` symbols in `libGGPO.so`
+with [`linux/exports.txt`](../../tests/baseline/linux/exports.txt). See the
+[Linux baseline README](../../tests/baseline/linux/README.md).
+
 The fixtures live under [`tests`](../../tests). Their frozen values represent
 the current compatibility contract; they should not be updated merely to make a
 behavior-changing refactor pass.
@@ -26,15 +35,20 @@ behavior-changing refactor pass.
 
 | Layer | Contract | Source | Runs against |
 | --- | --- | --- | --- |
-| Public ABI | Public sizes, offsets, enum values, callback order, and DLL exports | [`public_layout.cpp`](../../tests/baseline/windows/public_layout.cpp), [`exports-x64.txt`](../../tests/baseline/windows/exports-x64.txt) | Compiled header and shared DLL |
+| Public ABI | Public sizes, offsets, enum values, callback order, and DLL/shared-object exports | [`public_layout.cpp`](../../tests/baseline/windows/public_layout.cpp), [`exports-x64.txt`](../../tests/baseline/windows/exports-x64.txt), [`linux/exports.txt`](../../tests/baseline/linux/exports.txt) | Compiled header, shared DLL and `libGGPO.so` |
 | Installed consumers | C11 and C++98 compile/link use only installed SDK files | [`tests/consumer`](../../tests/consumer/CMakeLists.txt), [`verify_installed_consumers.ps1`](../../scripts/ci/verify_installed_consumers.ps1) | Installed header and shared/static library |
-| Wire layout | Packed `UdpMsg` sizes, offsets, and representative packet lengths | [`packet_layout.cpp`](../../tests/baseline/windows/packet_layout.cpp) | Internal protocol structures |
+| Wire layout | Packed `UdpMsg` sizes, offsets, and representative packet lengths | [`packet_layout.cpp`](../../tests/baseline/windows/packet_layout.cpp) | Internal protocol structures on Windows and Linux |
 | Portable core | Queue prediction, rollback/replay, time sync, containers, and bit encoding | [`tests/unit`](../../tests/unit/input_queue_test.cpp) | Production algorithms with deterministic state |
 | Public API | Session construction, lifecycle, null guards, configuration, and logging | [`public_api_contract_test.cpp`](../../tests/contract/public_api_contract_test.cpp) | Production backends with fake services |
 | Protocol safety | Exact packet sizes and truncated, trailing, or unknown messages | [`protocol_test.cpp`](../../tests/unit/protocol_test.cpp) | Production packet validator and receive guard |
 | Platform contract | Virtual clock/wait, fallbacks, endpoint/socket results, failure, and cleanup | [`platform_fake_test.cpp`](../../tests/platform/fake/platform_fake_test.cpp) | Deterministic fake adapter |
 | Native conformance | One clock/config/endpoint/UDP assertion source | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | Fake, Windows, and Linux adapters |
 | Platform-free rollback | Production core linked without the Windows adapter | [`platform_fake.cpp`](../../tests/platform/fake/platform_fake.cpp), [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | Fake adapter and production rollback core |
+| Sample simulation | Scripted Vector War inputs, explicit arena bounds, and canonical checkpoints | [`gamestate_contract_test.cpp`](../../tests/vectorwar/gamestate_contract_test.cpp), [`state_contract.cpp`](../../src/apps/vectorwar/state_contract.cpp) | Real sample `GameState` without a window or socket |
+| Sample gameplay determinism | Exact cardinal starts and shared initialization semantics | [`gameplay_determinism_test.cpp`](../../tests/vectorwar/gameplay_determinism_test.cpp) | Same gameplay assertions on Windows and Linux |
+| Sample native hosts | Native clock, sleep, bounds, input and presentation ownership | [`native_host_contract_test.cpp`](../../tests/vectorwar/native_host_contract_test.cpp), [`win32_host_contract_test.cpp`](../../tests/vectorwar/win32_host_contract_test.cpp), [`sdl_host_contract_test.cpp`](../../tests/vectorwar/sdl_host_contract_test.cpp) | POSIX/Win32 adapter branches and the Windows and Linux GUI hosts |
+| Sample application loopback | Real Vector War callbacks, scripted host input, native UDP, rollback, and final golden state | [`headless_main.cpp`](../../src/apps/vectorwar/headless_main.cpp), [`run_headless_loopback.py`](../../tests/vectorwar/run_headless_loopback.py) | Two headless Vector War processes on Windows or Linux |
+| Sample application negatives | Startup, timeout, divergence, absent rollback, and dirty shutdown are rejected | [`headless_negative.py`](../../tests/vectorwar/headless_negative.py) | Fault-injected Vector War processes |
 | Rollback behavior | Save, restore, synchronized input, replay, and deterministic final state | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | SyncTest backend without sockets |
 | Native transport | Handshake, events, prediction, rollback, UDP delivery, and shutdown | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Two Windows or Linux GGPO processes over localhost |
 | Negative peer contracts | Startup, timeout, checksum mismatch, and shutdown failures are rejected | [`peer_runner_negative.py`](../../tests/smoke/peer_runner_negative.py) | Fault-injected real peer processes |
@@ -61,7 +75,8 @@ state, and argument. Deeper behavior is divided deliberately:
 - the shared API contract covers common wrapper and lifecycle behavior;
 - SyncTest and focused core contracts cover rollback and replay;
 - native peer tests cover real platform sockets and two-process sessions; and
-- Windows-only fixtures cover frozen ABI, exports, and packet layout.
+- native layout fixtures cover the frozen ABI, exports, and packet layout on
+  both Windows and Linux.
 
 [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp)
 is the single assertion source compiled against the fake, Windows, and Linux
@@ -128,6 +143,65 @@ It does not prove safe parsing, delivery, endianness across different hosts, or
 protocol-version compatibility; those require separate tests.
 
 ## Runtime fixtures
+
+### Vector War two-layer contracts
+
+Vector War separates platform adapters from gameplay so failures identify the
+right ownership boundary:
+
+```mermaid
+flowchart TD
+    Native["Layer 1<br/>native host<br/>contracts"]
+    Shared["Layer 2<br/>shared gameplay<br/>contracts"]
+    Session["Application<br/>loopback and<br/>rollback oracle"]
+
+    Native --> Session
+    Shared --> Session
+```
+
+- The native-host layer runs the selected Windows or Linux clock and sleep
+  implementation and freezes the headless bounds, input, renderer, and
+  diagnostics contract. Windows additionally creates a real hidden Win32
+  window and validates client bounds, GDI renderer ownership, and diagnostics.
+- The shared-gameplay layer runs identical sources and assertions on both
+  platforms. It checks exact two- and four-player cardinal starts, the
+  180-frame simulation checkpoints, and canonical state hashing.
+
+These layers do not replace the two-process application fixture. They localize
+adapter and gameplay failures before native UDP, prediction, and rollback are
+introduced.
+
+### Vector War simulation contract
+
+[`gamestate_contract_test.cpp`](../../tests/vectorwar/gamestate_contract_test.cpp)
+advances the real sample simulation for 180 frames using a fixed two-player
+input script and explicit 640×480 arena bounds. It validates canonical
+checkpoints at frames 1, 30, 60, 90, 120, 150, and 180.
+
+[`VectorWarCanonicalChecksum`](../../src/apps/vectorwar/state_contract.cpp)
+hashes explicitly ordered fixed-width integers, booleans, and IEEE-754 double
+bits. It excludes native structure padding and the old Win32 `RECT` layout.
+This test freezes simulation behavior before the sample host is ported; it does
+not exercise GGPO callbacks, UDP, rendering, or interactive input.
+
+### Vector War application loopback
+
+[`VectorWarHeadless`](../../src/apps/vectorwar/headless_main.cpp) supplies the
+portable application core with scripted input and no renderer. Two processes
+use the production GGPO session, callbacks, native UDP adapter, save/load path,
+and frame loop. Player 2 starts submitting after a bounded delay so rollback is
+an explicit fixture contract rather than a scheduler accident.
+
+[`run_headless_loopback.py`](../../tests/vectorwar/run_headless_loopback.py)
+requires both peers to reach frame 180 and canonical checksum `b3381958`, report
+one running event, and record at least one replayed frame. The fixture continues
+pumping both sessions before collecting results so late authoritative inputs
+can converge.
+
+[`headless_negative.py`](../../tests/vectorwar/headless_negative.py) proves the
+runner rejects controlled startup failure, timeout, divergent state, missing
+rollback evidence, and dirty shutdown. Rendering and interactive input remain
+separate frontend contracts.
 
 ### Shared deterministic state
 
@@ -222,12 +296,16 @@ shutdown failure with the matching diagnostic. The fault variable is removed
 from ordinary peer environments, so these cases cannot weaken positive smoke
 tests.
 
-### Native cross-host smoke
+### Native cross-host E2E
 
 [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml)
 automates native Linux↔Linux, Windows↔Windows, Linux↔Windows, and
-Windows↔Linux role assignments on GitHub-hosted runners. Both peers use the
-same source SHA and advance 180 deterministic frames.
+Windows↔Linux role assignments on GitHub-hosted runners. Every assignment runs
+two fixtures from the same source SHA for 180 deterministic frames:
+
+- `ggpo_peer_smoke` isolates the public GGPO session and transport contract.
+- `VectorWarHeadless` adds the real sample's callbacks, state, frame loop,
+  scripted input, rollback, and shutdown path.
 
 ```mermaid
 flowchart LR
@@ -258,6 +336,10 @@ reaching frame 180 can still leave predicted inputs awaiting correction.
 compatibility and validates schema 2. The latter requires matching run/session
 identity, expected platform roles, independent oracle checksum, one running
 event, no unexpected disconnect, clean session close, and zero exit status.
+The generic fixture uses its independently advanced integer-state oracle;
+Vector War uses the frozen 180-frame application checksum `b3381958`.
+[`validate_manifest.py`](../../tests/e2e/validate_manifest.py) rejects a run
+unless all eight fixture/scenario combinations produce passing role-2 reports.
 [`compare_peer_results.py`](../../tests/smoke/compare_peer_results.py) exposes
 that validator for standalone result files. Wine is not native Windows
 interoperability evidence.
@@ -268,10 +350,14 @@ protocol, security model, failure contracts, evidence, and execution guide.
 
 ## Build and CI integration
 
-[`tests/CMakeLists.txt`](../../tests/CMakeLists.txt) registers Windows-only
-layout checks plus shared smoke families. Linux registers:
+[`tests/CMakeLists.txt`](../../tests/CMakeLists.txt) registers native layout
+checks plus shared smoke families on each platform. Linux registers:
 
 ```text
+linux_public_layout
+linux_packet_layout
+linux_exports                      (shared builds)
+linux_vectorwar_gui_host_contract  (SDL2, SDL_VIDEODRIVER=dummy)
 linux_synctest_smoke
 linux_peer_loopback
 linux_peer_schema2_loopback

@@ -103,12 +103,13 @@ class MatrixTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
 
-            def write_report(name, scenario, result="pass"):
+            def write_report(name, scenario, fixture="smoke", result="pass"):
                 target = root / name / "report.json"
                 target.parent.mkdir()
                 target.write_text(
                     json.dumps({
-                        "scenario": scenario, "result": result,
+                        "fixture": fixture, "scenario": scenario,
+                        "result": result,
                     }),
                     encoding="utf-8",
                 )
@@ -119,6 +120,12 @@ class MatrixTests(unittest.TestCase):
             write_report("ww", "windows-windows")
             write_report("lw", "linux-windows")
             write_report("wl", "windows-linux")
+            for scenario in ("linux-linux", "windows-windows",
+                             "linux-windows", "windows-linux"):
+                write_report(
+                    f"vw-{scenario}", f"vectorwar-{scenario}",
+                    fixture="vectorwar",
+                )
             self.assertEqual(build_manifest(root)["result"], "pass")
             write_report("duplicate", "linux-linux")
             with self.assertRaisesRegex(ValueError, "duplicate"):

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 # TODO: SDK Versioning.
-project(GGPO VERSION 0.2.0)
+project(GGPO VERSION 0.3.0)
 
 include(CTest)
 
@@ -30,12 +30,9 @@ if(GGPO_BUILD_SDK)
 endif()
 
 if(GGPO_BUILD_VECTORWAR)
-	# Vector War is Windows only.
-	if(WIN32)
-		add_subdirectory(src/apps/vectorwar)
-	else()
-		message(WARNING "The Vector War app only supports Windows, skipping...")
-	endif()
+	# The application/session core is portable; platform frontends are selected
+	# inside the sample directory.
+	add_subdirectory(src/apps/vectorwar)
 endif()
 
 if(BUILD_TESTING AND GGPO_BUILD_SDK)
@@ -49,8 +46,14 @@ if(BUILD_TESTING AND GGPO_BUILD_SDK)
 				ggpo_windows_peer_smoke)
 		else()
 			set(GGPO_PLATFORM_TEST_TARGETS
+				ggpo_linux_public_layout
+				ggpo_linux_packet_layout
 				ggpo_linux_synctest_smoke
 				ggpo_linux_peer_smoke)
+		endif()
+		# The registered frontend lifecycle test must not race its executable link.
+		if(TARGET VectorWar)
+			list(APPEND GGPO_PLATFORM_TEST_TARGETS VectorWar)
 		endif()
 		get_property(GGPO_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 		if(GGPO_MULTI_CONFIG)

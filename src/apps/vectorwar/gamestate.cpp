@@ -1,8 +1,8 @@
-#include <windows.h>
 #include <stdio.h>
 #include <math.h>
-#include "vectorwar.h"
+#include "ggponet.h"
 #include "gamestate.h"
+#include "vectorwar_inputs.h"
 
 extern GGPOSession *ggpo;
 
@@ -27,12 +27,15 @@ distance(Position *lhs, Position *rhs)
  */
 
 void
-GameState::Init(HWND hwnd, int num_players)
+GameState::Init(const VectorWarBounds &bounds, int num_players)
 {
    int i, w, h, r;
 
-   GetClientRect(hwnd, &_bounds);
-   InflateRect(&_bounds, -8, -8);
+   _bounds = bounds;
+   _bounds.left += 8;
+   _bounds.top += 8;
+   _bounds.right -= 8;
+   _bounds.bottom -= 8;
 
    w = _bounds.right - _bounds.left;
    h = _bounds.bottom - _bounds.top;
@@ -45,8 +48,20 @@ GameState::Init(HWND hwnd, int num_players)
       double cost, sint, theta;
 
       theta = (double)heading * PI / 180;
-      cost = ::cos(theta);
-      sint = ::sin(theta);
+      /* Cardinal starts are exact on every supported compiler. This avoids
+       * seeding rollback state with platform-libm rounding differences. */
+      if (heading == 0) {
+         cost = 1; sint = 0;
+      } else if (heading == 90) {
+         cost = 0; sint = 1;
+      } else if (heading == 180) {
+         cost = -1; sint = 0;
+      } else if (heading == 270) {
+         cost = 0; sint = -1;
+      } else {
+         cost = ::cos(theta);
+         sint = ::sin(theta);
+      }
 
       _ships[i].position.x = (w / 2) + r * cost;
       _ships[i].position.y = (h / 2) + r * sint;
@@ -55,7 +70,10 @@ GameState::Init(HWND hwnd, int num_players)
       _ships[i].radius = SHIP_RADIUS;
    }
 
-   InflateRect(&_bounds, -8, -8);
+   _bounds.left += 8;
+   _bounds.top += 8;
+   _bounds.right -= 8;
+   _bounds.bottom -= 8;
 }
 
 void GameState::GetShipAI(int i, double *heading, double *thrust, int *fire)

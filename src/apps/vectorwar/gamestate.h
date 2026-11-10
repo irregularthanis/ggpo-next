@@ -25,6 +25,14 @@
 
 #define MAX_SHIPS               4
 
+/* Platform-neutral replacement for the Win32 RECT stored in rollback state. */
+struct VectorWarBounds {
+   int left;
+   int top;
+   int right;
+   int bottom;
+};
+
 struct Position {
    double x, y;
 };
@@ -52,14 +60,14 @@ struct Ship {
 };
 
 struct GameState {
-   void Init(HWND hwnd, int num_players);
+   void Init(const VectorWarBounds &bounds, int num_players);
    void GetShipAI(int i, double *heading, double *thrust, int *fire);
    void ParseShipInputs(int inputs, int i, double *heading, double *thrust, int *fire);
    void MoveShip(int i, double heading, double thrust, int fire);
    void Update(int inputs[], int disconnect_flags);
 
    int         _framenumber;
-   RECT        _bounds;
+   VectorWarBounds _bounds;
    int         _num_ships;
    Ship        _ships[MAX_SHIPS];
 };

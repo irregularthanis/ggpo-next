@@ -22,14 +22,20 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Build the Release x64 static peer
+      - name: Install the Vector War GUI build dependency
+        run: sudo apt-get update && sudo apt-get install -y libsdl2-dev
+      - name: Build the Release x64 static fixtures
         run: |
           cmake -S . -B build/e2e -G Ninja \
             -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
-          cmake --build build/e2e --target ggpo_linux_peer_smoke --parallel 2
+          cmake --build build/e2e \
+            --target ggpo_linux_peer_smoke VectorWarHeadless --parallel 2
           install -D -m 0755 build/e2e/bin/x64/Release/ggpo_linux_peer_smoke \
             build/evidence/peer/ggpo_peer_smoke
+          install -D -m 0755 build/e2e/bin/x64/Release/VectorWarHeadless \
+            build/evidence/peer/vectorwar_headless
           sha256sum build/evidence/peer/ggpo_peer_smoke \
+            build/evidence/peer/vectorwar_headless \
             > build/evidence/peer/sha256.txt
           cmake --version > build/evidence/peer/toolchain.txt
           c++ --version >> build/evidence/peer/toolchain.txt
@@ -48,15 +54,20 @@ jobs:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
-      - name: Build the Release x64 static peer
+      - name: Build the Release x64 static fixtures
         shell: pwsh
         run: |
           cmake -S . -B build/e2e -A x64 -DBUILD_SHARED_LIBS=OFF
-          cmake --build build/e2e --config Release --target ggpo_windows_peer_smoke --parallel 2
+          cmake --build build/e2e --config Release `
+            --target ggpo_windows_peer_smoke VectorWarHeadless --parallel 2
           New-Item -ItemType Directory -Force build/evidence/peer | Out-Null
           Copy-Item build/e2e/bin/x64/Release/ggpo_windows_peer_smoke.exe `
             build/evidence/peer/ggpo_peer_smoke.exe
-          (Get-FileHash build/evidence/peer/ggpo_peer_smoke.exe -Algorithm SHA256).Hash.ToLower() `
+          Copy-Item build/e2e/bin/x64/Release/VectorWarHeadless.exe `
+            build/evidence/peer/vectorwar_headless.exe
+          Get-FileHash build/evidence/peer/ggpo_peer_smoke.exe, `
+            build/evidence/peer/vectorwar_headless.exe -Algorithm SHA256 `
+            | ForEach-Object { "$($_.Hash.ToLower())  $($_.Path)" } `
             | Set-Content build/evidence/peer/sha256.txt
           cmake --version | Set-Content build/evidence/peer/toolchain.txt
           Get-Content build/e2e/CMakeCache.txt `
@@ -69,7 +80,7 @@ jobs:
           if-no-files-found: error
 
   execute:
-    name: ${{ matrix.scenario }} / role ${{ matrix.role }}
+    name: ${{ matrix.fixture }} / ${{ matrix.scenario }} / role ${{ matrix.role }}
     if: >-
       github.event_name != 'pull_request' ||
       (github.event.pull_request.head.repo.full_name == github.repository &&
@@ -81,14 +92,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {scenario: linux-linux, role: 1, platform: linux, os: ubuntu-24.04, player1: linux, player2: linux, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
-          - {scenario: linux-linux, role: 2, platform: linux, os: ubuntu-24.04, player1: linux, player2: linux, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
-          - {scenario: windows-windows, role: 1, platform: windows, os: windows-2022, player1: windows, player2: windows, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke.exe}
-          - {scenario: windows-windows, role: 2, platform: windows, os: windows-2022, player1: windows, player2: windows, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke.exe}
-          - {scenario: linux-windows, role: 1, platform: linux, os: ubuntu-24.04, player1: linux, player2: windows, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
-          - {scenario: linux-windows, role: 2, platform: windows, os: windows-2022, player1: linux, player2: windows, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke}
-          - {scenario: windows-linux, role: 1, platform: windows, os: windows-2022, player1: windows, player2: linux, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke.exe}
-          - {scenario: windows-linux, role: 2, platform: linux, os: ubuntu-24.04, player1: windows, player2: linux, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke.exe}
+          - {fixture: smoke, scenario: linux-linux, role: 1, platform: linux, os: ubuntu-24.04, player1: linux, player2: linux, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: linux-linux, role: 2, platform: linux, os: ubuntu-24.04, player1: linux, player2: linux, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: windows-windows, role: 1, platform: windows, os: windows-2022, player1: windows, player2: windows, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke.exe}
+          - {fixture: smoke, scenario: windows-windows, role: 2, platform: windows, os: windows-2022, player1: windows, player2: windows, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke.exe}
+          - {fixture: smoke, scenario: linux-windows, role: 1, platform: linux, os: ubuntu-24.04, player1: linux, player2: windows, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: linux-windows, role: 2, platform: windows, os: windows-2022, player1: linux, player2: windows, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: windows-linux, role: 1, platform: windows, os: windows-2022, player1: windows, player2: linux, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke.exe}
+          - {fixture: smoke, scenario: windows-linux, role: 2, platform: linux, os: ubuntu-24.04, player1: windows, player2: linux, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke.exe}
+          - {fixture: vectorwar, scenario: vectorwar-linux-linux, role: 1, platform: linux, os: ubuntu-24.04, player1: linux, player2: linux, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-linux-linux, role: 2, platform: linux, os: ubuntu-24.04, player1: linux, player2: linux, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-windows-windows, role: 1, platform: windows, os: windows-2022, player1: windows, player2: windows, executable: peer/vectorwar_headless.exe, player1_executable: peer/vectorwar_headless.exe}
+          - {fixture: vectorwar, scenario: vectorwar-windows-windows, role: 2, platform: windows, os: windows-2022, player1: windows, player2: windows, executable: peer/vectorwar_headless.exe, player1_executable: peer/vectorwar_headless.exe}
+          - {fixture: vectorwar, scenario: vectorwar-linux-windows, role: 1, platform: linux, os: ubuntu-24.04, player1: linux, player2: windows, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-linux-windows, role: 2, platform: windows, os: windows-2022, player1: linux, player2: windows, executable: peer/vectorwar_headless.exe, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-windows-linux, role: 1, platform: windows, os: windows-2022, player1: windows, player2: linux, executable: peer/vectorwar_headless.exe, player1_executable: peer/vectorwar_headless.exe}
+          - {fixture: vectorwar, scenario: vectorwar-windows-linux, role: 2, platform: linux, os: ubuntu-24.04, player1: windows, player2: linux, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless.exe}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -100,7 +119,7 @@ jobs:
           path: peer
       - name: Make the Linux peer executable
         if: runner.os == 'Linux'
-        run: chmod 0755 peer/ggpo_peer_smoke
+        run: chmod 0755 peer/ggpo_peer_smoke peer/vectorwar_headless
       - name: Join the ephemeral E2E tailnet
         uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c
         with:
@@ -144,6 +163,7 @@ jobs:
             --local-address "${{ steps.address.outputs.ipv4 }}" \
             --session-id "${{ matrix.scenario }}" \
             --scenario "${{ matrix.scenario }}" \
+            --fixture "${{ matrix.fixture }}" \
             --player1-platform "${{ matrix.player1 }}" \
             --player2-platform "${{ matrix.player2 }}" \
             --out "evidence/report.json"

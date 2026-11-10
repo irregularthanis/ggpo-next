@@ -166,9 +166,86 @@ jobs:
           path: build/ggpo-*.zip
           if-no-files-found: error
 
+  package-vectorwar-linux:
+    name: Linux x86-64 Vector War
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the tagged source
+        uses: actions/checkout@v4
+      - name: Build the repository Linux environment
+        run: docker build -f docker/linux/Dockerfile -t ggpo-vectorwar-release .
+      - name: Build and smoke-test the interactive app
+        run: |
+          mkdir -p build/vectorwar-linux
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp -e SDL_VIDEODRIVER=dummy \
+            -v "$PWD:/src:ro" -v "$PWD/build/vectorwar-linux:/out" \
+            -w /src ggpo-vectorwar-release sh -euxc '
+              cmake -S /src -B /out/build -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+                -DGGPO_BUILD_SDK=ON -DGGPO_BUILD_VECTORWAR=ON \
+                -DGGPO_RUN_TESTS_ON_BUILD=OFF -DBUILD_TESTING=ON
+              cmake --build /out/build --target VectorWar --parallel 2
+              /out/build/bin/x64/Release/VectorWar --frontend-smoke
+            '
+      - name: Archive the standalone app
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          name="ggpo-${version}-vectorwar-linux-x86_64"
+          mkdir -p "build/stage/$name"
+          install -m 0755 build/vectorwar-linux/build/bin/x64/Release/VectorWar \
+            "build/stage/$name/vectorwar"
+          install -m 0644 LICENSE doc/architecture/VectorWar.md "build/stage/$name/"
+          tar -C build/stage -czf "build/$name.tar.gz" "$name"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-package-vectorwar-linux-x86_64
+          path: build/ggpo-*-vectorwar-linux-x86_64.tar.gz
+          if-no-files-found: error
+
+  package-vectorwar-windows:
+    name: Windows ${{ matrix.platform }} Vector War
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {architecture: x64, platform: x64}
+          - {architecture: Win32, platform: x86}
+    steps:
+      - name: Check out the tagged source
+        uses: actions/checkout@v4
+      - name: Build the standalone app
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          cmake -S . -B build/vectorwar -A "${{ matrix.architecture }}" `
+            -DBUILD_SHARED_LIBS=OFF -DGGPO_BUILD_SDK=ON `
+            -DGGPO_BUILD_VECTORWAR=ON -DGGPO_RUN_TESTS_ON_BUILD=OFF `
+            -DBUILD_TESTING=ON
+          cmake --build build/vectorwar --config Release `
+            --target VectorWar --parallel 2
+      - name: Archive the standalone app
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $version = "${{ github.ref_name }}".Substring(1)
+          $name = "ggpo-$version-vectorwar-windows-${{ matrix.platform }}"
+          $stage = Join-Path $PWD "build/stage/$name"
+          New-Item -ItemType Directory -Force $stage | Out-Null
+          Copy-Item "build/vectorwar/bin/${{ matrix.platform }}/Release/VectorWar.exe" $stage
+          Copy-Item LICENSE, doc/architecture/VectorWar.md $stage
+          Compress-Archive -Path "$stage/*" -DestinationPath "build/$name.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-package-vectorwar-windows-${{ matrix.platform }}
+          path: build/ggpo-*-vectorwar-windows-${{ matrix.platform }}.zip
+          if-no-files-found: error
+
   publish-release:
     name: Publish release assets
-    needs: [package-windows, package-linux]
+    needs: [package-windows, package-linux, package-vectorwar-linux, package-vectorwar-windows]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
