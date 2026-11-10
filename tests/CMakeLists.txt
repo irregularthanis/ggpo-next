@@ -292,7 +292,6 @@ endif()
 # the executables before invoking CTest on multi-config generators such as MSVC.
 set(GGPO_PORTABLE_TEST_TARGETS
 	ggpo_vectorwar_state_contract
-    VectorWarHeadless
     ggpo_input_queue_contract
     ggpo_sync_contract
     ggpo_timesync_contract
@@ -301,5 +300,8 @@ set(GGPO_PORTABLE_TEST_TARGETS
     ggpo_public_api_contract
     ggpo_fake_platform_conformance
     ggpo_native_platform_conformance
-    PARENT_SCOPE
 )
+if(TARGET VectorWarHeadless)
+    list(APPEND GGPO_PORTABLE_TEST_TARGETS VectorWarHeadless)
+endif()
+set(GGPO_PORTABLE_TEST_TARGETS ${GGPO_PORTABLE_TEST_TARGETS} PARENT_SCOPE)
