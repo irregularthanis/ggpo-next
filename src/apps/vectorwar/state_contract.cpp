@@ -28,9 +28,7 @@ void HashU64(uint32_t &hash, uint64_t value)
 void HashDouble(uint32_t &hash, double value)
 {
    uint64_t bits = 0;
-   if (sizeof(value) == sizeof(bits)) {
-      memcpy(&bits, &value, sizeof(bits));
-   }
+   memcpy(&bits, &value, sizeof(bits));
    HashU64(hash, bits);
 }
 
