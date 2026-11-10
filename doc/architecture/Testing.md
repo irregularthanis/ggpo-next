@@ -36,6 +36,8 @@ behavior-changing refactor pass.
 | Native conformance | One clock/config/endpoint/UDP assertion source | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | Fake, Windows, and Linux adapters |
 | Platform-free rollback | Production core linked without the Windows adapter | [`platform_fake.cpp`](../../tests/platform/fake/platform_fake.cpp), [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | Fake adapter and production rollback core |
 | Sample simulation | Scripted Vector War inputs, explicit arena bounds, and canonical checkpoints | [`gamestate_contract_test.cpp`](../../tests/vectorwar/gamestate_contract_test.cpp), [`state_contract.cpp`](../../src/apps/vectorwar/state_contract.cpp) | Real sample `GameState` without a window or socket |
+| Sample gameplay determinism | Exact cardinal starts and shared initialization semantics | [`gameplay_determinism_test.cpp`](../../tests/vectorwar/gameplay_determinism_test.cpp) | Same gameplay assertions on Windows and Linux |
+| Sample native hosts | Native clock, sleep, bounds, input and presentation ownership | [`native_host_contract_test.cpp`](../../tests/vectorwar/native_host_contract_test.cpp), [`win32_host_contract_test.cpp`](../../tests/vectorwar/win32_host_contract_test.cpp) | POSIX/Win32 adapter branches and the Windows GUI host |
 | Sample application loopback | Real Vector War callbacks, scripted host input, native UDP, rollback, and final golden state | [`headless_main.cpp`](../../src/apps/vectorwar/headless_main.cpp), [`run_headless_loopback.py`](../../tests/vectorwar/run_headless_loopback.py) | Two headless Vector War processes on Windows or Linux |
 | Sample application negatives | Startup, timeout, divergence, absent rollback, and dirty shutdown are rejected | [`headless_negative.py`](../../tests/vectorwar/headless_negative.py) | Fault-injected Vector War processes |
 | Rollback behavior | Save, restore, synchronized input, replay, and deterministic final state | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | SyncTest backend without sockets |
@@ -131,6 +133,33 @@ It does not prove safe parsing, delivery, endianness across different hosts, or
 protocol-version compatibility; those require separate tests.
 
 ## Runtime fixtures
+
+### Vector War two-layer contracts
+
+Vector War separates platform adapters from gameplay so failures identify the
+right ownership boundary:
+
+```mermaid
+flowchart TD
+    Native["Layer 1<br/>native host<br/>contracts"]
+    Shared["Layer 2<br/>shared gameplay<br/>contracts"]
+    Session["Application<br/>loopback and<br/>rollback oracle"]
+
+    Native --> Session
+    Shared --> Session
+```
+
+- The native-host layer runs the selected Windows or Linux clock and sleep
+  implementation and freezes the headless bounds, input, renderer, and
+  diagnostics contract. Windows additionally creates a real hidden Win32
+  window and validates client bounds, GDI renderer ownership, and diagnostics.
+- The shared-gameplay layer runs identical sources and assertions on both
+  platforms. It checks exact two- and four-player cardinal starts, the
+  180-frame simulation checkpoints, and canonical state hashing.
+
+These layers do not replace the two-process application fixture. They localize
+adapter and gameplay failures before native UDP, prediction, and rollback are
+introduced.
 
 ### Vector War simulation contract
 

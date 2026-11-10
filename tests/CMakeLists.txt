@@ -263,7 +263,57 @@ target_include_directories(ggpo_vectorwar_state_contract PRIVATE
 target_link_libraries(ggpo_vectorwar_state_contract PRIVATE ggpo_fake_core)
 add_test(NAME vectorwar_state_contract COMMAND ggpo_vectorwar_state_contract)
 set_tests_properties(vectorwar_state_contract PROPERTIES
-    LABELS "portable;sample")
+    LABELS "portable;sample;vectorwar-gameplay")
+
+# Shared gameplay layer: exact cardinal initialization must be bit-stable on
+# every supported compiler before networking or platform services participate.
+add_executable(ggpo_vectorwar_gameplay_contract
+    vectorwar/gameplay_determinism_test.cpp
+    ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/gamestate.cpp
+    ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/state_contract.cpp
+)
+ggpo_configure_static_test(ggpo_vectorwar_gameplay_contract)
+target_include_directories(ggpo_vectorwar_gameplay_contract PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/apps/vectorwar
+)
+target_link_libraries(ggpo_vectorwar_gameplay_contract PRIVATE ggpo_fake_core)
+add_test(NAME vectorwar_gameplay_contract COMMAND ggpo_vectorwar_gameplay_contract)
+set_tests_properties(vectorwar_gameplay_contract PROPERTIES
+    LABELS "portable;sample;vectorwar-gameplay")
+
+# Native-host layer: compile and execute each platform's clock/sleep branch and
+# freeze the headless adapter's bounds, input, renderer and diagnostics contract.
+add_executable(ggpo_vectorwar_native_host_contract
+    vectorwar/native_host_contract_test.cpp
+    ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/headless_host.cpp
+)
+ggpo_configure_test(ggpo_vectorwar_native_host_contract)
+target_include_directories(ggpo_vectorwar_native_host_contract PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/apps/vectorwar
+)
+target_link_libraries(ggpo_vectorwar_native_host_contract PRIVATE GGPO::GGPO)
+add_test(NAME ${GGPO_SMOKE_PREFIX}_vectorwar_native_host_contract
+    COMMAND ggpo_vectorwar_native_host_contract)
+set_tests_properties(${GGPO_SMOKE_PREFIX}_vectorwar_native_host_contract PROPERTIES
+    LABELS "native;platform;sample;vectorwar-host")
+
+if(WIN32)
+    add_executable(ggpo_vectorwar_win32_host_contract
+        vectorwar/win32_host_contract_test.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/win32_host.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/gdi_renderer.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/ggpo_perfmon.cpp
+    )
+    ggpo_configure_test(ggpo_vectorwar_win32_host_contract)
+    target_include_directories(ggpo_vectorwar_win32_host_contract PRIVATE
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar
+    )
+    target_link_libraries(ggpo_vectorwar_win32_host_contract PRIVATE GGPO::GGPO)
+    add_test(NAME windows_vectorwar_gui_host_contract
+        COMMAND ggpo_vectorwar_win32_host_contract)
+    set_tests_properties(windows_vectorwar_gui_host_contract PROPERTIES
+        LABELS "native;platform;sample;vectorwar-host")
+endif()
 
 # Launch two instances of the real Vector War application core over native
 # loopback sockets and compare their final deterministic game state.
@@ -292,6 +342,8 @@ endif()
 # the executables before invoking CTest on multi-config generators such as MSVC.
 set(GGPO_PORTABLE_TEST_TARGETS
 	ggpo_vectorwar_state_contract
+    ggpo_vectorwar_gameplay_contract
+    ggpo_vectorwar_native_host_contract
     ggpo_input_queue_contract
     ggpo_sync_contract
     ggpo_timesync_contract
@@ -303,5 +355,8 @@ set(GGPO_PORTABLE_TEST_TARGETS
 )
 if(TARGET VectorWarHeadless)
     list(APPEND GGPO_PORTABLE_TEST_TARGETS VectorWarHeadless)
+endif()
+if(TARGET ggpo_vectorwar_win32_host_contract)
+    list(APPEND GGPO_PORTABLE_TEST_TARGETS ggpo_vectorwar_win32_host_contract)
 endif()
 set(GGPO_PORTABLE_TEST_TARGETS ${GGPO_PORTABLE_TEST_TARGETS} PARENT_SCOPE)
