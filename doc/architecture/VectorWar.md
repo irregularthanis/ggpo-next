@@ -60,7 +60,7 @@ flowchart TD
 | --- | --- | --- |
 | Process host | Window, command line, Winsock, message loop, frame schedule | [`main.cpp`](../../src/apps/vectorwar/main.cpp) |
 | GGPO adapter | Session lifecycle, callbacks, input submission, simulation/render split | [`vectorwar.cpp`](../../src/apps/vectorwar/vectorwar.cpp), [`vectorwar.h`](../../src/apps/vectorwar/vectorwar.h) |
-| Deterministic state | Frame, arena bounds, ships, bullets, health, score | [`gamestate.h`](../../src/apps/vectorwar/gamestate.h), [`gamestate.cpp`](../../src/apps/vectorwar/gamestate.cpp) |
+| Deterministic state | Frame, platform-neutral arena bounds, ships, bullets, health, score | [`gamestate.h`](../../src/apps/vectorwar/gamestate.h), [`gamestate.cpp`](../../src/apps/vectorwar/gamestate.cpp) |
 | Non-rollback state | Player handles, connection progress, timeouts, displayed checksums | [`nongamestate.h`](../../src/apps/vectorwar/nongamestate.h) |
 | Rendering | Draw current simulation and connection state | [`renderer.h`](../../src/apps/vectorwar/renderer.h), [`gdi_renderer.cpp`](../../src/apps/vectorwar/gdi_renderer.cpp) |
 | Network monitor | Display ping, bandwidth, queues, and frame advantage | [`ggpo_perfmon.cpp`](../../src/apps/vectorwar/ggpo_perfmon.cpp) |
@@ -254,6 +254,13 @@ The sample makes the rollback boundary explicit:
 the complete `GameState` with `memcpy`. [`vw_load_game_state_callback`](../../src/apps/vectorwar/vectorwar.cpp)
 restores it the same way. This is safe for this sample because `GameState` contains
 fixed arrays and values rather than owning pointers.
+
+The application converts the Win32 client rectangle into explicit
+[`VectorWarBounds`](../../src/apps/vectorwar/gamestate.h) before initialization,
+so rollback state no longer contains `HWND` or `RECT`. The portable
+[`VectorWarCanonicalChecksum`](../../src/apps/vectorwar/state_contract.cpp)
+provides a padding-independent test representation; GGPO's current save/load
+callback still copies the complete in-process state.
 
 ## 7. Simulation
 

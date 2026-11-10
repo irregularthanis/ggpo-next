@@ -220,9 +220,26 @@ add_test(NAME ${GGPO_SMOKE_PREFIX}_platform_conformance
 set_tests_properties(${GGPO_SMOKE_PREFIX}_platform_conformance
     PROPERTIES LABELS "native;platform")
 
+# Exercise the sample's real deterministic simulation without a window. This
+# freezes the state path before the interactive host is made portable.
+add_executable(ggpo_vectorwar_state_contract
+    vectorwar/gamestate_contract_test.cpp
+    ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/gamestate.cpp
+    ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/state_contract.cpp
+)
+ggpo_configure_static_test(ggpo_vectorwar_state_contract)
+target_include_directories(ggpo_vectorwar_state_contract PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/apps/vectorwar
+)
+target_link_libraries(ggpo_vectorwar_state_contract PRIVATE ggpo_fake_core)
+add_test(NAME vectorwar_state_contract COMMAND ggpo_vectorwar_state_contract)
+set_tests_properties(vectorwar_state_contract PROPERTIES
+    LABELS "portable;sample")
+
 # Export every portable contract target so the root test-on-build target builds
 # the executables before invoking CTest on multi-config generators such as MSVC.
 set(GGPO_PORTABLE_TEST_TARGETS
+	ggpo_vectorwar_state_contract
     ggpo_input_queue_contract
     ggpo_sync_contract
     ggpo_timesync_contract

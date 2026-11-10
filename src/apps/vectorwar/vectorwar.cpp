@@ -15,6 +15,18 @@ NonGameState ngs = { 0 };
 Renderer *renderer = NULL;
 GGPOSession *ggpo = NULL;
 
+/* Convert the current client area once; rollback state stores no HWND/RECT. */
+static VectorWarBounds
+GetGameBounds(HWND hwnd)
+{
+   RECT rect = { 0 };
+   GetClientRect(hwnd, &rect);
+   VectorWarBounds bounds = {
+      (int)rect.left, (int)rect.top, (int)rect.right, (int)rect.bottom
+   };
+   return bounds;
+}
+
 /* 
  * Simple checksum function stolen from wikipedia:
  *
@@ -212,7 +224,7 @@ VectorWar_Init(HWND hwnd, unsigned short localport, int num_players, GGPOPlayer 
    renderer = new GDIRenderer(hwnd);
 
    // Initialize the game state
-   gs.Init(hwnd, num_players);
+   gs.Init(GetGameBounds(hwnd), num_players);
    ngs.num_players = num_players;
 
    // Fill in a ggpo callbacks structure to pass to start_session.
@@ -269,7 +281,7 @@ VectorWar_InitSpectator(HWND hwnd, unsigned short localport, int num_players, ch
    renderer = new GDIRenderer(hwnd);
 
    // Initialize the game state
-   gs.Init(hwnd, num_players);
+   gs.Init(GetGameBounds(hwnd), num_players);
    ngs.num_players = num_players;
 
    // Fill in a ggpo callbacks structure to pass to start_session.

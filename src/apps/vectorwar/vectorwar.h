@@ -2,6 +2,7 @@
 #define _VECTORWAR_H
 
 #include "ggponet.h"
+#include "vectorwar_inputs.h"
 
 /*
  * vectorwar.h --
@@ -9,15 +10,6 @@
  * Interface to the vector war application.
  *
  */
-
-enum VectorWarInputs {
-   INPUT_THRUST            = (1 << 0),
-   INPUT_BREAK             = (1 << 1),
-   INPUT_ROTATE_LEFT       = (1 << 2),
-   INPUT_ROTATE_RIGHT      = (1 << 3),
-   INPUT_FIRE              = (1 << 4),
-   INPUT_BOMB              = (1 << 5),
-};
 
 void VectorWar_Init(HWND hwnd, unsigned short localport, int num_players, GGPOPlayer *players, int num_spectators);
 void VectorWar_InitSpectator(HWND hwnd, unsigned short localport, int num_players, char *host_ip, unsigned short host_port);

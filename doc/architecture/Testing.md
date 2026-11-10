@@ -35,6 +35,7 @@ behavior-changing refactor pass.
 | Platform contract | Virtual clock/wait, fallbacks, endpoint/socket results, failure, and cleanup | [`platform_fake_test.cpp`](../../tests/platform/fake/platform_fake_test.cpp) | Deterministic fake adapter |
 | Native conformance | One clock/config/endpoint/UDP assertion source | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | Fake, Windows, and Linux adapters |
 | Platform-free rollback | Production core linked without the Windows adapter | [`platform_fake.cpp`](../../tests/platform/fake/platform_fake.cpp), [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | Fake adapter and production rollback core |
+| Sample simulation | Scripted Vector War inputs, explicit arena bounds, and canonical checkpoints | [`gamestate_contract_test.cpp`](../../tests/vectorwar/gamestate_contract_test.cpp), [`state_contract.cpp`](../../src/apps/vectorwar/state_contract.cpp) | Real sample `GameState` without a window or socket |
 | Rollback behavior | Save, restore, synchronized input, replay, and deterministic final state | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | SyncTest backend without sockets |
 | Native transport | Handshake, events, prediction, rollback, UDP delivery, and shutdown | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Two Windows or Linux GGPO processes over localhost |
 | Negative peer contracts | Startup, timeout, checksum mismatch, and shutdown failures are rejected | [`peer_runner_negative.py`](../../tests/smoke/peer_runner_negative.py) | Fault-injected real peer processes |
@@ -128,6 +129,19 @@ It does not prove safe parsing, delivery, endianness across different hosts, or
 protocol-version compatibility; those require separate tests.
 
 ## Runtime fixtures
+
+### Vector War simulation contract
+
+[`gamestate_contract_test.cpp`](../../tests/vectorwar/gamestate_contract_test.cpp)
+advances the real sample simulation for 180 frames using a fixed two-player
+input script and explicit 640×480 arena bounds. It validates canonical
+checkpoints at frames 1, 30, 60, 90, 120, 150, and 180.
+
+[`VectorWarCanonicalChecksum`](../../src/apps/vectorwar/state_contract.cpp)
+hashes explicitly ordered fixed-width integers, booleans, and IEEE-754 double
+bits. It excludes native structure padding and the old Win32 `RECT` layout.
+This test freezes simulation behavior before the sample host is ported; it does
+not exercise GGPO callbacks, UDP, rendering, or interactive input.
 
 ### Shared deterministic state
 

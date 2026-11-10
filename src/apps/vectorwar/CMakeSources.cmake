@@ -4,6 +4,8 @@ set(GGPO_EXAMPLES_VECTORWAR_INC_NOFILTER
 	"ggpo_perfmon.h"
 	"nongamestate.h"
 	"renderer.h"
+	"state_contract.h"
+	"vectorwar_inputs.h"
 	"Resource.h"
 	"targetver.h"
 	"vectorwar.h"
@@ -14,6 +16,7 @@ set(GGPO_EXAMPLES_VECTORWAR_SRC_NOFILTER
 	"gdi_renderer.cpp"
 	"ggpo_perfmon.cpp"
 	"main.cpp"
+	"state_contract.cpp"
 	"vectorwar.cpp"
 )
 
