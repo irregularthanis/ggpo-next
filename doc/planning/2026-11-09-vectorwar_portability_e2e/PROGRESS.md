@@ -21,8 +21,8 @@ Architecture: [Vector War](../../architecture/VectorWar.md).
 
 Owns game state, session integration, parser, and host interfaces.
 
-- [ ] M1-T01: Remove Win32 types and services from rollback state and shared app logic.
-- [ ] M1-T02: Route input, timing, rendering, diagnostics, and lifecycle through
+- [x] M1-T01: Remove Win32 types and services from rollback state and shared app logic.
+- [x] M1-T02: Route input, timing, rendering, diagnostics, and lifecycle through
   the frozen host contracts without changing the public GGPO API.
 - [ ] M1-T03: Pass the Windows baseline and focused portable application contracts.
 
@@ -58,3 +58,4 @@ Parallel with M2; owns headless host, scripted inputs, result schema, and local 
 | M0-T01 | [`53b2b3e`](https://github.com/irregularthanis/ggpo-next/commit/53b2b3e6d2587d25b519234519ea93e5ca24b528), [Vector War architecture](../../architecture/VectorWar.md) | Source and feature-boundary audit | Existing Win32 sample at `5184cbf` | Current CLI, controls, modes, diagnostics, state, and lifecycle recorded |
 | M0-T03 | [Technical plan contracts](TECH_PLAN.md#contracts-and-flow), [upstream PR #57](https://github.com/pond3r/ggpo/pull/57) | Host-boundary and attribution review | C++98 app; Windows/Linux targets | Portable host/result boundary frozen; SDL2 app-only reuse scope recorded |
 | M0-T02 | [`53b2b3e`](https://github.com/irregularthanis/ggpo-next/commit/53b2b3e6d2587d25b519234519ea93e5ca24b528), [Windows CI](https://github.com/irregularthanis/ggpo-next/actions/runs/42745724187) | `vectorwar_state_contract`; seven canonical checkpoints over 180 scripted frames | Linux GCC; Windows x64/x86, shared/static, Debug/Release | PASS; all variants produced the same checkpoints and final digest |
+| M1-T01, M1-T02 | [`4876b2a`](https://github.com/irregularthanis/ggpo-next/commit/4876b2a) | Build `VectorWarCore`; run the full native Linux suite | Linux GCC Release, static GGPO | Portable core compiled; 14/14 tests passed; Windows verification pending CI |
