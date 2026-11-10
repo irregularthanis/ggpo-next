@@ -390,6 +390,29 @@ SDL2 event loop and renderer in [`sdl_main.cpp`](../../src/apps/vectorwar/sdl_ma
 [`sdl_renderer.cpp`](../../src/apps/vectorwar/sdl_renderer.cpp). Both select the
 same `VectorWarCore`, GGPO callbacks, rollback state, controls, and topology.
 
+```mermaid
+flowchart TD
+    subgraph Windows["Windows: VectorWar.exe"]
+        WinMain["main.cpp<br/>wWinMain and<br/>Win32 message loop"]
+        WinHost["Win32VectorWarHost<br/>win32_host.cpp"]
+        GDI["GDIRenderer<br/>gdi_renderer.cpp"]
+        WinMain --> WinHost --> GDI
+    end
+    subgraph Linux["Linux: vectorwar"]
+        SdlMain["sdl_main.cpp<br/>main and<br/>SDL event loop"]
+        SdlHost["SDLVectorWarHost<br/>sdl_host.cpp"]
+        SdlDraw["SDLVectorWarRenderer<br/>sdl_renderer.cpp"]
+        SdlMain --> SdlHost --> SdlDraw
+    end
+    Contract["VectorWarHost contract<br/>bounds, input, renderer,<br/>clock, sleep, diagnostics"]
+    Core["VectorWarCore<br/>session, callbacks,<br/>rollback state, simulation"]
+    GGPO["GGPO SDK<br/>ggponet.h"]
+
+    WinHost -->|"implements"| Contract
+    SdlHost -->|"implements"| Contract
+    Contract --> Core --> GGPO
+```
+
 The Linux frontend draws ships, bullets, player colors, and health, and maps
 the same arrow, `D`, `S`, function-key, and Escape controls. Connection status
 is exposed in the window title. Its `--frontend-smoke` mode creates and tears
