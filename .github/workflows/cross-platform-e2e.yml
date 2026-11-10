@@ -1,0 +1,197 @@
+name: Native cross-platform E2E
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  deployments: write
+
+jobs:
+  build-linux:
+    name: Build native Linux peer
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == github.repository_owner)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the Release x64 static peer
+        run: |
+          cmake -S . -B build/e2e -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
+          cmake --build build/e2e --target ggpo_linux_peer_smoke --parallel 2
+          install -D -m 0755 build/e2e/bin/x64/Release/ggpo_linux_peer_smoke \
+            build/evidence/peer/ggpo_peer_smoke
+          sha256sum build/evidence/peer/ggpo_peer_smoke \
+            > build/evidence/peer/sha256.txt
+          cmake --version > build/evidence/peer/toolchain.txt
+          c++ --version >> build/evidence/peer/toolchain.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e2e-peer-linux
+          path: build/evidence/peer
+          if-no-files-found: error
+
+  build-windows:
+    name: Build native Windows peer
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == github.repository_owner)
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the Release x64 static peer
+        shell: pwsh
+        run: |
+          cmake -S . -B build/e2e -A x64 -DBUILD_SHARED_LIBS=OFF
+          cmake --build build/e2e --config Release --target ggpo_windows_peer_smoke --parallel 2
+          New-Item -ItemType Directory -Force build/evidence/peer | Out-Null
+          Copy-Item build/e2e/bin/x64/Release/ggpo_windows_peer_smoke.exe `
+            build/evidence/peer/ggpo_peer_smoke.exe
+          (Get-FileHash build/evidence/peer/ggpo_peer_smoke.exe -Algorithm SHA256).Hash.ToLower() `
+            | Set-Content build/evidence/peer/sha256.txt
+          cmake --version | Set-Content build/evidence/peer/toolchain.txt
+          Get-Content build/e2e/CMakeCache.txt `
+            | Select-String '^(CMAKE_(C|CXX)_COMPILER|CMAKE_GENERATOR|CMAKE_VS_PLATFORM_NAME):' `
+            | Add-Content build/evidence/peer/toolchain.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e2e-peer-windows
+          path: build/evidence/peer
+          if-no-files-found: error
+
+  execute:
+    name: ${{ matrix.scenario }} / role ${{ matrix.role }}
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == github.repository_owner)
+    needs: [build-linux, build-windows]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {scenario: linux-linux, role: 1, platform: linux, os: ubuntu-24.04, player1: linux, player2: linux, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {scenario: linux-linux, role: 2, platform: linux, os: ubuntu-24.04, player1: linux, player2: linux, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {scenario: windows-windows, role: 1, platform: windows, os: windows-2022, player1: windows, player2: windows, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke.exe}
+          - {scenario: windows-windows, role: 2, platform: windows, os: windows-2022, player1: windows, player2: windows, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke.exe}
+          - {scenario: linux-windows, role: 1, platform: linux, os: ubuntu-24.04, player1: linux, player2: windows, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {scenario: linux-windows, role: 2, platform: windows, os: windows-2022, player1: linux, player2: windows, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke}
+          - {scenario: windows-linux, role: 1, platform: windows, os: windows-2022, player1: windows, player2: linux, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke.exe}
+          - {scenario: windows-linux, role: 2, platform: linux, os: ubuntu-24.04, player1: windows, player2: linux, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke.exe}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: e2e-peer-${{ matrix.platform }}
+          path: peer
+      - name: Make the Linux peer executable
+        if: runner.os == 'Linux'
+        run: chmod 0755 peer/ggpo_peer_smoke
+      - name: Join the ephemeral E2E tailnet
+        uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ggpo-ci
+      - name: Record the Tailscale IPv4 address
+        id: address
+        shell: bash
+        run: echo "ipv4=$(tailscale ip -4 | head -n 1)" >> "$GITHUB_OUTPUT"
+      - name: Allow the bounded E2E ports on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-NetFirewallRule -DisplayName "GGPO E2E $env:GITHUB_RUN_ID ${{ matrix.scenario }}" `
+            -Direction Inbound -Action Allow -Protocol TCP -LocalPort 24871
+          New-NetFirewallRule -DisplayName "GGPO E2E UDP $env:GITHUB_RUN_ID ${{ matrix.scenario }}" `
+            -Direction Inbound -Action Allow -Protocol UDP -LocalPort 24872-24873
+      - name: Serve player 1
+        if: matrix.role == 1
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GGPO_E2E_SESSION_SECRET: ${{ secrets.GGPO_E2E_SESSION_SECRET }}
+        run: |
+          python tests/e2e/host_agent.py \
+            --workspace "$GITHUB_WORKSPACE" \
+            --address "${{ steps.address.outputs.ipv4 }}" \
+            --session-id "${{ matrix.scenario }}" --timeout 420
+      - name: Coordinate player 2 and validate the session
+        if: matrix.role == 2
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GGPO_E2E_SESSION_SECRET: ${{ secrets.GGPO_E2E_SESSION_SECRET }}
+        run: |
+          python tests/e2e/execute_pair.py \
+            --workspace "$GITHUB_WORKSPACE" \
+            --executable "${{ matrix.executable }}" \
+            --player1-executable "${{ matrix.player1_executable }}" \
+            --local-address "${{ steps.address.outputs.ipv4 }}" \
+            --session-id "${{ matrix.scenario }}" \
+            --scenario "${{ matrix.scenario }}" \
+            --player1-platform "${{ matrix.player1 }}" \
+            --player2-platform "${{ matrix.player2 }}" \
+            --out "evidence/report.json"
+      - name: Remove Windows firewall rules
+        if: always() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Remove-NetFirewallRule -DisplayName "GGPO E2E $env:GITHUB_RUN_ID ${{ matrix.scenario }}" `
+            -ErrorAction SilentlyContinue
+          Remove-NetFirewallRule -DisplayName "GGPO E2E UDP $env:GITHUB_RUN_ID ${{ matrix.scenario }}" `
+            -ErrorAction SilentlyContinue
+      - name: Upload role evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ matrix.scenario }}-role${{ matrix.role }}
+          path: evidence
+          if-no-files-found: warn
+
+  final-report:
+    name: Complete native E2E matrix
+    if: >-
+      always() &&
+      (github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == github.repository_owner))
+    needs: [build-linux, build-windows, execute]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: e2e-*-role2
+          path: evidence
+      - name: Reject failed jobs or incomplete scenarios
+        env:
+          BUILD_LINUX: ${{ needs.build-linux.result }}
+          BUILD_WINDOWS: ${{ needs.build-windows.result }}
+          EXECUTE: ${{ needs.execute.result }}
+        run: |
+          test "$BUILD_LINUX" = success
+          test "$BUILD_WINDOWS" = success
+          test "$EXECUTE" = success
+          python3 tests/e2e/validate_manifest.py evidence --out manifest.json
+      - name: Upload the complete manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-complete-manifest
+          path: manifest.json
+          if-no-files-found: warn
