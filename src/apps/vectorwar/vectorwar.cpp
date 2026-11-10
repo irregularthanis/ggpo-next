@@ -160,7 +160,11 @@ bool GGPO_CALL
 vw_log_game_state(char *filename, unsigned char *buffer, int)
 {
    FILE* fp = NULL;
+#if defined(_MSC_VER)
+   fopen_s(&fp, filename, "w");
+#else
    fp = fopen(filename, "w");
+#endif
    if (fp) {
       GameState *gamestate = (GameState *)buffer;
       fprintf(fp, "GameState object.\n");
