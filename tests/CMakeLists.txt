@@ -305,6 +305,8 @@ if(WIN32)
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/ggpo_perfmon.cpp
     )
     ggpo_configure_test(ggpo_vectorwar_win32_host_contract)
+    target_compile_definitions(ggpo_vectorwar_win32_host_contract PRIVATE
+        _UNICODE UNICODE)
     target_include_directories(ggpo_vectorwar_win32_host_contract PRIVATE
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar
     )
