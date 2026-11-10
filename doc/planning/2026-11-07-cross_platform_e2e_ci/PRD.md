@@ -1,8 +1,10 @@
 # PRD — Native cross-platform end-to-end CI
 
-Status: Draft
+Status: Clean native matrix qualified; impairment testing remains follow-up work
 
 Source: inspected `3ae20afbda22f245d15ac28d67f9bd9d732100ab`; supplied Option B handoff identified `8a0b40fcbd0145837cbef7e40206eaad7c6397ff`
+
+Qualified implementation: `9cc921b57b994d7fc5f77eda7c63a5340af709fc`
 
 Scope: native Windows x64 and Linux x86-64 GGPO interoperability on GitHub-hosted runners; excluded: public API/ABI changes, production protocol changes, Vector War, performance benchmarking, permanent infrastructure, and self-hosted runners
 
@@ -43,3 +45,10 @@ This suite measures correctness, not latency or throughput. Direct WireGuard and
 - The official Tailscale Action is pinned to commit `064b10558093f38325e838ddea35486bdc6b1d5c` (v4.4.0). Its documented OAuth nodes are ephemeral and removed after logout.
 - A run-scoped GitHub Deployment record bootstraps the Linux coordinator address. HMAC-authenticated control messages use a separate repository secret; deployment payloads never carry reusable credentials.
 - Clean-network interoperability is the merge gate for this work. Seeded latency/loss and proven rollback execution form the nightly follow-up tier.
+
+## Qualification result
+
+Three consecutive trusted workflow runs completed LL, WW, LW, and WL at 180
+frames. Every scenario matched canonical checksum `2109130363`, recorded one
+running event, closed cleanly, and reported no unexpected disconnect. The
+[progress ledger](PROGRESS.md#evidence-ledger) links the retained run evidence.

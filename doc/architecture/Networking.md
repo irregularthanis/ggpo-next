@@ -60,6 +60,10 @@ bootstrap uses a transient, run-scoped
 [`DeploymentRendezvous`](../../tests/e2e/rendezvous.py); production peers still
 exchange session traffic directly through `Udp`.
 
+Tailscale is CI transport for that qualification suite, not a GGPO runtime
+dependency or a production relay/NAT-traversal feature. Applications remain
+responsible for providing reachable peer endpoints.
+
 ## Peer state machine
 
 ```mermaid

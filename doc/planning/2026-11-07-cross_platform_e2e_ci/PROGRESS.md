@@ -1,6 +1,6 @@
 # PROGRESS — Native cross-platform end-to-end CI
 
-Status: In progress
+Status: Clean native matrix qualified; M5 deferred to follow-up work
 
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
@@ -38,14 +38,14 @@ Parallel with M1/M2; owns `.github/workflows/cross-platform-e2e.yml`; integrates
 - [x] M3-T02: Join pinned ephemeral Tailscale nodes with least-privileged trusted-only triggers and grants.
 - [x] M3-T03: Run concurrent agents and unconditional artifact/Deployment/process cleanup; final report cannot mask failed jobs.
 
-All required secrets are configured and two consecutive owner-only native runs
-passed. M4 qualification is at 2/3 consecutive clean runs.
+All required secrets are configured and three consecutive owner-only native
+runs passed.
 
 ### M4: Qualify the clean native matrix (depends: M1, M2, M3)
 
 - [x] M4-T01: Pass LL, WW, LW, and WL with exactly 180 frames, canonical/oracle state, expected events, and clean closure.
-- [ ] M4-T02: Pass three consecutive trusted runs with complete manifests, hashes, logs, summaries, and no orphan resources.
-- [ ] M4-T03: Update testing/networking/portability docs and record workflow evidence before making the check required.
+- [x] M4-T02: Pass three consecutive trusted runs with complete manifests, hashes, logs, summaries, and no orphan resources.
+- [x] M4-T03: Update testing/networking/portability docs and record workflow evidence before making the check required.
 
 ### M5: Add deterministic impairment (depends: M4)
 
@@ -70,4 +70,5 @@ passed. M4 qualification is at 2/3 consecutive clean runs.
 | M3-T02 | [Eight native role jobs](https://github.com/irregularthanis/ggpo-next/actions/runs/42723244592) | Pinned Tailscale action; `tag:ggpo-ci`; TCP 24871 and UDP 24872–24873 | Four ephemeral scenario pairs | PASS |
 | M3-T03 | [Complete manifest artifact](https://github.com/irregularthanis/ggpo-next/actions/runs/42723244592/artifacts/13721662369) | Final fail-closed report plus unconditional action/process/Deployment cleanup | 11 evidence artifacts; four Deployment records | PASS; all Deployments inactive |
 | M4-T01 | [Complete manifest artifact](https://github.com/irregularthanis/ggpo-next/actions/runs/42723244592/artifacts/13721662369) | Validate all role reports against the independent oracle | LL, WW, LW, WL; 180 frames each | PASS; checksum `2109130363`, clean closure, no disconnects |
-| M4-T02 (2/3) | [Native E2E run `42723789745`](https://github.com/irregularthanis/ggpo-next/actions/runs/42723789745), [manifest](https://github.com/irregularthanis/ggpo-next/actions/runs/42723789745/artifacts/13721219229) | Repeat the complete clean matrix and verify cleanup | Second consecutive LL/WW/LW/WL run; four Deployments | PASS; manifest complete and all Deployments inactive |
+| M4-T02 | [Run 1](https://github.com/irregularthanis/ggpo-next/actions/runs/42723244592), [run 2](https://github.com/irregularthanis/ggpo-next/actions/runs/42723789745), [run 3](https://github.com/irregularthanis/ggpo-next/actions/runs/42724239616) | Repeat the complete clean matrix and verify manifests and cleanup | Three consecutive LL/WW/LW/WL runs | PASS, 3/3; complete manifests and retired Deployments |
+| M4-T03 | [Cross-platform qualification](../../architecture/CrossPlatformTesting.md), [Testing](../../architecture/Testing.md), [Networking](../../architecture/Networking.md), [Portability](../../architecture/Portability.md) | Documentation and source-reference audit | Implemented clean matrix and explicit limits | PASS |

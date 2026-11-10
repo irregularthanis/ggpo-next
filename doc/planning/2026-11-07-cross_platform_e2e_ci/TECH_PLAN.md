@@ -1,8 +1,10 @@
 # TECH_PLAN — Native cross-platform end-to-end CI
 
-Status: Implementation in progress
+Status: Clean native matrix qualified; M5 is a follow-up
 
-Implementation baseline: `2a5cbe7` (current `master` plus owner-approval policy)
+Planning baseline: `2a5cbe7` (then-current `master` plus owner-approval policy)
+
+Qualified implementation: `9cc921b57b994d7fc5f77eda7c63a5340af709fc`
 
 [Product brief](PRD.md) · [Tracker](PROGRESS.md)
 
@@ -111,9 +113,28 @@ The final job runs with `if: always()`, downloads both evidence artifacts, and f
 
 Critical path: M0 → M1/M2/M3 → M4 → M5. M1 owns smoke/result files, M2 owns `tests/e2e`, and M3 owns the workflow; changes to shared schema imports integrate at M4.
 
+M0–M4 are complete. M5 does not block the clean interoperability gate and
+should be implemented as a separate nightly qualification change.
+
+## Qualification evidence
+
+| Run | Source | Result |
+| --- | --- | --- |
+| [1](https://github.com/irregularthanis/ggpo-next/actions/runs/42723244592) | `dbb6eec0d003e5706a8e29cfab374c0f3aa62285` | LL/WW/LW/WL passed; 180 frames; canonical checksum `2109130363` |
+| [2](https://github.com/irregularthanis/ggpo-next/actions/runs/42723789745) | `33216f380bcb2d63db7efa88f19ef5aa57b87cde` | Complete four-scenario manifest passed; transient Deployments retired |
+| [3](https://github.com/irregularthanis/ggpo-next/actions/runs/42724239616) | `9cc921b57b994d7fc5f77eda7c63a5340af709fc` | Complete four-scenario manifest passed; clean lifecycle and canonical oracle matched |
+
+Run 3's manifest contains exactly the four ordered scenarios. All eight peers
+reported frame 180, checksum `2109130363`, one running event, zero unexpected
+disconnects, clean session closure, and exit status zero. Save/load/replay
+counts varied by scheduling and remain diagnostic rather than acceptance
+thresholds.
+
 ## Decisions / gaps
 
-- GitHub Deployments are the proposed bootstrap record because they can be run-scoped, transient, queried while both jobs remain alive, and cleaned explicitly. A proof in M2 must confirm payload visibility/rate limits before workflow integration.
+- GitHub Deployments are the implemented bootstrap record. M2 confirmed that
+  an exact run-scoped payload remains queryable while both jobs run and that
+  the record can be retired explicitly during cleanup.
 - The public GGPO API, ABI, packed UDP messages, and production sources do not change.
 - Initial workflow execution is trusted-only. Enabling same-repository PRs requires a separate approval policy; fork PRs remain unprivileged.
 - Current GGPO code has no public confirmed-frame query. Win32 CI proved that a boolean ready/finalize barrier can expose predicted state. The fixture therefore keeps publishing state while pumping GGPO and finalizes only when both peers match the independent oracle.

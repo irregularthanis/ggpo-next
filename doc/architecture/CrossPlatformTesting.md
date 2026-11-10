@@ -14,6 +14,7 @@
 - [Failure contracts](#failure-contracts)
 - [Evidence and interpretation](#evidence-and-interpretation)
 - [Running the workflow](#running-the-workflow)
+- [Adding another platform](#adding-another-platform)
 - [Limits](#limits)
 - [References](#references)
 
@@ -254,8 +255,8 @@ save/load/replay counts are diagnostic because host scheduling changes them;
 the gates are deterministic state, identity, required events, clean lifecycle,
 and complete scenario coverage.
 
-The first qualified run is recorded in the
-[cross-platform progress ledger](../planning/2026-11-07-cross_platform_e2e_ci/PROGRESS.md).
+The three-run qualification is recorded in the
+[cross-platform progress ledger](../planning/2026-11-07-cross_platform_e2e_ci/PROGRESS.md#evidence-ledger).
 
 ## Running the workflow
 
@@ -280,18 +281,35 @@ For ordinary local validation, use CTest instead; the cross-host workflow
 depends on GitHub Deployments, native hosted runners, and ephemeral Tailscale
 nodes. See [Build and CI integration](Testing.md#build-and-ci-integration).
 
+## Adding another platform
+
+A new platform first needs its native adapter, local conformance tests,
+two-process loopback, and package/consumer checks described in
+[Portability](Portability.md#follow-up-platform-contract). Only then should it
+enter this ordered interoperability matrix.
+
+macOS can use a native GitHub-hosted runner and the same ephemeral Tailscale
+control plane. Android and iOS require separate proof that the tested emulator,
+simulator, or physical device itself reaches the tailnet; joining only its host
+does not establish direct mobile-peer connectivity. A host proxy is a distinct
+test topology and must be reported as such.
+
+The complete ordered matrix grows as the square of the platform count. Keep a
+small required per-change matrix and move the complete matrix to scheduled
+qualification when its cost becomes excessive.
+
 ## Limits
 
 - The matrix covers native Ubuntu and Windows hosted runners, not SteamOS,
-  macOS, consoles, or mobile platforms.
+  macOS, consoles, emulators, simulators, or physical mobile devices.
 - It uses two players and does not cover spectators or disconnect/resume.
 - Clean qualification injects no latency or packet loss.
 - It does not test NAT traversal, relay selection, matchmaking, encryption, or
   public-Internet reachability.
 - It is a correctness suite, not a throughput or latency benchmark.
 
-Seeded impairment is tracked as the next tier after three consecutive clean
-matrix runs.
+Seeded impairment is the next independent nightly tier; it is not part of the
+completed clean interoperability gate.
 
 ## References
 
