@@ -51,6 +51,33 @@ class ResultSchemaTests(unittest.TestCase):
     def test_valid_schema2_pair_passes(self):
         self.assertEqual(self.validate()["result"], "pass")
 
+    def test_vectorwar_pair_uses_its_application_oracle(self):
+        checksum = expected_state(180, "vectorwar")["canonical_checksum"]
+        for peer in (self.peer_a, self.peer_b):
+            peer["canonical_checksum"] = checksum
+            peer["native_checksum"] = checksum
+        report = validate_pair(
+            self.peer_a, self.peer_b, 180,
+            scenario="linux-windows", run_id="run-42",
+            session_id="session-7", platforms=("linux", "windows"),
+            fixture="vectorwar",
+        )
+        self.assertEqual(report["fixture"], "vectorwar")
+        self.assertEqual(checksum, 0xB3381958)
+
+    def test_vectorwar_rejects_generic_peer_checksum(self):
+        with self.assertRaisesRegex(ValueError, "canonical checksum mismatch"):
+            validate_pair(
+                self.peer_a, self.peer_b, 180,
+                scenario="linux-windows", run_id="run-42",
+                session_id="session-7", platforms=("linux", "windows"),
+                fixture="vectorwar",
+            )
+
+    def test_vectorwar_oracle_rejects_unqualified_frame_count(self):
+        with self.assertRaisesRegex(ValueError, "frozen at 180 frames"):
+            expected_state(90, "vectorwar")
+
     def test_legacy_schema_remains_accepted(self):
         peers = [
             {"player": 1, "frame": 180, "checksum": 7, "running_events": 1},

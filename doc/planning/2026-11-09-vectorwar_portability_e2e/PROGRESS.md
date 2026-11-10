@@ -1,6 +1,6 @@
 # PROGRESS — Portable Vector War and application E2E
 
-Status: M0 complete; M1 verification and M3 implementation in progress
+Status: M0 and M3 implementation complete; M1/M4 await Windows CI evidence
 
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
@@ -40,13 +40,13 @@ Parallel with M3; owns SDL/frontend files and dependency provisioning.
 Parallel with M2; owns headless host, scripted inputs, result schema, and local tests.
 
 - [x] M3-T01: Implement the headless host using the same session/frame/callback path.
-- [ ] M3-T02: Validate canonical results against golden checkpoints and reject
+- [x] M3-T02: Validate canonical results against golden checkpoints and reject
   identity, timeout, divergence, missing rollback, and dirty shutdown.
 - [ ] M3-T03: Pass two-process application loopback on Windows and Linux.
 
 ### M4: Qualify native application interoperability (depends: M2, M3, merged PR #5)
 
-- [ ] M4-T01: Add the Vector War fixture to the authenticated native E2E matrix.
+- [x] M4-T01: Add the Vector War fixture to the authenticated native E2E matrix.
 - [ ] M4-T02: Pass LL, WW, LW, and WL from one source SHA with complete evidence.
 - [ ] M4-T03: Update build, Vector War, testing, and portability documentation and
   record exact workflow artifacts.
@@ -62,3 +62,5 @@ Parallel with M2; owns headless host, scripted inputs, result schema, and local 
 | M3-T01 | `VectorWarHeadless`, [`run_headless_loopback.py`](../../../tests/vectorwar/run_headless_loopback.py) | Three independent two-process runs, 180 frames each | Linux GCC Release, static GGPO, native UDP loopback | PASS; checksum `b3381958` in every peer/run; forced rollback observed |
 | M3-T02 (partial) | [`headless_negative.py`](../../../tests/vectorwar/headless_negative.py) | Inject startup, timeout, mismatch, no-rollback, and shutdown faults | Linux native loopback | PASS; all five failure families rejected; cross-host identity schema remains for M4 |
 | M1-T03 (two-layer coverage) | [`gameplay_determinism_test.cpp`](../../../tests/vectorwar/gameplay_determinism_test.cpp), [`native_host_contract_test.cpp`](../../../tests/vectorwar/native_host_contract_test.cpp), [`win32_host_contract_test.cpp`](../../../tests/vectorwar/win32_host_contract_test.cpp) | Shared gameplay assertions plus selected native-host contracts | Linux locally; Windows/Linux CI | Linux PASS; Windows verification pending CI |
+| M3-T02 | [`result_schema.py`](../../../tests/e2e/result_schema.py), [`test_result_schema.py`](../../../tests/e2e/test_result_schema.py) | Validate the frozen Vector War oracle plus identity/lifecycle negative cases | Python 3; schema-2 synthetic reports | PASS; wrong fixture checksum and unsupported frame count rejected |
+| M4-T01 | [Native E2E workflow](../../../.github/workflows/cross-platform-e2e.yml), [`validate_manifest.py`](../../../tests/e2e/validate_manifest.py) | Add Vector War to the existing authenticated LL/WW/LW/WL matrix | Same source artifacts and control plane as generic peer smoke | Implemented; 8 fixture/scenario reports required; hosted CI evidence pending |

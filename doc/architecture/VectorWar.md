@@ -355,6 +355,12 @@ The local fixture launches two processes for 180 frames, forces a bounded input
 delay to exercise rollback, and requires canonical checksum `b3381958` on both
 peers. See the [testing contract](Testing.md#vector-war-application-loopback).
 
+The [native cross-host workflow](../../.github/workflows/cross-platform-e2e.yml)
+runs the same executable for Linux↔Linux, Windows↔Windows, Linux↔Windows, and
+Windows↔Linux. It adds run/scenario/platform identity and a completion barrier:
+both peers continue pumping GGPO until their corrected frame-180 checksums match
+the frozen Vector War oracle, then the coordinator permits clean shutdown.
+
 ## End-to-end two-player example
 
 [`start_vectorwar_2p.cmd`](../../bin/start_vectorwar_2p.cmd) creates:
@@ -389,8 +395,9 @@ For frame 120:
 
 - The interactive host, renderer, input devices, and launch scripts remain
   Windows-specific; the application core and headless host are portable.
-- The simulation uses raw `double`, native structure layout, and a window-derived
-  arena; cross-platform determinism has not been established.
+- The simulation retains native `double` internally, but canonical state uses
+  explicit field encoding and the qualified 180-frame trace has a fixed oracle.
+  Other traces still require their own cross-platform qualification.
 - Raw `memcpy` serialization is not versioned and is unsuitable for pointers or
   dynamic containers.
 - The sample uses a full peer mesh rather than an authoritative server.

@@ -9,7 +9,7 @@ from run_matrix import generate_matrix, validate_matrix
 
 
 def build_manifest(root):
-    """Validate one passing report per scenario and return the manifest."""
+    """Validate one passing report per fixture/scenario and return the manifest."""
     root = Path(root)
     reports = []
     for path in root.rglob("report.json"):
@@ -17,15 +17,20 @@ def build_manifest(root):
         if report.get("result") != "pass":
             raise ValueError(f"non-passing report: {path}")
         reports.append(report)
-    scenarios = [report.get("scenario") for report in reports]
-    expected = [item["scenario"] for item in validate_matrix(generate_matrix())]
-    if len(scenarios) != len(set(scenarios)):
-        raise ValueError(f"duplicate scenario reports: {scenarios}")
-    if set(scenarios) != set(expected):
+    base = [item["scenario"] for item in validate_matrix(generate_matrix())]
+    expected = ({("smoke", scenario) for scenario in base} |
+                {("vectorwar", f"vectorwar-{scenario}") for scenario in base})
+    identities = [
+        (report.get("fixture"), report.get("scenario")) for report in reports
+    ]
+    if len(identities) != len(set(identities)):
+        raise ValueError(f"duplicate fixture/scenario reports: {identities}")
+    if set(identities) != expected:
         raise ValueError(
-            f"incomplete scenario reports: expected={expected}, actual={scenarios}"
+            f"incomplete fixture/scenario reports: "
+            f"expected={sorted(expected)}, actual={identities}"
         )
-    return {"schema": 1, "scenarios": sorted(scenarios),
+    return {"schema": 1, "scenarios": sorted(identities),
             "reports": reports, "result": "pass"}
 
 

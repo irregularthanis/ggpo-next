@@ -40,8 +40,14 @@ def input_for_player(player, frame):
     return ((frame + 1) * (player * 17 + 3)) ^ (frame << player)
 
 
-def expected_state(frames):
+def expected_state(frames, fixture="smoke"):
     """Independently advance the public smoke-state transition for N frames."""
+    if fixture == "vectorwar":
+        if frames != 180:
+            raise ValueError("Vector War E2E oracle is frozen at 180 frames")
+        return {"frame": frames, "canonical_checksum": 0xB3381958}
+    if fixture != "smoke":
+        raise ValueError(f"unsupported fixture: {fixture}")
     accumulator = 0
     for frame in range(frames):
         accumulator = (
@@ -79,7 +85,7 @@ def _require_schema2(result, label):
 
 
 def validate_pair(peer_a, peer_b, frames, scenario=None, run_id=None,
-                  session_id=None, platforms=None):
+                  session_id=None, platforms=None, fixture="smoke"):
     """Validate identity, lifecycle, platform roles, and deterministic state."""
     peers = [peer_a, peer_b]
     if all("schema" not in peer for peer in peers):
@@ -109,7 +115,7 @@ def validate_pair(peer_a, peer_b, frames, scenario=None, run_id=None,
     if any(peer["frames"] != frames for peer in peers):
         raise ValueError(f"incomplete frames: {peers}")
 
-    oracle = expected_state(frames)["canonical_checksum"]
+    oracle = expected_state(frames, fixture)["canonical_checksum"]
     checksums = [peer["canonical_checksum"] for peer in peers]
     if checksums != [oracle, oracle]:
         raise ValueError(
@@ -127,6 +133,7 @@ def validate_pair(peer_a, peer_b, frames, scenario=None, run_id=None,
 
     return {
         "schema": SCHEMA_VERSION,
+        "fixture": fixture,
         "scenario": peer_a["scenario"],
         "run_id": peer_a["run_id"],
         "session_id": peer_a["session_id"],

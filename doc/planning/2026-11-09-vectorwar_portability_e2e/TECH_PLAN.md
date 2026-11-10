@@ -96,7 +96,7 @@ build with `GGPO_BUILD_VECTORWAR=OFF` remains SDL-free.
 | Portable application | Unit/contract tests for parser, bounds, input, save/load, frame and event state | Same cases on Windows and Linux | Platform-only implementation blocks |
 | Frontend smoke | SDL dummy/software driver; create, render one frame, process input event, close | Clean lifecycle on Windows x64/x86 and Linux GCC/Clang | Missing SDL or display fallback fails relevant lane |
 | Local integration | Two headless app processes, 180 frames, scripted inputs | Golden state, nonzero rollback, clean close | Matching peers without oracle is failure |
-| Native application E2E | LL, WW, LW, WL through PR #5 orchestration | Exact four-scenario manifest and native artifact hashes | Missing platform/role is incomplete |
+| Native application E2E | Generic peer and Vector War fixtures each run LL, WW, LW, WL through PR #5 orchestration | Exact eight-report manifest and native artifact hashes | Missing fixture/platform/role is incomplete |
 | Regression | Existing SDK compatibility, API, ABI, protocol, package, sanitizer tests | No changed public contract | Any regression blocks |
 
 ## Implementation order

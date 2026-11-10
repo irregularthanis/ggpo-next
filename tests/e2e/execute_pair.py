@@ -33,6 +33,8 @@ def main():
     parser.add_argument("--player1-platform", required=True)
     parser.add_argument("--player2-platform", required=True)
     parser.add_argument("--frames", type=int, default=180)
+    parser.add_argument("--fixture", choices=("smoke", "vectorwar"),
+                        default="smoke")
     parser.add_argument("--player1-port", type=int, default=24872)
     parser.add_argument("--player2-port", type=int, default=24873)
     parser.add_argument("--out", type=Path, required=True)
@@ -58,7 +60,7 @@ def main():
     run_id = f"{os.environ['GITHUB_RUN_ID']}-{os.environ['GITHUB_RUN_ATTEMPT']}"
     common = {"scenario": args.scenario, "run_id": run_id,
               "session_id": args.session_id, "frames": args.frames}
-    expected_checksum = expected_state(args.frames)["canonical_checksum"]
+    expected_checksum = expected_state(args.frames, args.fixture)["canonical_checksum"]
     remote_prepared = False
     shutdown_sent = False
     try:
@@ -111,6 +113,7 @@ def main():
                     player1, player2, args.frames, scenario=args.scenario,
                     run_id=run_id, session_id=args.session_id,
                     platforms=(args.player1_platform, args.player2_platform),
+                    fixture=args.fixture,
                 )
                 args.out.parent.mkdir(parents=True, exist_ok=True)
                 args.out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n",

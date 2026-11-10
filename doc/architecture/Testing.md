@@ -286,12 +286,16 @@ shutdown failure with the matching diagnostic. The fault variable is removed
 from ordinary peer environments, so these cases cannot weaken positive smoke
 tests.
 
-### Native cross-host smoke
+### Native cross-host E2E
 
 [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml)
 automates native Linux↔Linux, Windows↔Windows, Linux↔Windows, and
-Windows↔Linux role assignments on GitHub-hosted runners. Both peers use the
-same source SHA and advance 180 deterministic frames.
+Windows↔Linux role assignments on GitHub-hosted runners. Every assignment runs
+two fixtures from the same source SHA for 180 deterministic frames:
+
+- `ggpo_peer_smoke` isolates the public GGPO session and transport contract.
+- `VectorWarHeadless` adds the real sample's callbacks, state, frame loop,
+  scripted input, rollback, and shutdown path.
 
 ```mermaid
 flowchart LR
@@ -322,6 +326,10 @@ reaching frame 180 can still leave predicted inputs awaiting correction.
 compatibility and validates schema 2. The latter requires matching run/session
 identity, expected platform roles, independent oracle checksum, one running
 event, no unexpected disconnect, clean session close, and zero exit status.
+The generic fixture uses its independently advanced integer-state oracle;
+Vector War uses the frozen 180-frame application checksum `b3381958`.
+[`validate_manifest.py`](../../tests/e2e/validate_manifest.py) rejects a run
+unless all eight fixture/scenario combinations produce passing role-2 reports.
 [`compare_peer_results.py`](../../tests/smoke/compare_peer_results.py) exposes
 that validator for standalone result files. Wine is not native Windows
 interoperability evidence.

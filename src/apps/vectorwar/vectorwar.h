@@ -27,6 +27,7 @@ int VectorWar_SaveCount();
 int VectorWar_LoadCount();
 int VectorWar_ReplayFrameCount();
 int VectorWar_RunningEventCount();
+int VectorWar_UnexpectedDisconnectCount();
 
 #define ARRAY_SIZE(n)      (sizeof(n) / sizeof(n[0]))
 #define FRAME_DELAY        2

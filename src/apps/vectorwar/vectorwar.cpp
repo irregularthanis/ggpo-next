@@ -19,6 +19,7 @@ static int save_count = 0;
 static int load_count = 0;
 static int replay_frame_count = 0;
 static int running_event_count = 0;
+static int unexpected_disconnect_count = 0;
 
 /* 
  * Simple checksum function stolen from wikipedia:
@@ -97,6 +98,7 @@ vw_on_event_callback(GGPOEvent *info)
       ngs.SetConnectState(info->u.connection_resumed.player, Running);
       break;
    case GGPO_EVENTCODE_DISCONNECTED_FROM_PEER:
+      unexpected_disconnect_count++;
       ngs.SetConnectState(info->u.disconnected.player, Disconnected);
       break;
    case GGPO_EVENTCODE_TIMESYNC:
@@ -227,6 +229,7 @@ VectorWar_Init(VectorWarHost *application_host, unsigned short localport,
    GGPOErrorCode result;
    host = application_host;
    save_count = load_count = replay_frame_count = running_event_count = 0;
+   unexpected_disconnect_count = 0;
    renderer = host->CreateRenderer();
 
    // Initialize the game state
@@ -469,3 +472,4 @@ int VectorWar_SaveCount() { return save_count; }
 int VectorWar_LoadCount() { return load_count; }
 int VectorWar_ReplayFrameCount() { return replay_frame_count; }
 int VectorWar_RunningEventCount() { return running_event_count; }
+int VectorWar_UnexpectedDisconnectCount() { return unexpected_disconnect_count; }
