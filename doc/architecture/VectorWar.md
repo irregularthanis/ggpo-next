@@ -361,6 +361,25 @@ Windows↔Linux. It adds run/scenario/platform identity and a completion barrier
 both peers continue pumping GGPO until their corrected frame-180 checksums match
 the frozen Vector War oracle, then the coordinator permits clean shutdown.
 
+## Interactive platform frontends
+
+Windows retains the native Win32/GDI frontend in [`main.cpp`](../../src/apps/vectorwar/main.cpp)
+and [`win32_host.cpp`](../../src/apps/vectorwar/win32_host.cpp). Linux uses the
+SDL2 event loop and renderer in [`sdl_main.cpp`](../../src/apps/vectorwar/sdl_main.cpp),
+[`sdl_host.cpp`](../../src/apps/vectorwar/sdl_host.cpp), and
+[`sdl_renderer.cpp`](../../src/apps/vectorwar/sdl_renderer.cpp). Both select the
+same `VectorWarCore`, GGPO callbacks, rollback state, controls, and topology.
+
+The Linux frontend draws ships, bullets, player colors, and health, and maps
+the same arrow, `D`, `S`, function-key, and Escape controls. Connection status
+is exposed in the window title. Its `--frontend-smoke` mode creates and tears
+down the real SDL window/renderer using SDL's dummy video driver, allowing CI
+to verify the GUI lifecycle without a desktop session.
+
+Release tags attach standalone GUI archives for Windows x64/x86 and Linux
+x86-64 alongside the SDK packages. The Linux executable requires the SDL2
+runtime supplied by the target distribution.
+
 ## End-to-end two-player example
 
 [`start_vectorwar_2p.cmd`](../../bin/start_vectorwar_2p.cmd) creates:
@@ -393,16 +412,15 @@ For frame 120:
 
 ## Sample limitations
 
-- The interactive host, renderer, input devices, and launch scripts remain
-  Windows-specific; the application core and headless host are portable.
+- Interactive hosts are qualified on Windows and Linux. Other desktop and
+  mobile frontends remain unsupported.
 - The simulation retains native `double` internally, but canonical state uses
   explicit field encoding and the qualified 180-frame trace has a fixed oracle.
   Other traces still require their own cross-platform qualification.
 - Raw `memcpy` serialization is not versioned and is unsuitable for pointers or
   dynamic containers.
 - The sample uses a full peer mesh rather than an authoritative server.
-- Vector War's window, renderer, and interactive input still require frontend
-  validation. Automated tests now cover its real application core and two
+- Automated tests cover the application core, native GUI lifecycle, and two
   native processes exchanging scripted inputs over loopback UDP.
 
 Continue with the general [Runtime](Runtime.md), [Synchronization](Synchronization.md),

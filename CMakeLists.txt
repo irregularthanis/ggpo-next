@@ -49,6 +49,10 @@ if(BUILD_TESTING AND GGPO_BUILD_SDK)
 				ggpo_linux_synctest_smoke
 				ggpo_linux_peer_smoke)
 		endif()
+		# The registered frontend lifecycle test must not race its executable link.
+		if(TARGET VectorWar)
+			list(APPEND GGPO_PLATFORM_TEST_TARGETS VectorWar)
+		endif()
 		get_property(GGPO_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 		if(GGPO_MULTI_CONFIG)
 			set(GGPO_CTEST_CONFIG_ARGS -C $<CONFIG>)

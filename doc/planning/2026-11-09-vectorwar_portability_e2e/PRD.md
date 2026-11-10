@@ -7,7 +7,7 @@ cross-host infrastructure is tracked by [PR #5](https://github.com/irregularthan
 
 Scope: interactive and headless Vector War on supported Windows and Linux
 targets; excluded: Apple/mobile adapters, GGPO API/ABI or wire changes,
-matchmaking, packaging Vector War as part of the SDK, and visual-performance
+matchmaking, packaging Vector War inside the SDK, and visual-performance
 benchmarking
 
 ## Motivation
@@ -26,7 +26,7 @@ application-level interoperability evidence.
 ## Outcomes
 
 - Build the interactive Vector War application on Windows and Linux from shared
-  application/session sources and one SDL2 frontend.
+  application/session sources and native platform frontends.
 - Preserve current gameplay, player and spectator modes, keyboard controls,
   connection/status presentation, checksums, and network diagnostics.
 - Add a display-independent host using the same game state, callbacks, session
@@ -36,6 +36,8 @@ application-level interoperability evidence.
 - Keep the public GGPO header, exports, ABI, and production UDP protocol
   unchanged. Missing SDL2 or unavailable native evidence must fail the relevant
   build/qualification rather than silently skip it.
+- Publish standalone GUI archives for every currently supported interactive
+  platform on release tags, separately from the SDK packages.
 
 ## Success and constraints
 
@@ -57,8 +59,7 @@ claims.
 - “All supported platforms” currently means Windows and Linux, as documented in
   [Build](../../architecture/Build.md#platform-status). Future supported targets
   must qualify the same host contracts before joining the application matrix.
-- SDL2 is selected because Ubuntu 24.04 packages it, Windows package managers
-  provide both x64 and x86 builds, and upstream
+- SDL2 is selected for Linux because Ubuntu 24.04 packages it, and upstream
   [PR #57](https://github.com/pond3r/ggpo/pull/57) demonstrates the approach.
   Reused code must retain its attribution; unrelated historical core changes are
   out of scope.

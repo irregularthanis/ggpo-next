@@ -65,6 +65,30 @@ The release page also provides `SHA256SUMS`. Compare the archive's
 place `C:/ggpo-sdk/bin/GGPO.dll` beside the application executable or otherwise
 make that directory available to the Windows loader.
 
+### Run the standalone Vector War sample
+
+Release pages also attach GUI sample archives independent of the SDK linkage:
+
+| Archive suffix | Contents |
+| --- | --- |
+| `vectorwar-windows-x64.zip` | 64-bit Win32/GDI Vector War executable |
+| `vectorwar-windows-x86.zip` | 32-bit Win32/GDI Vector War executable |
+| `vectorwar-linux-x86_64.tar.gz` | 64-bit SDL2 Vector War executable |
+
+On Linux, install the SDL2 runtime, extract the archive, and launch two local
+players in separate terminals:
+
+```bash
+sudo apt install libsdl2-2.0-0
+./vectorwar 7000 2 local 127.0.0.1:7001
+./vectorwar 7001 2 127.0.0.1:7000 local
+```
+
+Windows uses the same arguments with `VectorWar.exe`. Arrow keys steer, `D`
+fires, `S` bombs, function keys disconnect players, and Escape exits. The
+sample archives include the license and the detailed
+[Vector War architecture guide](architecture/VectorWar.md).
+
 #### Linux DEB and RPM
 
 Install the package matching the required linkage:

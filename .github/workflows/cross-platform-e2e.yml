@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: Install the Vector War GUI build dependency
+        run: sudo apt-get update && sudo apt-get install -y libsdl2-dev
       - name: Build the Release x64 static fixtures
         run: |
           cmake -S . -B build/e2e -G Ninja \

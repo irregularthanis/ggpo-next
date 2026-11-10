@@ -12,6 +12,7 @@ RUN apt-get update \
         cmake \
         cpio \
         git \
+		libsdl2-dev \
         ninja-build \
         python3 \
         rpm \

@@ -150,7 +150,9 @@ Pushing a final tag such as `v0.2.0`, or a prerelease tag such as
 The tag must match the version declared by the root [`project()`](../../CMakeLists.txt).
 
 The workflow builds Windows x64/x86 and Linux x86-64 SDKs with shared and
-static linkage. Windows publishes ZIP files. Linux publishes:
+static linkage. It also publishes standalone interactive Vector War archives
+for Windows x64/x86 and Linux x86-64. Windows publishes ZIP files; Linux
+publishes the GUI as a tarball and the SDK in these formats:
 
 | Format | Install shape | Validation |
 | --- | --- | --- |
@@ -169,7 +171,7 @@ the GitHub Release.
 | Platform | Current build status | Main blockers |
 | --- | --- | --- |
 | Windows | Supported SDK and Vector War build | Existing reference platform |
-| Linux | SDK supported through the Ubuntu 24.04 container | Vector War/frontend remains Windows-only |
+| Linux | SDK and SDL2 Vector War GUI supported through the Ubuntu 24.04 container | Additional distribution formats remain follow-up work |
 | macOS | Explicitly rejected until an Apple platform layer exists | Adapter, CI, lifecycle/frontend, and packaging remain |
 | Mobile and consoles | No build target | Platform services, lifecycle, socket policy, packaging, and validation absent |
 

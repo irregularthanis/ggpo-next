@@ -31,7 +31,7 @@ Source: `5184cbf2d0e094c063d704e139631a6db94323bc`
 | --- | --- | --- | --- | --- |
 | Modify | `gamestate.*`, `nongamestate.h` | Replace Win32 `RECT/HWND` inputs with explicit fixed-width arena/host data; add canonical state serialization | M0–M1 | [State ownership](../../architecture/VectorWar.md#6-state-ownership) |
 | Add | `vectorwar_app.*`, `vectorwar_host.h` | Own callbacks, session lifecycle, scripted/live input, clock, sleep, renderer, and result contract behind platform-neutral interfaces | M1 | [Normal frame](../../architecture/VectorWar.md#4-normal-frame) |
-| Add | `sdl_main.cpp`, `sdl_renderer.*`, `sdl_perfmon.*` | Implement one SDL2 frontend for Windows and Linux, including current controls and diagnostics | M2 | [Rendering](../../architecture/VectorWar.md#8-rendering-and-diagnostics) |
+| Add | `sdl_main.cpp`, `sdl_host.*`, `sdl_renderer.*` | Implement the Linux SDL2 frontend while retaining the existing Windows GUI | M2 | [Rendering](../../architecture/VectorWar.md#8-rendering-and-diagnostics) |
 | Add | `headless_main.cpp`, `tests/vectorwar/*` | Run deterministic application sessions without a display and emit strict JSON evidence | M3 | [Testing layers](../../architecture/Testing.md#test-layers) |
 | Modify | root/app CMake, Dockerfile, Linux/Windows CI | Discover SDL2, build both hosts, run tests by default, and retain SDK-only opt-out | M2–M4 | [Build graph](../../architecture/Build.md#build-graph) |
 | Modify after #5 | native E2E workflow and `tests/e2e` validators | Add a `vectorwar` fixture dimension using the existing authenticated control plane | M4 | [PR #5](https://github.com/irregularthanis/ggpo-next/pull/5) |
@@ -105,7 +105,7 @@ build with `GGPO_BUILD_VECTORWAR=OFF` remains SDL-free.
 | --- | --- | --- | --- |
 | M0 | PR #5 available for integration planning | — | Freeze current sample behavior, features, CLI, canonical trace, and internal host contracts |
 | M1 | M0 | — | Extract portable state/session/frame core while the existing Windows host still passes the baseline |
-| M2 | M1 | M3 | SDL2 interactive Windows/Linux frontend and build provisioning; owns app UI files |
+| M2 | M1 | M3 | Native Windows and SDL2 Linux interactive frontends, lifecycle smoke, and standalone release archives |
 | M3 | M1 | M2 | Headless host, application contracts, local loopback, and strict result schema; owns tests/headless files |
 | M4 | M2, M3, merged PR #5 | — | Integrate native application matrix, documentation, and complete qualification evidence |
 

@@ -38,4 +38,17 @@ if(WIN32)
 	target_compile_definitions(VectorWar PRIVATE _UNICODE UNICODE)
 	target_link_libraries(VectorWar PRIVATE VectorWarCore)
 	target_compile_options(VectorWar PRIVATE "/W4" "/WX")
+else()
+	find_package(SDL2 REQUIRED)
+	add_executable(VectorWar ${GGPO_EXAMPLES_VECTORWAR_SDL_SRC})
+	add_common_flags(VectorWar)
+	target_link_libraries(VectorWar PRIVATE VectorWarCore SDL2::SDL2)
+	target_compile_options(VectorWar PRIVATE -Wall -Wextra)
+	if(BUILD_TESTING)
+		add_test(NAME linux_vectorwar_frontend_smoke
+			COMMAND VectorWar --frontend-smoke)
+		set_tests_properties(linux_vectorwar_frontend_smoke PROPERTIES
+			ENVIRONMENT "SDL_VIDEODRIVER=dummy"
+			LABELS "native;sample;vectorwar-host")
+	endif()
 endif()

@@ -1,6 +1,6 @@
 # PROGRESS — Portable Vector War and application E2E
 
-Status: M0 and M3 implementation complete; M1/M4 await Windows CI evidence
+Status: M0 and M3 complete; GUI release integration awaits hosted CI evidence
 
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
@@ -30,10 +30,10 @@ Owns game state, session integration, parser, and host interfaces.
 
 Parallel with M3; owns SDL/frontend files and dependency provisioning.
 
-- [ ] M2-T01: Implement the shared SDL2 window, input, renderer, status, and
-  performance monitor.
+- [x] M2-T01: Implement the Linux SDL2 window, input, renderer, and status path
+  while retaining the Windows Win32/GDI frontend.
 - [ ] M2-T02: Build the interactive target in Windows x64/x86 and Linux GCC/Clang lanes.
-- [ ] M2-T03: Run native SDL lifecycle smoke and document launch/topology commands.
+- [x] M2-T03: Run native SDL lifecycle smoke and document launch/topology commands.
 
 ### M3: Add application-level automated sessions (depends: M1)
 
@@ -64,3 +64,5 @@ Parallel with M2; owns headless host, scripted inputs, result schema, and local 
 | M1-T03 (two-layer coverage) | [`gameplay_determinism_test.cpp`](../../../tests/vectorwar/gameplay_determinism_test.cpp), [`native_host_contract_test.cpp`](../../../tests/vectorwar/native_host_contract_test.cpp), [`win32_host_contract_test.cpp`](../../../tests/vectorwar/win32_host_contract_test.cpp) | Shared gameplay assertions plus selected native-host contracts | Linux locally; Windows/Linux CI | Linux PASS; Windows verification pending CI |
 | M3-T02 | [`result_schema.py`](../../../tests/e2e/result_schema.py), [`test_result_schema.py`](../../../tests/e2e/test_result_schema.py) | Validate the frozen Vector War oracle plus identity/lifecycle negative cases | Python 3; schema-2 synthetic reports | PASS; wrong fixture checksum and unsupported frame count rejected |
 | M4-T01 | [Native E2E workflow](../../../.github/workflows/cross-platform-e2e.yml), [`validate_manifest.py`](../../../tests/e2e/validate_manifest.py) | Add Vector War to the existing authenticated LL/WW/LW/WL matrix | Same source artifacts and control plane as generic peer smoke | Implemented; 8 fixture/scenario reports required; hosted CI evidence pending |
+| M2-T01, M2-T03 | [`sdl_main.cpp`](../../../src/apps/vectorwar/sdl_main.cpp), [`sdl_renderer.cpp`](../../../src/apps/vectorwar/sdl_renderer.cpp) | Build the GUI; run `SDL_VIDEODRIVER=dummy VectorWar --frontend-smoke` | Linux SDL2 frontend | PASS locally; native window/render lifecycle created and destroyed cleanly |
+| Release GUI | [Release workflow](../../../.github/workflows/release-packages.yml) | Build static-core GUI archives on release tags | Windows x64/x86; Linux x86-64 | Implemented; tag workflow evidence pending |
