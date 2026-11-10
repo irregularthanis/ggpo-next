@@ -4,6 +4,7 @@
 #include <string.h>
 #include "nongamestate.h"
 #include "renderer.h"
+#include "state_contract.h"
 #include "vectorwar.h"
 
 //#define SYNC_TEST    // test: turn on synctest
@@ -14,6 +15,10 @@ NonGameState ngs;
 Renderer *renderer = NULL;
 GGPOSession *ggpo = NULL;
 VectorWarHost *host = NULL;
+static int save_count = 0;
+static int load_count = 0;
+static int replay_frame_count = 0;
+static int running_event_count = 0;
 
 /* 
  * Simple checksum function stolen from wikipedia:
@@ -77,6 +82,7 @@ vw_on_event_callback(GGPOEvent *info)
       ngs.UpdateConnectProgress(info->u.synchronized.player, 100);
       break;
    case GGPO_EVENTCODE_RUNNING:
+      running_event_count++;
       ngs.SetConnectState(Running);
       if (renderer) {
          renderer->SetStatusText("");
@@ -117,6 +123,7 @@ vw_advance_frame_callback(int)
    // the game state instead of reading from the keyboard.
    ggpo_synchronize_input(ggpo, (void *)inputs, sizeof(int) * MAX_SHIPS, &disconnect_flags);
    VectorWar_AdvanceFrame(inputs, disconnect_flags);
+   replay_frame_count++;
    return true;
 }
 
@@ -129,6 +136,7 @@ bool GGPO_CALL
 vw_load_game_state_callback(unsigned char *buffer, int len)
 {
    memcpy(&gs, buffer, len);
+   load_count++;
    return true;
 }
 
@@ -147,6 +155,7 @@ vw_save_game_state_callback(unsigned char **buffer, int *len, int *checksum, int
       return false;
    }
    memcpy(*buffer, &gs, *len);
+   save_count++;
    *checksum = fletcher32_checksum((short *)*buffer, *len / 2);
    return true;
 }
@@ -217,6 +226,7 @@ VectorWar_Init(VectorWarHost *application_host, unsigned short localport,
 {
    GGPOErrorCode result;
    host = application_host;
+   save_count = load_count = replay_frame_count = running_event_count = 0;
    renderer = host->CreateRenderer();
 
    // Initialize the game state
@@ -394,7 +404,7 @@ VectorWar_RunFrame()
   int inputs[MAX_SHIPS] = { 0 };
 
   if (ngs.local_player_handle != GGPO_INVALID_HANDLE) {
-     int input = host ? host->ReadLocalInput() : 0;
+     int input = host ? host->ReadLocalInput(gs._framenumber) : 0;
 #if defined(SYNC_TEST)
      input = rand(); // test: use random inputs to demonstrate sync testing
 #endif
@@ -452,3 +462,10 @@ VectorWar_Exit()
    }
    host = NULL;
 }
+
+int VectorWar_FrameNumber() { return gs._framenumber; }
+unsigned int VectorWar_StateChecksum() { return VectorWarCanonicalChecksum(gs); }
+int VectorWar_SaveCount() { return save_count; }
+int VectorWar_LoadCount() { return load_count; }
+int VectorWar_ReplayFrameCount() { return replay_frame_count; }
+int VectorWar_RunningEventCount() { return running_event_count; }

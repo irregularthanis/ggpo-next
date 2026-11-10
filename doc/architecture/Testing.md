@@ -36,6 +36,8 @@ behavior-changing refactor pass.
 | Native conformance | One clock/config/endpoint/UDP assertion source | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | Fake, Windows, and Linux adapters |
 | Platform-free rollback | Production core linked without the Windows adapter | [`platform_fake.cpp`](../../tests/platform/fake/platform_fake.cpp), [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | Fake adapter and production rollback core |
 | Sample simulation | Scripted Vector War inputs, explicit arena bounds, and canonical checkpoints | [`gamestate_contract_test.cpp`](../../tests/vectorwar/gamestate_contract_test.cpp), [`state_contract.cpp`](../../src/apps/vectorwar/state_contract.cpp) | Real sample `GameState` without a window or socket |
+| Sample application loopback | Real Vector War callbacks, scripted host input, native UDP, rollback, and final golden state | [`headless_main.cpp`](../../src/apps/vectorwar/headless_main.cpp), [`run_headless_loopback.py`](../../tests/vectorwar/run_headless_loopback.py) | Two headless Vector War processes on Windows or Linux |
+| Sample application negatives | Startup, timeout, divergence, absent rollback, and dirty shutdown are rejected | [`headless_negative.py`](../../tests/vectorwar/headless_negative.py) | Fault-injected Vector War processes |
 | Rollback behavior | Save, restore, synchronized input, replay, and deterministic final state | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | SyncTest backend without sockets |
 | Native transport | Handshake, events, prediction, rollback, UDP delivery, and shutdown | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Two Windows or Linux GGPO processes over localhost |
 | Negative peer contracts | Startup, timeout, checksum mismatch, and shutdown failures are rejected | [`peer_runner_negative.py`](../../tests/smoke/peer_runner_negative.py) | Fault-injected real peer processes |
@@ -142,6 +144,25 @@ hashes explicitly ordered fixed-width integers, booleans, and IEEE-754 double
 bits. It excludes native structure padding and the old Win32 `RECT` layout.
 This test freezes simulation behavior before the sample host is ported; it does
 not exercise GGPO callbacks, UDP, rendering, or interactive input.
+
+### Vector War application loopback
+
+[`VectorWarHeadless`](../../src/apps/vectorwar/headless_main.cpp) supplies the
+portable application core with scripted input and no renderer. Two processes
+use the production GGPO session, callbacks, native UDP adapter, save/load path,
+and frame loop. Player 2 starts submitting after a bounded delay so rollback is
+an explicit fixture contract rather than a scheduler accident.
+
+[`run_headless_loopback.py`](../../tests/vectorwar/run_headless_loopback.py)
+requires both peers to reach frame 180 and canonical checksum `f823dc4b`, report
+one running event, and record at least one replayed frame. The fixture continues
+pumping both sessions before collecting results so late authoritative inputs
+can converge.
+
+[`headless_negative.py`](../../tests/vectorwar/headless_negative.py) proves the
+runner rejects controlled startup failure, timeout, divergent state, missing
+rollback evidence, and dirty shutdown. Rendering and interactive input remain
+separate frontend contracts.
 
 ### Shared deterministic state
 

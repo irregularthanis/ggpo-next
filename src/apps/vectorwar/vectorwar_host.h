@@ -13,7 +13,7 @@ public:
 
    virtual VectorWarBounds GetGameBounds() const = 0;
    virtual Renderer *CreateRenderer() = 0;
-   virtual int ReadLocalInput() const = 0;
+   virtual int ReadLocalInput(int frame) const = 0;
    virtual unsigned int NowMs() const = 0;
    virtual void SleepMs(unsigned int milliseconds) const = 0;
 

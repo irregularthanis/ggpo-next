@@ -1,6 +1,6 @@
 # PROGRESS — Portable Vector War and application E2E
 
-Status: M0 complete; M1 implementation in progress
+Status: M0 complete; M1 verification and M3 implementation in progress
 
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
@@ -39,7 +39,7 @@ Parallel with M3; owns SDL/frontend files and dependency provisioning.
 
 Parallel with M2; owns headless host, scripted inputs, result schema, and local tests.
 
-- [ ] M3-T01: Implement the headless host using the same session/frame/callback path.
+- [x] M3-T01: Implement the headless host using the same session/frame/callback path.
 - [ ] M3-T02: Validate canonical results against golden checkpoints and reject
   identity, timeout, divergence, missing rollback, and dirty shutdown.
 - [ ] M3-T03: Pass two-process application loopback on Windows and Linux.
@@ -59,3 +59,5 @@ Parallel with M2; owns headless host, scripted inputs, result schema, and local 
 | M0-T03 | [Technical plan contracts](TECH_PLAN.md#contracts-and-flow), [upstream PR #57](https://github.com/pond3r/ggpo/pull/57) | Host-boundary and attribution review | C++98 app; Windows/Linux targets | Portable host/result boundary frozen; SDL2 app-only reuse scope recorded |
 | M0-T02 | [`53b2b3e`](https://github.com/irregularthanis/ggpo-next/commit/53b2b3e6d2587d25b519234519ea93e5ca24b528), [Windows CI](https://github.com/irregularthanis/ggpo-next/actions/runs/42745724187) | `vectorwar_state_contract`; seven canonical checkpoints over 180 scripted frames | Linux GCC; Windows x64/x86, shared/static, Debug/Release | PASS; all variants produced the same checkpoints and final digest |
 | M1-T01, M1-T02 | [`4876b2a`](https://github.com/irregularthanis/ggpo-next/commit/4876b2a) | Build `VectorWarCore`; run the full native Linux suite | Linux GCC Release, static GGPO | Portable core compiled; 14/14 tests passed; Windows verification pending CI |
+| M3-T01 | `VectorWarHeadless`, [`run_headless_loopback.py`](../../../tests/vectorwar/run_headless_loopback.py) | Three independent two-process runs, 180 frames each | Linux GCC Release, static GGPO, native UDP loopback | PASS; checksum `f823dc4b` in every peer/run; forced rollback observed |
+| M3-T02 (partial) | [`headless_negative.py`](../../../tests/vectorwar/headless_negative.py) | Inject startup, timeout, mismatch, no-rollback, and shutdown faults | Linux native loopback | PASS; all five failure families rejected; cross-host identity schema remains for M4 |

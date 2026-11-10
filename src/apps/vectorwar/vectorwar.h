@@ -21,6 +21,12 @@ void VectorWar_Idle(int time);
 void VectorWar_DisconnectPlayer(int player);
 void VectorWar_TogglePerformanceMonitor();
 void VectorWar_Exit();
+int VectorWar_FrameNumber();
+unsigned int VectorWar_StateChecksum();
+int VectorWar_SaveCount();
+int VectorWar_LoadCount();
+int VectorWar_ReplayFrameCount();
+int VectorWar_RunningEventCount();
 
 #define ARRAY_SIZE(n)      (sizeof(n) / sizeof(n[0]))
 #define FRAME_DELAY        2

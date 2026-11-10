@@ -11,7 +11,7 @@ public:
 
    virtual VectorWarBounds GetGameBounds() const;
    virtual Renderer *CreateRenderer();
-   virtual int ReadLocalInput() const;
+   virtual int ReadLocalInput(int frame) const;
    virtual unsigned int NowMs() const;
    virtual void SleepMs(unsigned int milliseconds) const;
    virtual void InitializePerformanceMonitor();

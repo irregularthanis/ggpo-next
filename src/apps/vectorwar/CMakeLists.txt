@@ -13,6 +13,19 @@ else()
 	target_compile_options(VectorWarCore PRIVATE -Wall -Wextra)
 endif()
 
+add_executable(VectorWarHeadless
+	headless_main.cpp
+	headless_host.cpp
+	headless_host.h
+)
+add_common_flags(VectorWarHeadless)
+target_link_libraries(VectorWarHeadless PRIVATE VectorWarCore)
+if(MSVC)
+	target_compile_options(VectorWarHeadless PRIVATE "/W4" "/WX")
+else()
+	target_compile_options(VectorWarHeadless PRIVATE -Wall -Wextra)
+endif()
+
 if(WIN32)
 	add_executable(VectorWar WIN32
 		${GGPO_EXAMPLES_VECTORWAR_WIN32_INC}

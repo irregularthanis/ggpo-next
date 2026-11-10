@@ -15,6 +15,7 @@
 - [8. Rendering and diagnostics](#8-rendering-and-diagnostics)
 - [9. Spectators](#9-spectators)
 - [10. Shutdown](#10-shutdown)
+- [Headless application contract](#headless-application-contract)
 - [End-to-end two-player example](#end-to-end-two-player-example)
 - [What the sample demonstrates](#what-the-sample-demonstrates)
 - [Sample limitations](#sample-limitations)
@@ -343,6 +344,17 @@ then calls `WSACleanup` and destroys the window. `ggpo_close_session()` is the
 operation that deletes the selected backend and releases its saved states,
 queues, endpoints, and socket.
 
+## Headless application contract
+
+[`VectorWarHeadless`](../../src/apps/vectorwar/headless_main.cpp) uses the same
+`VectorWarCore`, GGPO callbacks, native UDP session, and frame functions as the
+interactive host. [`HeadlessVectorWarHost`](../../src/apps/vectorwar/headless_host.cpp)
+supplies fixed bounds, frame-indexed input, monotonic time, and no renderer.
+
+The local fixture launches two processes for 180 frames, forces a bounded input
+delay to exercise rollback, and requires canonical checksum `f823dc4b` on both
+peers. See the [testing contract](Testing.md#vector-war-application-loopback).
+
 ## End-to-end two-player example
 
 [`start_vectorwar_2p.cmd`](../../bin/start_vectorwar_2p.cmd) creates:
@@ -375,15 +387,16 @@ For frame 120:
 
 ## Sample limitations
 
-- The host, renderer, input devices, and launch scripts are Windows-specific.
+- The interactive host, renderer, input devices, and launch scripts remain
+  Windows-specific; the application core and headless host are portable.
 - The simulation uses raw `double`, native structure layout, and a window-derived
   arena; cross-platform determinism has not been established.
 - Raw `memcpy` serialization is not versioned and is unsuitable for pointers or
   dynamic containers.
 - The sample uses a full peer mesh rather than an authoritative server.
-- Vector War's window, renderer, and input path still require interactive
-  validation. Automated SDK tests separately cover SyncTest and two Windows
-  processes exchanging inputs over loopback UDP.
+- Vector War's window, renderer, and interactive input still require frontend
+  validation. Automated tests now cover its real application core and two
+  native processes exchanging scripted inputs over loopback UDP.
 
 Continue with the general [Runtime](Runtime.md), [Synchronization](Synchronization.md),
 and [API reference](API.md).

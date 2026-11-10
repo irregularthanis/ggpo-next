@@ -26,7 +26,7 @@ Win32VectorWarHost::CreateRenderer()
 }
 
 int
-Win32VectorWarHost::ReadLocalInput() const
+Win32VectorWarHost::ReadLocalInput(int) const
 {
    static const struct {
       int key;

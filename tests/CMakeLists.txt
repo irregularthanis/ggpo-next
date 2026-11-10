@@ -265,10 +265,34 @@ add_test(NAME vectorwar_state_contract COMMAND ggpo_vectorwar_state_contract)
 set_tests_properties(vectorwar_state_contract PROPERTIES
     LABELS "portable;sample")
 
+# Launch two instances of the real Vector War application core over native
+# loopback sockets and compare their final deterministic game state.
+if(TARGET VectorWarHeadless)
+    add_test(NAME vectorwar_headless_loopback
+        COMMAND ${PYTHON_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/vectorwar/run_headless_loopback.py
+                $<TARGET_FILE:VectorWarHeadless>
+    )
+    set_tests_properties(vectorwar_headless_loopback PROPERTIES
+        TIMEOUT 60
+        LABELS "native;network;sample"
+    )
+    add_test(NAME vectorwar_headless_negative_contracts
+        COMMAND ${PYTHON_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/vectorwar/headless_negative.py
+                $<TARGET_FILE:VectorWarHeadless>
+    )
+    set_tests_properties(vectorwar_headless_negative_contracts PROPERTIES
+        TIMEOUT 30
+        LABELS "native;negative;sample"
+    )
+endif()
+
 # Export every portable contract target so the root test-on-build target builds
 # the executables before invoking CTest on multi-config generators such as MSVC.
 set(GGPO_PORTABLE_TEST_TARGETS
 	ggpo_vectorwar_state_contract
+    VectorWarHeadless
     ggpo_input_queue_contract
     ggpo_sync_contract
     ggpo_timesync_contract
