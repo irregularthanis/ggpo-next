@@ -23,7 +23,7 @@ if (!$EvidenceDirectory) {
 }
 
 cmake -S $repo -B $BuildDirectory -G $Generator -A $Architecture `
-    @linkageArguments `
+    $linkageArguments `
     -DGGPO_BUILD_SDK=ON `
     -DGGPO_BUILD_VECTORWAR=ON `
     -DBUILD_TESTING=ON
