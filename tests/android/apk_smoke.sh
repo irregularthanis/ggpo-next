@@ -5,7 +5,10 @@ set -eu
 apk="$1"
 adb install -r "$apk"
 adb logcat -c
-adb shell am start -W -n org.ggponext.vectorwar/.VectorWarActivity --es args --frontend-smoke
+# Do not use `am start -W`: API 21 can wait forever for SDLActivity to become
+# idle even after the frontend has started. The log marker below is the actual
+# bounded readiness contract on every tested API level.
+adb shell am start -n org.ggponext.vectorwar/.VectorWarActivity --es args --frontend-smoke
 for second in $(seq 1 60); do
     if adb logcat -d | grep -q "Vector War SDL frontend smoke: OK"; then
         echo "Vector War APK frontend smoke passed (API $(adb shell getprop ro.build.version.sdk | tr -d '\r'))"

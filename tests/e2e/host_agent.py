@@ -18,7 +18,8 @@ def main():
     parser.add_argument("--address", required=True)
     parser.add_argument("--port", type=int, default=24871)
     parser.add_argument("--session-id", required=True)
-    parser.add_argument("--timeout", type=int, default=300)
+    # The paired role can remain queued on a different runner pool.
+    parser.add_argument("--timeout", type=int, default=1200)
     args = parser.parse_args()
     required = ("GITHUB_REPOSITORY", "GITHUB_SHA", "GITHUB_RUN_ID",
                 "GITHUB_RUN_ATTEMPT", "GITHUB_TOKEN", "GGPO_E2E_SESSION_SECRET")
