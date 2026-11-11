@@ -1,19 +1,25 @@
 include(CMakeSources.cmake)
 
-add_library(GGPO
-	${GGPO_LIB_SRC}
-)
-add_library(GGPO::GGPO ALIAS GGPO)
-
-add_common_flags(GGPO)
-
-target_include_directories(GGPO
-	PUBLIC
-	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-	$<INSTALL_INTERFACE:include>
-	PRIVATE
-	${CMAKE_CURRENT_SOURCE_DIR}/lib/ggpo
-)
+# Linkage selection.  Leaving BUILD_SHARED_LIBS unset builds both libraries so
+# one install can serve dynamic and static consumers.  Passing it explicitly
+# keeps the historical single-flavor build used by existing scripts.
+if(DEFINED BUILD_SHARED_LIBS)
+	if(BUILD_SHARED_LIBS)
+		set(GGPO_BUILD_SHARED_DEFAULT ON)
+		set(GGPO_BUILD_STATIC_DEFAULT OFF)
+	else()
+		set(GGPO_BUILD_SHARED_DEFAULT OFF)
+		set(GGPO_BUILD_STATIC_DEFAULT ON)
+	endif()
+else()
+	set(GGPO_BUILD_SHARED_DEFAULT ON)
+	set(GGPO_BUILD_STATIC_DEFAULT ON)
+endif()
+option(GGPO_BUILD_SHARED "Build the shared GGPO library (.dll/.so)" ${GGPO_BUILD_SHARED_DEFAULT})
+option(GGPO_BUILD_STATIC "Build the static GGPO library (libGGPO.lib/libGGPO.a)" ${GGPO_BUILD_STATIC_DEFAULT})
+if(NOT GGPO_BUILD_SHARED AND NOT GGPO_BUILD_STATIC)
+	message(FATAL_ERROR "Enable GGPO_BUILD_SHARED, GGPO_BUILD_STATIC, or both")
+endif()
 
 if(WIN32)
 	include(platform/windows/Platform.cmake)
@@ -22,9 +28,59 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 else()
 	message(FATAL_ERROR "Unsupported GGPO platform: ${CMAKE_SYSTEM_NAME}")
 endif()
-ggpo_configure_platform(GGPO)
 
-set_target_properties(GGPO PROPERTIES VERSION ${PROJECT_VERSION})
+# Create one linkage flavor.  Both flavors compile the same sources; on Windows
+# only the DLL build defines GGPO_SDK_EXPORT, so the sources are compiled once
+# per flavor rather than shared through an object library.
+function(ggpo_add_library target type export_name)
+	add_library(${target} ${type} ${GGPO_LIB_SRC})
+	add_library(GGPO::${export_name} ALIAS ${target})
+	add_common_flags(${target})
+	target_include_directories(${target}
+		PUBLIC
+		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+		$<INSTALL_INTERFACE:include>
+		PRIVATE
+		${CMAKE_CURRENT_SOURCE_DIR}/lib/ggpo
+	)
+	ggpo_configure_platform(${target})
+	set_target_properties(${target} PROPERTIES
+		VERSION ${PROJECT_VERSION}
+		EXPORT_NAME ${export_name}
+	)
+endfunction()
+
+set(GGPO_LIBRARY_TARGETS)
+if(GGPO_BUILD_SHARED)
+	ggpo_add_library(GGPO_shared SHARED shared)
+	# GGPO.dll + GGPO.lib (import library) on Windows, libGGPO.so on Linux.
+	set_target_properties(GGPO_shared PROPERTIES OUTPUT_NAME GGPO)
+	list(APPEND GGPO_LIBRARY_TARGETS GGPO_shared)
+endif()
+if(GGPO_BUILD_STATIC)
+	ggpo_add_library(GGPO_static STATIC static)
+	if(WIN32)
+		# libGGPO.lib, distinct from the DLL import library GGPO.lib.
+		set_target_properties(GGPO_static PROPERTIES
+			OUTPUT_NAME libGGPO
+			COMPILE_PDB_NAME libGGPO
+			COMPILE_PDB_OUTPUT_DIRECTORY_DEBUG ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG}
+			COMPILE_PDB_OUTPUT_DIRECTORY_RELEASE ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE}
+		)
+	else()
+		set_target_properties(GGPO_static PROPERTIES OUTPUT_NAME GGPO)
+	endif()
+	list(APPEND GGPO_LIBRARY_TARGETS GGPO_static)
+endif()
+
+# In-tree default: shared when built, otherwise static.  Mirrors the installed
+# GGPO::GGPO default so tests and samples consume what most applications will.
+if(GGPO_BUILD_SHARED)
+	add_library(GGPO::GGPO ALIAS GGPO_shared)
+else()
+	add_library(GGPO::GGPO ALIAS GGPO_static)
+endif()
+set(GGPO_LIBRARY_TARGETS ${GGPO_LIBRARY_TARGETS} PARENT_SCOPE)
 
 # Install
 install(
@@ -35,14 +91,37 @@ install(
 	PATTERN "*.hpp"
 )
 
-install(
-	TARGETS GGPO
-	EXPORT GGPOTargets
-	RUNTIME DESTINATION bin
-	LIBRARY DESTINATION lib
-	ARCHIVE DESTINATION lib
-	INCLUDES DESTINATION include
-)
+# Each flavor has its own export so an install may contain either or both.
+if(GGPO_BUILD_SHARED)
+	install(
+		TARGETS GGPO_shared
+		EXPORT GGPOSharedTargets
+		RUNTIME DESTINATION bin
+		LIBRARY DESTINATION lib
+		ARCHIVE DESTINATION lib
+		INCLUDES DESTINATION include
+	)
+	install(
+		EXPORT GGPOSharedTargets
+		FILE GGPOSharedTargets.cmake
+		NAMESPACE GGPO::
+		DESTINATION lib/cmake/GGPO
+	)
+endif()
+if(GGPO_BUILD_STATIC)
+	install(
+		TARGETS GGPO_static
+		EXPORT GGPOStaticTargets
+		ARCHIVE DESTINATION lib
+		INCLUDES DESTINATION include
+	)
+	install(
+		EXPORT GGPOStaticTargets
+		FILE GGPOStaticTargets.cmake
+		NAMESPACE GGPO::
+		DESTINATION lib/cmake/GGPO
+	)
+endif()
 
 include(CMakePackageConfigHelpers)
 configure_package_config_file(
@@ -56,12 +135,6 @@ write_basic_package_version_file(
 	COMPATIBILITY SameMajorVersion
 )
 install(
-	EXPORT GGPOTargets
-	FILE GGPOTargets.cmake
-	NAMESPACE GGPO::
-	DESTINATION lib/cmake/GGPO
-)
-install(
 	FILES
 		${CMAKE_CURRENT_BINARY_DIR}/GGPOConfig.cmake
 		${CMAKE_CURRENT_BINARY_DIR}/GGPOConfigVersion.cmake
@@ -69,21 +142,20 @@ install(
 )
 
 if(MSVC)
-	if(BUILD_SHARED_LIBS)
+	if(GGPO_BUILD_SHARED)
 		install(
-			FILES $<TARGET_PDB_FILE:GGPO>
-			DESTINATION lib
-			OPTIONAL
-		)
-	else()
-		## NOTE: This is rather hacky, since CMake doesn't allow to install the PDB files for
-		##	     static libraries, so we get the debug PDB file and copy it there.
-		install(
-			FILES "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG}/GGPO.pdb"
+			FILES $<TARGET_PDB_FILE:GGPO_shared>
 			DESTINATION lib
 			OPTIONAL
 		)
 	endif()
-else()
-## TODO place the symbols install when GGPO became cross-platform
+	if(GGPO_BUILD_STATIC)
+		# CMake cannot install a static library's compiler PDB directly; it is
+		# written next to libGGPO.lib by COMPILE_PDB_OUTPUT_DIRECTORY above.
+		install(
+			FILES "${GGPO_LIBRARY_OUTPUT_DIR}/$<CONFIG>/libGGPO.pdb"
+			DESTINATION lib
+			OPTIONAL
+		)
+	endif()
 endif()

@@ -58,15 +58,10 @@ def verify_prefix(kind, prefix, source, checks, cc, cxx, jobs):
 
     build = checks / kind / "consumer"
     run([
-        "cmake", "-S", source / "tests/consumer", "-B", build, "-G", "Ninja",
-        f"-DCMAKE_C_COMPILER={cc}", f"-DCMAKE_CXX_COMPILER={cxx}",
-        "-DCMAKE_BUILD_TYPE=Release", f"-DCMAKE_PREFIX_PATH={prefix}",
+        "python3", source / "tests/consumer/verify_consumers.py",
+        "--prefix", prefix, "--work", build, "--generator", "Ninja",
+        "--cc", cc, "--cxx", cxx, "--jobs", str(jobs),
     ])
-    run(["cmake", "--build", build, "--parallel", str(jobs)])
-    environment = os.environ.copy()
-    environment["LD_LIBRARY_PATH"] = str(prefix / "lib")
-    run([build / "ggpo_installed_c11"], env=environment)
-    run([build / "ggpo_installed_cpp98"], env=environment)
     run(["python3", source / "scripts/ci/audit_linux_sdk.py", prefix])
 
 
@@ -84,8 +79,11 @@ def main():
 
     cache = args.build.resolve() / "CMakeCache.txt"
     version = cache_value(cache, "CMAKE_PROJECT_VERSION")
-    linkage = "shared" if cache_value(cache, "BUILD_SHARED_LIBS") == "ON" else "static"
-    base_name = f"ggpo-{version}-linux-x86_64-{linkage}"
+    shared = cache_value(cache, "GGPO_BUILD_SHARED") == "ON"
+    static = cache_value(cache, "GGPO_BUILD_STATIC") == "ON"
+    # Must match CPACK_PACKAGE_FILE_NAME in src/cmake/linux_packaging.cmake.
+    suffix = "" if shared and static else ("-shared" if shared else "-static")
+    base_name = f"ggpo-{version}-linux-x86_64{suffix}"
     packages = args.out.resolve()
     checks = packages.parent / "package-checks"
     shutil.rmtree(packages, ignore_errors=True)

@@ -21,7 +21,8 @@ endif()
 # What do we want to build?
 option(GGPO_BUILD_SDK "Enable the build of the GGPO SDK" ON)
 option(GGPO_BUILD_VECTORWAR "Enable the build of the Vector War example app" ON)
-option(BUILD_SHARED_LIBS "Enable the build of shared libraries (.dll/.so) instead of static ones (.lib/.a)" ON)
+# Linkage: leave BUILD_SHARED_LIBS unset to build both shared and static GGPO,
+# or pass -DBUILD_SHARED_LIBS=ON/OFF for one flavor (see src/CMakeLists.txt).
 option(GGPO_RUN_TESTS_ON_BUILD "Run self-contained GGPO tests during the default build" ON)
 
 if(GGPO_BUILD_SDK)

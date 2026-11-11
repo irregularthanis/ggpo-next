@@ -1,6 +1,6 @@
 # TECH_PLAN — Dual-linkage SDK and CI consolidation
 
-Status: Planning only
+Status: In progress
 
 Source: `59d831be59b1a6ff5a35bde31f112cfe7a3837ca`
 
@@ -56,10 +56,10 @@ flowchart TD
 - New options `GGPO_BUILD_SHARED` and `GGPO_BUILD_STATIC`, both `ON` by
   default. If neither is set explicitly, `BUILD_SHARED_LIBS` still selects a
   single flavor, so existing build scripts keep working.
-- Compile the sources once into a position-independent `OBJECT` library and
-  link both libraries from it. Windows needs `GGPO_SDK_EXPORT` only when
-  building the DLL, so on Windows the object files are compiled once per flavor
-  instead.
+- Each flavor compiles the sources itself. An `OBJECT` library shared by both
+  was considered, but Windows needs `GGPO_SDK_EXPORT` only for the DLL, and the
+  library is small enough that compiling it twice costs little. (Changed during
+  M1.)
 - In-tree alias `GGPO::GGPO` points at the shared library when it is built,
   otherwise the static one, so tests and Vector War keep working.
 
