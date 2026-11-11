@@ -39,8 +39,10 @@ def run_vectorwar_pair(executable, fault_a=None, fault_b=None,
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("executable", type=Path)
+    parser.add_argument("--timeout", type=int, default=45,
+                        help="per-pair process deadline in seconds")
     args = parser.parse_args()
-    run_vectorwar_pair(args.executable.resolve())
+    run_vectorwar_pair(args.executable.resolve(), timeout_seconds=args.timeout)
 
 
 if __name__ == "__main__":

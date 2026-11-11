@@ -120,13 +120,16 @@ def main():
                         help="optional second peer executable")
     parser.add_argument("--frames", type=int, default=180)
     parser.add_argument("--runs", type=int, default=1)
+    parser.add_argument("--timeout", type=int, default=45,
+                        help="per-pair process deadline in seconds")
     parser.add_argument("--summary", type=Path)
     args = parser.parse_args()
 
     executable_a = args.executable.resolve()
     executable_b = (args.peer_b or args.executable).resolve()
     results = [
-        run_pair(executable_a, executable_b, args.frames, run_number + 1)
+        run_pair(executable_a, executable_b, args.frames, run_number + 1,
+                 timeout_seconds=args.timeout)
         for run_number in range(args.runs)
     ]
     elapsed = [result["elapsed_ms"] for result in results]

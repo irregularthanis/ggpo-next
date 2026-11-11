@@ -140,14 +140,24 @@ add_executable(${GGPO_PEER_TARGET}
 )
 ggpo_configure_test(${GGPO_PEER_TARGET})
 target_link_libraries(${GGPO_PEER_TARGET} PRIVATE GGPO::GGPO)
+set(GGPO_PEER_PROCESS_TIMEOUT 45)
+set(GGPO_PEER_CTEST_TIMEOUT 90)
+if(ANDROID)
+    # API 21's emulator can take substantially longer to launch two adb-backed
+    # peers than current Android releases. Keep the execution bounded while
+    # giving the same network contract enough time to complete.
+    set(GGPO_PEER_PROCESS_TIMEOUT 120)
+    set(GGPO_PEER_CTEST_TIMEOUT 180)
+endif()
 add_test(NAME ${GGPO_SMOKE_PREFIX}_peer_loopback
     COMMAND ${PYTHON_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/smoke/run_peer_smoke.py
             $<TARGET_FILE:${GGPO_PEER_TARGET}>
             --frames 180
+            --timeout ${GGPO_PEER_PROCESS_TIMEOUT}
 )
 set_tests_properties(${GGPO_SMOKE_PREFIX}_peer_loopback PROPERTIES
-    TIMEOUT 90
+    TIMEOUT ${GGPO_PEER_CTEST_TIMEOUT}
     LABELS "native;network"
 )
 
@@ -204,9 +214,10 @@ if(TARGET GGPO_shared AND TARGET GGPO_static)
                 ${CMAKE_CURRENT_SOURCE_DIR}/smoke/run_peer_smoke.py
                 $<TARGET_FILE:${GGPO_STATIC_PEER_TARGET}>
                 --frames 180
+                --timeout ${GGPO_PEER_PROCESS_TIMEOUT}
     )
     set_tests_properties(${GGPO_SMOKE_PREFIX}_static_peer_loopback PROPERTIES
-        TIMEOUT 90
+        TIMEOUT ${GGPO_PEER_CTEST_TIMEOUT}
         LABELS "native;network;static"
     )
     set(GGPO_STATIC_RUNTIME_TEST_TARGETS
@@ -420,9 +431,10 @@ if(TARGET VectorWarHeadless)
         COMMAND ${PYTHON_EXECUTABLE}
                 ${CMAKE_CURRENT_SOURCE_DIR}/vectorwar/run_headless_loopback.py
                 $<TARGET_FILE:VectorWarHeadless>
+                --timeout ${GGPO_PEER_PROCESS_TIMEOUT}
     )
     set_tests_properties(vectorwar_headless_loopback PROPERTIES
-        TIMEOUT 60
+        TIMEOUT ${GGPO_PEER_CTEST_TIMEOUT}
         LABELS "native;network;sample"
     )
     add_test(NAME vectorwar_headless_negative_contracts
