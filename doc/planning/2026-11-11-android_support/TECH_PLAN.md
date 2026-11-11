@@ -26,6 +26,42 @@ Source: `a9407a88ffbd9d593806e6d520e00c3d3ad0b0f6`
 - The native E2E harness distributes per-platform peer bundles, runs role jobs
   over Tailscale, and validates a fixed scenario manifest.
 
+## Parity matrix
+
+Every capability of the existing platforms, with its Android equivalent. M5
+cannot close while any row is open.
+
+| Area | Existing platforms | Android equivalent |
+| --- | --- | --- |
+| **Build** | One CMake build, `Platform.cmake` per platform | Same CMake; `platform/android/Platform.cmake` |
+| Libraries | Shared + static from one build (`GGPO_BUILD_SHARED/STATIC`, `BUILD_SHARED_LIBS`) | Same, per ABI |
+| CMake package | `GGPO::GGPO`/`shared`/`static`, `GGPO_USE_STATIC`, `COMPONENTS` | Same |
+| Toolchain record | `GGPO_TOOLCHAIN` msvc/mingw/gnu, mismatch rejected on Windows | `android`; mismatch (non-Android consumer) rejected |
+| Architectures | Windows x64/x86, Linux x86-64 | arm64-v8a, armeabi-v7a, x86_64 |
+| Runtime embedding | MinGW DLL embeds libgcc/libstdc++ | `libGGPO.so` uses `libc++_static` |
+| Determinism flags | 32-bit MinGW `-msse2 -mfpmath=sse` | `-ffp-contract=off` |
+| **Tests** | Portable core, API, protocol, fake platform | Same suite, run on Android |
+| | Native platform conformance (`*_platform_conformance`) | `android_platform_conformance` |
+| | Public/packet layout (`*_public_layout`, `*_packet_layout`) | `android_public_layout`, `android_packet_layout` on every ABI (incl. 32-bit armv7) |
+| | Export manifest (`linux_exports`, MinGW/MSVC manifests) | `android_exports`: `llvm-readelf --dyn-syms` vs the frozen 16-export manifest |
+| | SyncTest, peer loopback, schema-2 loopback, negative contracts | `android_*` equivalents through the `adb` wrapper |
+| | Static-library runtime smokes (`*_static_*`) | `android_static_synctest_smoke`, `android_static_peer_loopback` |
+| | Vector War state/gameplay contracts, native host contract | Same; frozen checksum on arm64 |
+| | Vector War headless loopback and negative contracts | Same, on device |
+| | GUI host contract (Win32 / SDL) | `android_vectorwar_gui_host_contract` (SDL on Android) |
+| | Frontend smoke (`--frontend-smoke`) | APK launched in smoke mode on the emulator |
+| | Installed consumers: C11/C++98 × default/static/shared, runtime dependency check | Same via `verify_consumers.py` Android mode (`NEEDED` check) |
+| | SDK audit (Linux SONAME, glibc ceiling, exports) | SONAME `libGGPO.so`, **API-level ceiling** (no symbol newer than `minSdk`), exports |
+| | Toolchain isolation (MSVC vs MinGW) | Android SDK rejected by a host-Linux consumer and vice versa |
+| | Portable public header (C11/C++98, gcc/clang) | Same header compiled with the NDK clang for each ABI |
+| **Sanitizers** | Linux ASan+UBSan, MSVC ASan (scheduled) | NDK ASan/HWASan + UBSan on arm64 (scheduled) |
+| **Debug coverage** | One Windows Debug lane | One Android Debug build + test lane (arm64) |
+| **E2E** | Smoke + Vector War, every pairing in both roles | `android-{linux,windows,mingw}` and reverse, smoke and `vectorwar-*`, manifest requires all |
+| **Release** | SDK zips/DEB/RPM/tar.gz, Vector War per platform, dry run, `SHA256SUMS` | Android SDK archive (all ABIs), Vector War APK, in the dry run and checksums |
+| **Governance** | Required checks in ruleset + branch protection | Android build, test and isolation checks added |
+| **Docs** | Developer Guide install/build/use, architecture docs, README | Same topics for Android (see Documentation) |
+| Frozen MSVC baseline | Windows-only by definition | Not applicable: it freezes the historical Windows DLL. Android is held to the same frozen layout values and export manifest instead |
+
 ## Platform layer
 
 Android reuses the POSIX adapter instead of copying it:

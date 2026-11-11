@@ -28,6 +28,10 @@ Status: Planning
 - [ ] M2-T02: Full CTest suite passes on Android (arm64 preferred).
 - [ ] M2-T03: Frozen Vector War checksum matches on arm64.
 - [ ] M2-T04: Installed consumers (default, static, shared) on Android.
+- [ ] M2-T05: Layout and export manifest tests on every ABI; SDK audit
+  (SONAME, API-level ceiling).
+- [ ] M2-T06: Toolchain isolation and portable-header checks for Android.
+- [ ] M2-T07: Android Debug lane and scheduled sanitizer job.
 
 ### M3: Vector War (depends: M1)
 
@@ -42,7 +46,10 @@ Parallel with M2.
 - [ ] M4-T01: Android peer bundle and emulator role jobs with UDP forwarding.
 - [ ] M4-T02: Android ↔ Linux, Windows and MinGW scenarios, smoke and Vector War.
 
-### M5: Release and docs (depends: M3, M4)
+### M5: Release, docs and parity close-out (depends: M3, M4)
+
+- [ ] M5-T00: Every row of the [parity matrix](TECH_PLAN.md#parity-matrix)
+  is done or has a written "not applicable" reason.
 
 - [ ] M5-T01: Android SDK archive and Vector War APK; release dry run.
 - [ ] M5-T02: Developer Guide parity: install, build from source, use with
@@ -67,6 +74,7 @@ Parallel with M2.
 | Compatibility with existing platforms is a hard requirement | Accepted (2026-11-11) |
 | Port Vector War (SDL2 APK + headless for E2E) | Accepted (2026-11-11) |
 | Documentation parity: build, install, and use in apps | Accepted (2026-11-11) |
+| Full parity with existing platforms, tracked in the parity matrix | Accepted (2026-11-11) |
 | `-ffp-contract=off` on Android | Proposed |
 | `libc++_static` inside `libGGPO.so` | Proposed |
 | Minimum API 24, NDK r27 LTS, ABIs arm64-v8a/armeabi-v7a/x86_64 | Proposed |

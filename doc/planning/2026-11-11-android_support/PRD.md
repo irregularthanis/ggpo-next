@@ -18,6 +18,15 @@ with the Bionic C library and POSIX sockets, so the existing Linux platform
 adapter already implements nearly everything GGPO needs. The work is mostly
 build integration, test infrastructure that runs on Android, and packaging.
 
+## Governing rule: full parity
+
+Android gets **everything the existing platforms have**: build, libraries and
+CMake package, every test and check, sanitizers, E2E in both player roles for
+both fixtures, Vector War (GUI and headless), release artifacts, required
+checks, and documentation. The
+[parity matrix](TECH_PLAN.md#parity-matrix) lists each capability; an item may
+only be marked "not applicable" with a written reason in that matrix.
+
 ## Outcomes
 
 - The SDK builds with the Android NDK through the existing CMake build for
