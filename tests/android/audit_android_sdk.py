@@ -86,10 +86,14 @@ def main():
     available = set()
     for name in needed:
         stub = stubs_dir / name
-        if stub.is_file():
-            available |= set(re.findall(r"^\S*\s*[TWDBRV]\s+(\S+)$",
-                                        output(nm, "-D", "--defined-only", stub),
-                                        re.MULTILINE))
+        if not stub.is_file():
+            errors.append(f"no API {args.api} stub for {name} at {stub}")
+            continue
+        # Stub symbols carry version suffixes (abort@@LIBC); compare base names.
+        for symbol in re.findall(r"^\S*\s*[TWDBRVi]\s+(\S+)$",
+                                 output(nm, "-D", "--defined-only", stub),
+                                 re.MULTILINE):
+            available.add(symbol.split("@", 1)[0])
     undefined = set(re.findall(r"^\s+U\s+(\S+?)(?:@.*)?$",
                                output(nm, "-D", "--undefined-only", library),
                                re.MULTILINE))
