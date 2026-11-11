@@ -1,0 +1,56 @@
+plugins {
+    id 'com.android.application'
+}
+
+// SDL2 source tree (for example an extracted SDL2-2.30.9 release). The APK
+// uses SDL's own Java glue from it and builds SDL2 through the same CMake.
+def sdlDir = project.findProperty('sdlDir') ?: System.getenv('SDL2_SOURCE_DIR')
+if (!sdlDir) {
+    throw new GradleException('Set -PsdlDir=<SDL2 source tree> or SDL2_SOURCE_DIR (see doc/DeveloperGuide.md)')
+}
+def ndkDir = System.getenv('ANDROID_NDK_HOME') ?: System.getenv('ANDROID_NDK_LATEST_HOME')
+
+android {
+    namespace 'org.ggponext.vectorwar'
+    compileSdk 35
+    if (ndkDir) {
+        ndkPath ndkDir
+    }
+
+    defaultConfig {
+        applicationId 'org.ggponext.vectorwar'
+        minSdk 21
+        targetSdk 35
+        versionCode 1
+        versionName '1.0'
+        externalNativeBuild {
+            cmake {
+                // The repository's root CMake build: GGPO, VectorWarCore and the
+                // SDL2 frontend, exactly as on the other platforms.
+                arguments '-DGGPO_BUILD_VECTORWAR=ON', '-DBUILD_TESTING=OFF',
+                          "-DGGPO_ANDROID_SDL2_SOURCE_DIR=${sdlDir}"
+                targets 'VectorWarAndroid'
+            }
+        }
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64'
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path file('../../../../../CMakeLists.txt')
+        }
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs += ["${sdlDir}/android-project/app/src/main/java"]
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}

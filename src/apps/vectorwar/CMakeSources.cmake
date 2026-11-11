@@ -41,6 +41,8 @@ set(GGPO_EXAMPLES_VECTORWAR_SDL_SRC
 	"sdl_main.cpp"
 	"sdl_renderer.cpp"
 	"sdl_renderer.h"
+	"sdl_touch_controls.h"
+	"vw_sdl.h"
 )
 
 source_group("Portable core" FILES ${GGPO_EXAMPLES_VECTORWAR_INC_NOFILTER} ${GGPO_EXAMPLES_VECTORWAR_SRC_NOFILTER})

@@ -36,7 +36,7 @@ jobs:
             -DANDROID_ABI=${{ matrix.abi }} -DANDROID_PLATFORM=21 \
             -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
             -DBUILD_SHARED_LIBS=OFF \
-            -DGGPO_BUILD_VECTORWAR=OFF \
+            -DGGPO_BUILD_VECTORWAR=ON \
             -DBUILD_TESTING=ON \
             -DCMAKE_EXE_LINKER_FLAGS=-static
           cmake --build build/android --parallel 4
@@ -191,7 +191,7 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake" \
             -DANDROID_ABI=x86_64 -DANDROID_PLATFORM=21 \
             -DCMAKE_BUILD_TYPE=Release \
-            -DGGPO_BUILD_VECTORWAR=OFF \
+            -DGGPO_BUILD_VECTORWAR=ON \
             -DBUILD_TESTING=ON \
             "-DCMAKE_CROSSCOMPILING_EMULATOR=python3;$GITHUB_WORKSPACE/tests/android/run_on_device.py"
           cmake --build build/emu --parallel 4
@@ -214,3 +214,63 @@ jobs:
           name: android-emulator-api${{ matrix.api }}
           path: build/emu/Testing
           if-no-files-found: warn
+
+  vectorwar-apk:
+    # The SDL2 frontend as an APK: Gradle drives the repository's CMake build.
+    name: Vector War APK
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Fetch SDL2 sources
+        run: |
+          curl -sSL https://github.com/libsdl-org/SDL/releases/download/release-2.30.9/SDL2-2.30.9.tar.gz \
+            | tar -xz -C "$RUNNER_TEMP"
+          echo "SDL2_SOURCE_DIR=$RUNNER_TEMP/SDL2-2.30.9" >> "$GITHUB_ENV"
+      - name: Build the APK
+        run: |
+          gradle -p src/apps/vectorwar/android assembleDebug --no-daemon
+          apk=src/apps/vectorwar/android/app/build/outputs/apk/debug/app-debug.apk
+          unzip -l "$apk" | grep -E "lib/.*\.so$"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vectorwar-apk
+          path: src/apps/vectorwar/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+  vectorwar-apk-smoke:
+    name: Vector War APK smoke (API ${{ matrix.api }})
+    needs: vectorwar-apk
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {api: 21, target: default}
+          - {api: 35, target: google_apis}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: vectorwar-apk
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install and start the APK in smoke mode
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: ${{ matrix.target }}
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot
+          script: sh tests/android/apk_smoke.sh app-debug.apk

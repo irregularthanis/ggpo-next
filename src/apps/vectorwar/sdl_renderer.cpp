@@ -1,6 +1,9 @@
 #include "sdl_renderer.h"
 
-#include <SDL2/SDL.h>
+#include "vw_sdl.h"
+#if defined(__ANDROID__)
+#include "sdl_touch_controls.h"
+#endif
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -40,6 +43,16 @@ SDLVectorWarRenderer::SDLVectorWarRenderer() :
    if (!_window || !_renderer) {
       fprintf(stderr, "SDL renderer creation failed: %s\n", SDL_GetError());
    }
+#if defined(__ANDROID__)
+   // The window is the whole screen: stretch the 640x480 arena to it so
+   // normalized touch positions and drawing share one coordinate space.
+   if (_renderer) {
+      int width = 0, height = 0;
+      if (SDL_GetRendererOutputSize(_renderer, &width, &height) == 0 && width && height) {
+         SDL_RenderSetScale(_renderer, width / 640.0f, height / 480.0f);
+      }
+   }
+#endif
 }
 
 SDLVectorWarRenderer::~SDLVectorWarRenderer()
@@ -107,5 +120,8 @@ SDLVectorWarRenderer::Draw(GameState &state, NonGameState &)
    for (int player = 0; player < state._num_ships; ++player) {
       DrawShip(state._ships[player], player);
    }
+#if defined(__ANDROID__)
+   vw_touch::Draw(_renderer, 640, 480);
+#endif
    SDL_RenderPresent(_renderer);
 }
