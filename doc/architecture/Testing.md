@@ -69,11 +69,28 @@ not (`readelf -d` on Linux; on Windows the static programs run with the SDK's
 
 ## Shared coverage and platform normalization
 
+The suite separates shared behavioral assertions from platform execution and
+artifact inspection:
+
+| Contract | Common test source | Platform-specific execution |
+| --- | --- | --- |
+| Core, API, protocol and rollback | One assertion set for algorithms, all 16 public entry points, packet validation and SyncTest | Compiled with each supported toolchain; fake services isolate shared behavior |
+| Platform adapter | One [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) contract | Linked once to the fake adapter and again to MSVC/MinGW Windows or POSIX Linux/Android implementations |
+| ABI and wire layout | Frozen sizes, offsets, enums, callbacks and packet layouts | MSVC/MinGW inspect PE exports; Linux/Android inspect ELF exports, SONAME, dependencies and ABI ceilings |
+| Installed SDK | Same C11/C++98 consumers and shared/static selection | Native compiler, package layout, runtime loader and toolchain-isolation checks per SDK |
+| Vector War gameplay | Shared deterministic state, inputs, checkpoints and rollback oracle | Win32, SDL2 Linux and SDL2 Android hosts add window, input, renderer and lifecycle contracts |
+| Native networking | Same peer and Vector War headless protocols and result schema | Local loopback per platform, then ordered cross-platform pairs over ephemeral Tailscale nodes |
+
+Common sources define what must remain identical. Platform wrappers only
+select the native adapter, launch mechanism, loader and artifact inspector.
+MinGW uses the Windows runtime adapter but remains a separate compiler, ABI,
+packaging and interoperability lane.
+
 [`public_api_contract_test.cpp`](../../tests/contract/public_api_contract_test.cpp)
 calls all 16 exports declared by [`ggponet.h`](../../src/include/ggponet.h).
-It shares one fake-platform production core across Windows and Linux builds, so
+It shares one fake-platform production core across every platform build, so
 null-session, construction, backend lifecycle, configuration, logging, and
-cleanup expectations do not diverge by host.
+cleanup expectations do not diverge by host or toolchain.
 
 This is complete API *entry-point* coverage, not every combination of backend,
 state, and argument. Deeper behavior is divided deliberately:
@@ -82,12 +99,12 @@ state, and argument. Deeper behavior is divided deliberately:
 - SyncTest and focused core contracts cover rollback and replay;
 - native peer tests cover real platform sockets and two-process sessions; and
 - native layout fixtures cover the frozen ABI, exports, and packet layout on
-  both Windows and Linux.
+  Windows, Linux, MinGW, and Android.
 
 [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp)
-is the single assertion source compiled against the fake, Windows, and Linux
-adapters. It exercises clocks, waits, process identity, configuration defaults,
-directory handling, endpoints, network lifetime, and UDP lifecycle. All 16
+is the single assertion source compiled against the fake, Windows, Linux, and
+Android adapters. It exercises clocks, waits, process identity, configuration
+defaults, directory handling, endpoints, network lifetime, and UDP lifecycle. All 16
 callable platform operations plus socket construction/destruction are linked.
 `AssertFailed` is link-checked but not invoked because the Windows contract
 opens a modal diagnostic; platform setup and system-library linkage remain
@@ -102,7 +119,7 @@ flowchart TD
     Portable["Shared portable<br/>core, API and<br/>protocol contracts"]
     Conformance["Same platform<br/>conformance source<br/>fake and native"]
     Native["Native SyncTest,<br/>negative cases and<br/>two-process loopback"]
-    Layout["Windows only<br/>public ABI, exports<br/>and packet layout"]
+    Layout["Platform ABI,<br/>exports, dependencies<br/>and packet layout"]
     Consumers["Install SDK;<br/>compile and link<br/>C11 and C++98<br/>consumers"]
     Capture["Capture<br/>exports,<br/>layouts,<br/>hashes<br/>and<br/>environment"]
     Noise{"Repeated<br/>timing<br/>requested?"}
