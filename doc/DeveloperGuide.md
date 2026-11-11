@@ -33,14 +33,29 @@ platform: download, build from source, link (dynamic or static), and deploy.
 | Linux x86_64 | `ggpo-0.5.0-linux-x86_64.deb` / `.rpm` / `.tar.gz` | [Linux](#linux) |
 | Android (arm64-v8a, armeabi-v7a, x86_64) | `ggpo-0.5.0-android.tar.gz` | [Android](#android) |
 
-Downloads are on [GGPO Next Releases](https://github.com/irregularthanis/ggpo-next/releases),
-next to a `SHA256SUMS` file to verify them against.
+Downloads are on [GGPO Next Releases](https://github.com/irregularthanis/ggpo-next/releases).
 
-### Link GGPO into an application
+### Common to all platforms
 
-Every SDK is an installed CMake package containing **both** a shared and a
-static library. The public header and API are identical; the application picks
-one flavor per executable and links only that one.
+Everything in this section applies to every platform. The platform sections
+only add what differs.
+
+#### SDK contents
+
+- Every SDK is an installed CMake package: `include/ggponet.h`,
+  `lib/cmake/GGPO/`, `share/GGPO/` (license and readme), and **both** a shared
+  and a static library.
+- The public header, API, ABI and wire format are the same on every platform,
+  so peers on different platforms can play each other as long as the game
+  itself is deterministic across them ([floating point](#floating-point-determinism)).
+- Every release lists checksums in `SHA256SUMS`; verify a download before
+  extracting it.
+- Install each SDK in its own directory. Never merge two SDKs (for example MSVC
+  and MinGW, or two Android ABIs) into one prefix.
+
+#### Link GGPO into an application
+
+The application picks one flavor per executable and links only that one:
 
 | | Dynamic (shared) | Static |
 | --- | --- | --- |
@@ -72,28 +87,68 @@ add_executable(application_x main.cpp)
 target_link_libraries(application_x PRIVATE GGPO::GGPO)
 ```
 
-`GGPO::GGPO` is the **shared** library by default. Configure with
-`-DGGPO_USE_STATIC=ON` to link the static library instead, or name the flavor
-in the project:
+- Point CMake at the SDK with `-DCMAKE_PREFIX_PATH=<sdk directory>` (not needed
+  for Linux DEB/RPM installs).
+- `GGPO::GGPO` is the **shared** library by default. Configure with
+  `-DGGPO_USE_STATIC=ON` to link the static library instead, or name the
+  flavor in the project:
 
-```cmake
-find_package(GGPO CONFIG REQUIRED COMPONENTS static)
-target_link_libraries(application_x PRIVATE GGPO::static)   # or GGPO::shared
-```
+  ```cmake
+  find_package(GGPO CONFIG REQUIRED COMPONENTS static)
+  target_link_libraries(application_x PRIVATE GGPO::static)   # or GGPO::shared
+  ```
 
-The targets carry the include directory, the Windows system libraries
-(`ws2_32`, `winmm`), and `GGPO_SHARED_LIB` when it is needed. Without CMake,
-each platform section below gives the exact compiler commands. Two rules apply
-everywhere:
+- The targets carry the include directory, any system libraries, and
+  `GGPO_SHARED_LIB` when it is needed. Link one flavor per executable, not both.
 
+#### Linking without CMake
+
+Each platform section gives exact compiler commands. They follow the same
+rules:
+
+- Add `<sdk>/include` to the include path and link either the shared library
+  or the static library file, never both.
 - On Windows, define `GGPO_SHARED_LIB` for the shared library only; the static
-  library must **not** define it.
+  library must **not** define it. Other platforms ignore it.
+- With GNU-style linkers, list libraries **after** the sources: they resolve
+  left to right.
 - GGPO is C++. A C application that links the static library must do its final
   link with the C++ driver (`g++`, `clang++`) or add `-lstdc++`. CMake does
   this automatically.
 
-GGPO is MIT licensed, so either flavor may be distributed in closed-source
-applications; include the license text from `share/GGPO/LICENSE` either way.
+#### Build options
+
+These apply to every source build, whatever the platform:
+
+| Option | Effect |
+| --- | --- |
+| *(default)* | Build both the shared and the static library |
+| `-DBUILD_SHARED_LIBS=ON` / `OFF` | Build only the shared / only the static library |
+| `-DGGPO_BUILD_SHARED=OFF`, `-DGGPO_BUILD_STATIC=OFF` | Turn off one flavor individually |
+| `-DGGPO_BUILD_VECTORWAR=OFF` | Skip Vector War (always off for MinGW) |
+| `-DGGPO_BUILD_VECTORWAR_GUI=OFF` | Build only the portable Vector War core and headless fixture, without SDL or Win32 frontends |
+| `-DGGPO_RUN_TESTS_ON_BUILD=OFF` | Build tests but run them explicitly with `ctest` |
+| `-DBUILD_TESTING=OFF` | Consumer or packaging-only build, no tests |
+
+#### Floating-point determinism
+
+GGPO only keeps peers in sync if every peer's game simulation computes
+bit-identical results. GGPO's own builds force consistent floating point where
+a platform's default differs, and a game playing across platforms should use
+the same flags for its simulation code:
+
+| Platform | Flag used by GGPO | Why |
+| --- | --- | --- |
+| 32-bit MinGW | `-msse2 -mfpmath=sse` | GCC's x87 default rounds differently from MSVC, x64 and Linux |
+| Android | `-ffp-contract=off` | Clang fuses multiply-add (FMA) on ARM, changing results |
+
+#### Deployment and license
+
+- **Dynamic:** ship GGPO's runtime library where the platform loader finds it
+  (details per platform below).
+- **Static:** no GGPO file at run time.
+- GGPO is MIT licensed, so either flavor may be distributed in closed-source
+  applications; include the license text from `share/GGPO/LICENSE` either way.
 
 ### Windows with MSVC
 
@@ -138,13 +193,7 @@ Change `-A x64` to `-A Win32` for a 32-bit SDK. The install contains both
 SDL-free build of only the portable Vector War core and headless fixture, keep
 `GGPO_BUILD_VECTORWAR=ON` and add `-DGGPO_BUILD_VECTORWAR_GUI=OFF`.
 
-These build options apply on every platform:
-
-- `-DBUILD_SHARED_LIBS=ON` builds only the shared library, `OFF` only the
-  static one; `GGPO_BUILD_SHARED` / `GGPO_BUILD_STATIC` set each individually.
-- The normal build runs every registered test. Use
-  `-DGGPO_RUN_TESTS_ON_BUILD=OFF` when test execution must be explicit, or
-  `-DBUILD_TESTING=OFF` for a consumer/packaging-only build.
+The [common build options](#build-options) apply.
 
 #### Link with MSVC
 
