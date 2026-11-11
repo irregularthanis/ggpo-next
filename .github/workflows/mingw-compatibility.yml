@@ -102,3 +102,72 @@ jobs:
             build/exports.txt
             build/consumers/consumers.json
           if-no-files-found: warn
+
+  toolchain-isolation:
+    # MSVC and MinGW SDKs must not be mixed through CMake; the MSVC GGPO.dll
+    # C interface is the one supported cross-toolchain path.
+    name: MinGW toolchain isolation
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: false
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+
+      - name: Build an MSVC SDK (x64, both libraries)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          cmake -S . -B build/msvc -G "Visual Studio 17 2022" -A x64 `
+            -DBUILD_TESTING=OFF -DGGPO_BUILD_VECTORWAR=OFF
+          cmake --build build/msvc --config Release --parallel
+          cmake --install build/msvc --config Release --prefix build/msvc-sdk
+
+      - name: Build a MinGW SDK (x64, both libraries)
+        shell: msys2 {0}
+        run: |
+          cmake -S . -B build/mingw -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX="$PWD/build/mingw-sdk"
+          cmake --build build/mingw --parallel
+          cmake --install build/mingw
+
+      - name: A MinGW project rejects the MSVC SDK
+        shell: msys2 {0}
+        run: |
+          if cmake -S tests/consumer -B build/neg-mingw -G Ninja \
+               -DCMAKE_PREFIX_PATH="$PWD/build/msvc-sdk" > build/neg-mingw.log 2>&1; then
+            cat build/neg-mingw.log; echo "MinGW configure accepted the MSVC SDK" >&2; exit 1
+          fi
+          cat build/neg-mingw.log
+          grep -q "built with msvc, but the project uses mingw" build/neg-mingw.log
+
+      - name: An MSVC project rejects the MinGW SDK
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Continue"
+          $output = cmake -S tests/consumer -B build/neg-msvc -G "Visual Studio 17 2022" -A x64 `
+            "-DCMAKE_PREFIX_PATH=$($PWD.Path.Replace('\','/'))/build/mingw-sdk" 2>&1 | Out-String
+          $code = $LASTEXITCODE
+          Write-Host $output
+          if ($code -eq 0) { throw "MSVC configure accepted the MinGW SDK" }
+          if ($output -notmatch "built with mingw, but the project uses msvc") {
+            throw "MSVC configure failed without the toolchain message"
+          }
+
+      - name: A MinGW program uses the MSVC GGPO.dll
+        shell: msys2 {0}
+        run: |
+          # Link the DLL directly (no import library); the C API crosses toolchains.
+          gcc -std=c11 -DGGPO_SHARED_LIB -Ibuild/msvc-sdk/include \
+            tests/consumer/consumer.c build/msvc-sdk/bin/GGPO.dll \
+            -o build/mingw-uses-msvc-dll.exe
+          objdump -p build/mingw-uses-msvc-dll.exe | grep 'DLL Name: GGPO.dll'
+          PATH="$PWD/build/msvc-sdk/bin:$PATH" ./build/mingw-uses-msvc-dll.exe
+          echo "MinGW program ran against the MSVC GGPO.dll"
