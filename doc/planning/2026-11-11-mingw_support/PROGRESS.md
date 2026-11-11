@@ -78,7 +78,7 @@ Parallel with M2.
 |---|---|
 | Support x64 and x86 | Accepted (2026-11-11) |
 | No MinGW Vector War | Accepted (2026-11-11) |
-| x64 uses UCRT (UCRT64); x86 uses MSVCRT (MINGW32) | Proposed |
+| x64 uses UCRT (UCRT64); x86 uses MSVCRT (MINGW32) | Accepted (2026-11-11); static `libGGPO.a` requires a matching runtime, exception model and GCC ≥ the SDK's, documented in the Developer Guide; 32-bit UCRT via llvm-mingw is a possible follow-up |
 | Statically link libgcc/libstdc++ into `libGGPO.dll` | Accepted (2026-11-11) |
 | Release-only MinGW lanes, no Debug lane | Accepted (implemented) |
 | 32-bit MinGW compiles with `-msse2 -mfpmath=sse` (x87 breaks cross-platform determinism) | Accepted (2026-11-11) |

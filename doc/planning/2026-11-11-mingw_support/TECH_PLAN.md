@@ -173,5 +173,5 @@ ggpo-V-windows-x64-mingw/
 
 ## Open decisions
 
-- Whether the x86 MinGW download should wait for a 32-bit UCRT toolchain
-  instead of using MSVCRT (proposed: ship MSVCRT now, documented).
+- None. x86 ships on MSVCRT now (accepted); the static-library toolchain
+  requirements are documented in the Developer Guide.

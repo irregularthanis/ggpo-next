@@ -105,6 +105,31 @@ MSVCRT (MSYS2 `MINGW32`), because MSYS2 has no 32-bit UCRT environment.
 ship `libgcc`, `libstdc++` or `libwinpthread` DLLs for GGPO.
 `share/GGPO/TOOLCHAIN.txt` in each MinGW SDK names its toolchain and runtime.
 
+#### MinGW static library compatibility
+
+`libGGPO.dll` works with any MinGW application of the same architecture: it
+embeds its runtime and exposes only a C interface. **`libGGPO.a` is different.**
+It is C++ code that links against the application's own C and C++ runtime, so
+the application's toolchain must match the SDK's in three ways:
+
+1. **C runtime:** UCRT for the x64 SDK, MSVCRT for the x86 SDK.
+2. **Exception model:** SEH for x64, DWARF-2 for x86 (MSYS2's defaults).
+3. **GCC version:** the same or newer than the GCC in `TOOLCHAIN.txt`; an older
+   GCC can fail with missing `libstdc++` symbols.
+
+| Toolchain | x64 `libGGPO.a` | x86 `libGGPO.a` |
+| --- | --- | --- |
+| MSYS2 `UCRT64` / `MINGW32`, current GCC | **Tested** | **Tested** |
+| Other GCC builds with the same runtime and exception model (e.g. matching WinLibs or MinGW-builds flavors), same or newer GCC | Expected to work, untested | Expected to work, untested |
+| x86 toolchains using SJLJ exceptions (some older MinGW-builds) | — | **Not supported:** link errors |
+| UCRT x86 or MSVCRT x64 toolchains (e.g. llvm-mingw i686-ucrt, MSYS2 `MINGW64`) | **Not supported** | **Not supported** |
+| Clang-based MinGW (llvm-mingw, MSYS2 `CLANG64`), libc++ | **Not supported** | **Not supported** |
+| GCC older than the SDK's | May fail to link | May fail to link |
+
+If your toolchain is not in a supported row, use `libGGPO.dll`, or
+[build GGPO from source](#option-4-build-with-mingw-w64) with your own
+toolchain; the static library then matches by construction.
+
 ### Run the standalone Vector War sample
 
 Release pages also attach GUI sample archives independent of the SDK linkage:
