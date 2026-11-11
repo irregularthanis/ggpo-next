@@ -1,6 +1,6 @@
 # TECH_PLAN — MinGW-w64 SDK support
 
-Status: Planning only
+Status: In progress
 
 Source: `02ac787240fe68dfe21ce60629fe6980f9885e3b`
 
@@ -64,6 +64,9 @@ flowchart TD
   MinGW runtime DLLs on the user's machine (accepted). The export test also
   checks that `objdump -p libGGPO.dll` lists no `libgcc_s*`, `libstdc++*` or
   `libwinpthread*` imports.
+- 32-bit MinGW compiles everything with `-msse2 -mfpmath=sse`. GCC's x87
+  default rounds differently from SSE2 (MSVC x86, x64, Linux) and broke
+  Vector War's frozen checksum; MSVC x86 already requires SSE2. (Found in M2.)
 - `GGPO_BUILD_VECTORWAR` defaults to `OFF` under MinGW; explicitly enabling
   it fails with a clear message.
 - `platform_windows.cpp`: replace `_snprintf_s` with portable `snprintf` and
