@@ -2,7 +2,7 @@ param(
     [Parameter(Mandatory = $true)][string]$BuildDirectory,
     [Parameter(Mandatory = $true)][string]$Configuration,
     [Parameter(Mandatory = $true)][ValidateSet("x64", "Win32")][string]$Architecture,
-    [Parameter(Mandatory = $true)][ValidateSet("ON", "OFF")][string]$Shared,
+    [Parameter(Mandatory = $true)][ValidateSet("BOTH", "ON", "OFF")][string]$Shared,
     [Parameter(Mandatory = $true)][string]$OutputDirectory,
     [int]$NoiseRuns = 0
 )
@@ -55,7 +55,7 @@ Invoke-CapturedExecutable `
     (Join-Path $binaryDirectory "ggpo_windows_packet_layout.exe") `
     (Join-Path $output "packet-layout.txt")
 
-if ($Shared -eq "ON") {
+if ($Shared -ne "OFF") {
     $dll = Join-Path $binaryDirectory "GGPO.dll"
     $dumpbin = Find-DumpBin
     $exports = & $dumpbin /nologo /exports $dll

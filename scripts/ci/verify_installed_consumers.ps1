@@ -2,7 +2,7 @@ param(
     [Parameter(Mandatory = $true)][string]$BuildDirectory,
     [Parameter(Mandatory = $true)][string]$Configuration,
     [Parameter(Mandatory = $true)][ValidateSet("x64", "Win32")][string]$Architecture,
-    [Parameter(Mandatory = $true)][ValidateSet("ON", "OFF")][string]$Shared,
+    [Parameter(Mandatory = $true)][ValidateSet("BOTH", "ON", "OFF")][string]$Shared,
     [Parameter(Mandatory = $true)][string]$Generator,
     [Parameter(Mandatory = $true)][string]$EvidenceDirectory
 )

@@ -8,14 +8,19 @@ on:
 
 jobs:
   baseline:
-    name: Windows compatibility (${{ matrix.architecture }}, ${{ matrix.shared == 'ON' && 'shared' || 'static' }}, ${{ matrix.configuration }})
+    name: Windows compatibility (${{ matrix.architecture }}, ${{ matrix.label }}, ${{ matrix.configuration }})
     runs-on: windows-2022
     strategy:
       fail-fast: false
       matrix:
-        architecture: [x64, Win32]
-        shared: [ON, OFF]
-        configuration: [Debug, Release]
+        # Release lanes build GGPO.dll and libGGPO.lib together and test both.
+        # One Debug lane keeps the MSVC debug runtime checks (/RTC1, debug heap,
+        # checked iterators); the other Debug variants compiled the same
+        # sources and added no coverage.
+        include:
+          - {architecture: x64, shared: BOTH, label: both, configuration: Release}
+          - {architecture: Win32, shared: BOTH, label: both, configuration: Release}
+          - {architecture: x64, shared: "OFF", label: static, configuration: Debug}
 
     steps:
       - uses: actions/checkout@v4
@@ -35,7 +40,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: windows-compatibility-${{ matrix.architecture }}-${{ matrix.shared }}-${{ matrix.configuration }}
+          name: windows-compatibility-${{ matrix.architecture }}-${{ matrix.label }}-${{ matrix.configuration }}
           path: build/windows-compatibility-evidence
           if-no-files-found: error
 

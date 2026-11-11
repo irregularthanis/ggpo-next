@@ -1,6 +1,6 @@
 param(
     [ValidateSet("x64", "Win32")][string]$Architecture = "x64",
-    [ValidateSet("ON", "OFF")][string]$Shared = "ON",
+    [ValidateSet("BOTH", "ON", "OFF")][string]$Shared = "BOTH",
     [ValidateSet("Debug", "Release")][string]$Configuration = "Release",
     [string]$Generator = "Visual Studio 16 2019",
     [string]$BuildDirectory,
@@ -10,7 +10,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repo = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
-$sharedLabel = if ($Shared -eq "ON") { "shared" } else { "static" }
+$sharedLabel = switch ($Shared) { "BOTH" { "both" } "ON" { "shared" } default { "static" } }
+# BOTH leaves BUILD_SHARED_LIBS unset so one build produces GGPO.dll and libGGPO.lib.
+$linkageArguments = if ($Shared -eq "BOTH") { @() } else { @("-DBUILD_SHARED_LIBS=$Shared") }
 $architectureLabel = if ($Architecture -eq "x64") { "x64" } else { "x86" }
 
 if (!$BuildDirectory) {
@@ -21,7 +23,7 @@ if (!$EvidenceDirectory) {
 }
 
 cmake -S $repo -B $BuildDirectory -G $Generator -A $Architecture `
-    -DBUILD_SHARED_LIBS=$Shared `
+    @linkageArguments `
     -DGGPO_BUILD_SDK=ON `
     -DGGPO_BUILD_VECTORWAR=ON `
     -DBUILD_TESTING=ON
