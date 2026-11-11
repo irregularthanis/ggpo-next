@@ -37,27 +37,28 @@ behavior-changing refactor pass.
 | --- | --- | --- | --- |
 | Public ABI | Public sizes, offsets, enum values, callback order, and DLL/shared-object exports | [`public_layout.cpp`](../../tests/baseline/windows/public_layout.cpp), [`exports-x64.txt`](../../tests/baseline/windows/exports-x64.txt), [`linux/exports.txt`](../../tests/baseline/linux/exports.txt) | Compiled header, shared DLL and `libGGPO.so` |
 | Installed consumers | C11 and C++98 programs build and run from installed files for every linkage: default, `GGPO_USE_STATIC=ON`, and `GGPO::shared`; each binary's real runtime dependency is checked | [`tests/consumer`](../../tests/consumer/CMakeLists.txt), [`verify_consumers.py`](../../tests/consumer/verify_consumers.py) | Installed header plus shared and static libraries |
-| Wire layout | Packed `UdpMsg` sizes, offsets, and representative packet lengths | [`packet_layout.cpp`](../../tests/baseline/windows/packet_layout.cpp) | Internal protocol structures on Windows and Linux |
+| Wire layout | Packed `UdpMsg` sizes, offsets, and representative packet lengths | [`packet_layout.cpp`](../../tests/baseline/windows/packet_layout.cpp) | Internal protocol structures on Windows, Linux, MinGW, and Android |
 | Portable core | Queue prediction, rollback/replay, time sync, containers, and bit encoding | [`tests/unit`](../../tests/unit/input_queue_test.cpp) | Production algorithms with deterministic state |
 | Public API | Session construction, lifecycle, null guards, configuration, and logging | [`public_api_contract_test.cpp`](../../tests/contract/public_api_contract_test.cpp) | Production backends with fake services |
 | Protocol safety | Exact packet sizes and truncated, trailing, or unknown messages | [`protocol_test.cpp`](../../tests/unit/protocol_test.cpp) | Production packet validator and receive guard |
 | Platform contract | Virtual clock/wait, fallbacks, endpoint/socket results, failure, and cleanup | [`platform_fake_test.cpp`](../../tests/platform/fake/platform_fake_test.cpp) | Deterministic fake adapter |
-| Native conformance | One clock/config/endpoint/UDP assertion source | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | Fake, Windows, and Linux adapters |
+| Native conformance | One clock/config/endpoint/UDP assertion source | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | Fake, Windows, Linux, and Android adapters |
 | Platform-free rollback | Production core linked without the Windows adapter | [`platform_fake.cpp`](../../tests/platform/fake/platform_fake.cpp), [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | Fake adapter and production rollback core |
 | Sample simulation | Scripted Vector War inputs, explicit arena bounds, and canonical checkpoints | [`gamestate_contract_test.cpp`](../../tests/vectorwar/gamestate_contract_test.cpp), [`state_contract.cpp`](../../src/apps/vectorwar/state_contract.cpp) | Real sample `GameState` without a window or socket |
-| Sample gameplay determinism | Exact cardinal starts and shared initialization semantics | [`gameplay_determinism_test.cpp`](../../tests/vectorwar/gameplay_determinism_test.cpp) | Same gameplay assertions on Windows and Linux |
-| Sample native hosts | Native clock, sleep, bounds, input and presentation ownership | [`native_host_contract_test.cpp`](../../tests/vectorwar/native_host_contract_test.cpp), [`win32_host_contract_test.cpp`](../../tests/vectorwar/win32_host_contract_test.cpp), [`sdl_host_contract_test.cpp`](../../tests/vectorwar/sdl_host_contract_test.cpp) | POSIX/Win32 adapter branches and the Windows and Linux GUI hosts |
-| Sample application loopback | Real Vector War callbacks, scripted host input, native UDP, rollback, and final golden state | [`headless_main.cpp`](../../src/apps/vectorwar/headless_main.cpp), [`run_headless_loopback.py`](../../tests/vectorwar/run_headless_loopback.py) | Two headless Vector War processes on Windows or Linux |
+| Sample gameplay determinism | Exact cardinal starts and shared initialization semantics | [`gameplay_determinism_test.cpp`](../../tests/vectorwar/gameplay_determinism_test.cpp) | Same gameplay assertions on Windows, Linux, and Android |
+| Sample native hosts | Native clock, sleep, bounds, input and presentation ownership | [`native_host_contract_test.cpp`](../../tests/vectorwar/native_host_contract_test.cpp), [`win32_host_contract_test.cpp`](../../tests/vectorwar/win32_host_contract_test.cpp), [`sdl_host_contract_test.cpp`](../../tests/vectorwar/sdl_host_contract_test.cpp) | POSIX/Win32 adapter branches and the Windows, Linux, and Android GUI hosts |
+| Sample application loopback | Real Vector War callbacks, scripted host input, native UDP, rollback, and final golden state | [`headless_main.cpp`](../../src/apps/vectorwar/headless_main.cpp), [`run_headless_loopback.py`](../../tests/vectorwar/run_headless_loopback.py) | Two headless Vector War processes on Windows, Linux, or Android |
 | Sample application negatives | Startup, timeout, divergence, absent rollback, and dirty shutdown are rejected | [`headless_negative.py`](../../tests/vectorwar/headless_negative.py) | Fault-injected Vector War processes |
 | Rollback behavior | Save, restore, synchronized input, replay, and deterministic final state | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | SyncTest backend without sockets |
-| Native transport | Handshake, events, prediction, rollback, UDP delivery, and shutdown | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Two Windows or Linux GGPO processes over localhost |
+| Native transport | Handshake, events, prediction, rollback, UDP delivery, and shutdown | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Two native or on-device GGPO processes on every supported platform |
 | Negative peer contracts | Startup, timeout, checksum mismatch, and shutdown failures are rejected | [`peer_runner_negative.py`](../../tests/smoke/peer_runner_negative.py) | Fault-injected real peer processes |
 | Build compatibility | x64/Win32 Release and x64 Debug, each with both libraries | [`windows-compatibility.yml`](../../.github/workflows/windows-compatibility.yml) | Three Windows lanes |
 | Linux transport | The same peer contract through POSIX UDP | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`platform_posix.cpp`](../../src/lib/ggpo/platform_posix.cpp) | Two native Linux processes |
 | Linux package | GCC/Clang with both libraries, installed consumers and ABI ceiling | [`linux-compatibility.yml`](../../.github/workflows/linux-compatibility.yml) | Shared Ubuntu 24.04 image |
 | MinGW-w64 | x64 (MINGW64) and x86 (MINGW32), both MSVCRT, with both libraries: full CTest, installed consumers, export manifest, no MinGW runtime imports | [`mingw-compatibility.yml`](../../.github/workflows/mingw-compatibility.yml) | MSYS2 on Windows runners |
 | Toolchain isolation | MSVC and MinGW SDKs reject each other's CMake consumers; a MinGW program runs against the MSVC `GGPO.dll` | [`mingw-compatibility.yml`](../../.github/workflows/mingw-compatibility.yml) | One runner with both toolchains |
-| Cross-host | Native Windows and Linux peers converge | [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml), [`tests/e2e`](../../tests/e2e) | Native GitHub-hosted Windows↔Ubuntu matrix over ephemeral Tailscale nodes |
+| Android compatibility | Three ABIs, API 21/current emulators, installed consumers, SDK audit, APK smoke, and sanitizer qualification | [`android-compatibility.yml`](../../.github/workflows/android-compatibility.yml), [`tests/android`](../../tests/android) | NDK builds, native ARM execution, and x86_64 Android emulators |
+| Cross-host | Linux, Windows, MinGW, and Android peers converge | [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml), [`tests/e2e`](../../tests/e2e) | Native hosted runners joined through ephemeral Tailscale nodes |
 
 Every lane builds the shared and the static library together. CTest runs the
 suite against the shared library and adds `*_static_synctest_smoke` and
@@ -164,12 +165,12 @@ flowchart TD
     Shared --> Session
 ```
 
-- The native-host layer runs the selected Windows or Linux clock and sleep
+- The native-host layer runs the selected Windows or POSIX clock and sleep
   implementation and freezes the headless bounds, input, renderer, and
   diagnostics contract. Windows additionally creates a real hidden Win32
   window and validates client bounds, GDI renderer ownership, and diagnostics.
-- The shared-gameplay layer runs identical sources and assertions on both
-  platforms. It checks exact two- and four-player cardinal starts, the
+- The shared-gameplay layer runs identical sources and assertions across
+  supported platforms. It checks exact two- and four-player cardinal starts, the
   180-frame simulation checkpoints, and canonical state hashing.
 
 These layers do not replace the two-process application fixture. They localize
@@ -304,9 +305,10 @@ tests.
 ### Native cross-host E2E
 
 [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml)
-automates native Linux↔Linux, Windows↔Windows, Linux↔Windows, and
-Windows↔Linux role assignments on GitHub-hosted runners. Every assignment runs
-two fixtures from the same source SHA for 180 deterministic frames:
+automates ordered Linux, Windows, MinGW, and Android role assignments on
+GitHub-hosted runners. The generic fixture covers every supported pairing;
+Vector War covers platforms where that sample builds. Every assignment runs
+from the same source SHA for 180 deterministic frames:
 
 - `ggpo_peer_smoke` isolates the public GGPO session and transport contract.
 - `VectorWarHeadless` adds the real sample's callbacks, state, frame loop,
