@@ -3,22 +3,20 @@
 ## Contents
 
 - [Purpose](#purpose)
-- [Test layers](#test-layers)
-- [Shared coverage and platform normalization](#shared-coverage-and-platform-normalization)
-- [Execution flow](#execution-flow)
-- [Windows compatibility baseline](#windows-compatibility-baseline)
-- [Runtime fixtures](#runtime-fixtures)
-- [Build and CI integration](#build-and-ci-integration)
-- [Evidence and interpretation](#evidence-and-interpretation)
-- [Current limits and follow-ups](#current-limits-and-follow-ups)
+- [Bottom-up coverage map](#bottom-up-coverage-map)
+- [1. Build and artifact contracts](#1-build-and-artifact-contracts)
+- [2. API and platform contracts](#2-api-and-platform-contracts)
+- [3. Execution contracts](#3-execution-contracts)
+- [4. CI qualification](#4-ci-qualification)
 
 ## Purpose
 
 GGPO's tests freeze Windows compatibility while qualifying the shared core and
-Linux adapter. They protect public ABI, packed protocol data, deterministic
-rollback, and real loopback sessions without requiring Vector War.
+the Windows, Linux, MinGW, and Android platform paths. They protect public ABI,
+packed protocol data, deterministic rollback, packages, and real loopback
+sessions without requiring the interactive Vector War frontend.
 
-### Linux counterparts
+### Platform counterparts
 
 Linux compiles the same two layout sources as `linux_public_layout` and
 `linux_packet_layout`; the frozen values are identical on LP64, and the packed
@@ -27,11 +25,16 @@ run `linux_exports`, which compares `nm -D` `ggpo_*` symbols in `libGGPO.so`
 with [`linux/exports.txt`](../../tests/baseline/linux/exports.txt). See the
 [Linux baseline README](../../tests/baseline/linux/README.md).
 
+MinGW compiles the Windows adapter with its own x86/x64 toolchains and verifies
+PE exports and runtime imports. Android compiles the shared POSIX adapter for
+three ABIs, checks the same layouts and exports, and executes the contracts on
+native ARM runners and API-level emulators.
+
 The fixtures live under [`tests`](../../tests). Their frozen values represent
 the current compatibility contract; they should not be updated merely to make a
 behavior-changing refactor pass.
 
-## Test layers
+## Bottom-up coverage map
 
 | Layer | Contract | Source | Runs against |
 | --- | --- | --- | --- |
@@ -60,14 +63,47 @@ behavior-changing refactor pass.
 | Android compatibility | Three ABIs, API 21/current emulators, installed consumers, SDK audit, APK smoke, and sanitizer qualification | [`android-compatibility.yml`](../../.github/workflows/android-compatibility.yml), [`tests/android`](../../tests/android) | NDK builds, native ARM execution, and x86_64 Android emulators |
 | Cross-host | Linux, Windows, MinGW, and Android peers converge | [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml), [`tests/e2e`](../../tests/e2e) | Native hosted runners joined through ephemeral Tailscale nodes |
 
-Every lane builds the shared and the static library together. CTest runs the
+## 1. Build and artifact contracts
+
+Every platform first has to produce compatible headers, shared/static
+libraries, package metadata and consumer-visible layouts. Every lane builds
+the shared and the static library together. CTest runs the
 suite against the shared library and adds `*_static_synctest_smoke` and
 `*_static_peer_loopback` against the static one. The installed-consumer step
 then proves shared consumers depend on the GGPO runtime and static consumers do
 not (`readelf -d` on Linux; on Windows the static programs run with the SDK's
 `bin` removed from `PATH`).
 
-## Shared coverage and platform normalization
+| Platform path | Produced artifacts | Build-level proof |
+| --- | --- | --- |
+| MSVC Windows | `GGPO.dll`, import/static `.lib`, CMake package | x64/Win32 layouts, exports, frozen baseline compatibility and installed consumers |
+| MinGW Windows | `libGGPO.dll`, `.dll.a`, static `.a` | x86/x64 exports, no external MinGW runtime DLLs, consumers and MSVC isolation |
+| Linux | `libGGPO.so`, static `.a`, DEB/RPM/tar SDKs | GCC/Clang builds, SONAME/glibc audit, consumers and package layout |
+| Android | Per-ABI `libGGPO.so`, static `.a`, CMake SDK | API-21 ceiling, ELF exports/dependencies, 16 KB alignment, consumers and cross-toolchain rejection |
+
+### Windows compatibility baseline
+
+#### Public layout and exports
+
+[`windows_public_layout`](../../tests/baseline/windows/public_layout.cpp) prints
+and verifies consumer-visible sizes and offsets. Pointer-sized callback slots
+adapt to x64 or Win32, while fixed public values must remain unchanged.
+
+For shared builds, the evidence script runs MSVC `dumpbin /exports`, normalizes
+the `ggpo_*` symbols, and records them. x64 additionally compares the result
+with [`exports-x64.txt`](../../tests/baseline/windows/exports-x64.txt).
+
+#### Packet layout
+
+[`windows_packet_layout`](../../tests/baseline/windows/packet_layout.cpp)
+verifies the packed `UdpMsg` header, union members, input-bit offset, and packet
+sizes for empty and nine-bit input payloads. This catches compiler-packing or
+field changes before they silently alter peer-visible datagrams.
+
+It does not prove safe parsing, delivery, endianness across different hosts, or
+protocol-version compatibility; those require separate execution tests.
+
+## 2. API and platform contracts
 
 The suite separates shared behavioral assertions from platform execution and
 artifact inspection:
@@ -110,7 +146,9 @@ callable platform operations plus socket construction/destruction are linked.
 opens a modal diagnostic; platform setup and system-library linkage remain
 adapter-specific.
 
-## Execution flow
+## 3. Execution contracts
+
+### Validation flow
 
 ```mermaid
 flowchart TD
@@ -143,31 +181,9 @@ flowchart TD
 The diagram shows validation order, not runtime threads. CTest may schedule
 independent tests differently when parallel execution is requested.
 
-## Windows compatibility baseline
+### Runtime fixture families
 
-### Public layout and exports
-
-[`windows_public_layout`](../../tests/baseline/windows/public_layout.cpp) prints
-and verifies consumer-visible sizes and offsets. Pointer-sized callback slots
-adapt to x64 or Win32, while fixed public values must remain unchanged.
-
-For shared builds, the evidence script runs MSVC `dumpbin /exports`, normalizes
-the `ggpo_*` symbols, and records them. x64 additionally compares the result
-with [`exports-x64.txt`](../../tests/baseline/windows/exports-x64.txt).
-
-### Packet layout
-
-[`windows_packet_layout`](../../tests/baseline/windows/packet_layout.cpp)
-verifies the packed `UdpMsg` header, union members, input-bit offset, and packet
-sizes for empty and nine-bit input payloads. This catches compiler-packing or
-field changes before they silently alter peer-visible datagrams.
-
-It does not prove safe parsing, delivery, endianness across different hosts, or
-protocol-version compatibility; those require separate tests.
-
-## Runtime fixtures
-
-### Vector War two-layer contracts
+#### Vector War two-layer contracts
 
 Vector War separates platform adapters from gameplay so failures identify the
 right ownership boundary:
@@ -194,7 +210,7 @@ These layers do not replace the two-process application fixture. They localize
 adapter and gameplay failures before native UDP, prediction, and rollback are
 introduced.
 
-### Vector War simulation contract
+#### Vector War simulation contract
 
 [`gamestate_contract_test.cpp`](../../tests/vectorwar/gamestate_contract_test.cpp)
 advances the real sample simulation for 180 frames using a fixed two-player
@@ -207,7 +223,7 @@ bits. It excludes native structure padding and the old Win32 `RECT` layout.
 This test freezes simulation behavior before the sample host is ported; it does
 not exercise GGPO callbacks, UDP, rendering, or interactive input.
 
-### Vector War application loopback
+#### Vector War application loopback
 
 [`VectorWarHeadless`](../../src/apps/vectorwar/headless_main.cpp) supplies the
 portable application core with scripted input and no renderer. Two processes
@@ -226,7 +242,7 @@ runner rejects controlled startup failure, timeout, divergent state, missing
 rollback evidence, and dirty shutdown. Rendering and interactive input remain
 separate frontend contracts.
 
-### Shared deterministic state
+#### Shared deterministic state
 
 [`smoke_session.cpp`](../../tests/smoke/smoke_session.cpp) provides a small
 game-owned state, checksum, and the callbacks GGPO needs to save, load, free,
@@ -256,7 +272,7 @@ flowchart LR
 
 This is a test simulation, not a model of a real game's state or performance.
 
-### Deterministic SyncTest
+#### Deterministic SyncTest
 
 The platform-named SyncTest fixture, implemented by
 [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp), creates two
@@ -278,7 +294,7 @@ virtual time, configuration fallbacks, endpoint representation, would-block
 results, scripted socket-open failure, close behavior, and balanced network
 lifetime calls.
 
-### Two-process loopback
+#### Two-process loopback
 
 [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) reserves two ephemeral
 localhost ports and launches two copies of the native
@@ -310,7 +326,7 @@ A pass establishes real platform socket and two-peer behavior on one machine.
 It does not establish Internet/NAT behavior, loss tolerance, spectators, more
 than two players, or interoperability between operating systems.
 
-### Negative peer contracts
+#### Negative peer contracts
 
 [`peer_runner_negative.py`](../../tests/smoke/peer_runner_negative.py) launches
 the real peer fixture with one controlled test-only fault at a time. It requires
@@ -319,7 +335,7 @@ shutdown failure with the matching diagnostic. The fault variable is removed
 from ordinary peer environments, so these cases cannot weaken positive smoke
 tests.
 
-### Native cross-host E2E
+#### Native cross-host E2E
 
 [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml)
 automates ordered Linux, Windows, MinGW, and Android role assignments on
@@ -373,7 +389,9 @@ See [Native cross-platform qualification](CrossPlatformTesting.md) for the
 complete scenario matrix, build artifacts, control/data boundaries, completion
 protocol, security model, failure contracts, evidence, and execution guide.
 
-## Build and CI integration
+## 4. CI qualification
+
+### Build and CI integration
 
 [`classify-changes.yml`](../../.github/workflows/classify-changes.yml) keeps
 documentation-only changes (`doc/**`, `docs/**`, and Markdown files) on a
@@ -516,7 +534,7 @@ a missing, duplicate, or failed scenario in an unconditional final job. It runs 
 same-repository PRs, trusted `master` pushes, and manual dispatch; fork and
 non-owner PR jobs are skipped.
 
-## Evidence and interpretation
+### Evidence and interpretation
 
 [`capture_windows_compatibility_baseline.ps1`](../../scripts/ci/capture_windows_compatibility_baseline.ps1)
 records:
@@ -532,7 +550,7 @@ hashes are expected. Repeated duration is a noise measurement for designing
 later A/B comparisons, not a performance threshold. Runtime compatibility is
 established by the frame, checksum, callback, and lifecycle assertions.
 
-## Current limits and follow-ups
+### Current limits and follow-ups
 
 - No spectator, disconnect/resume, simulated loss, or multi-player automated
   session exists.
