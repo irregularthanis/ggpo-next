@@ -422,6 +422,26 @@ elseif(TARGET VectorWar)
     set_tests_properties(linux_vectorwar_gui_host_contract PROPERTIES
         ENVIRONMENT "SDL_VIDEODRIVER=dummy"
         LABELS "native;platform;sample;vectorwar-host")
+elseif(TARGET VectorWarAndroid)
+    # The APK's SDL2 frontend, built when GGPO_ANDROID_SDL2_SOURCE_DIR supplies
+    # SDL2. The test selects the dummy video driver itself; the launcher
+    # pushes libSDL2.so from its build directory.
+    add_executable(ggpo_vectorwar_sdl_host_contract
+        vectorwar/sdl_host_contract_test.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_host.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_renderer.cpp
+    )
+    ggpo_configure_test(ggpo_vectorwar_sdl_host_contract)
+    target_include_directories(ggpo_vectorwar_sdl_host_contract PRIVATE
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar
+    )
+    target_link_libraries(ggpo_vectorwar_sdl_host_contract PRIVATE
+        GGPO::GGPO SDL2::SDL2 log android)
+    add_test(NAME android_vectorwar_gui_host_contract
+        COMMAND ggpo_vectorwar_sdl_host_contract)
+    set_tests_properties(android_vectorwar_gui_host_contract PROPERTIES
+        ENVIRONMENT "GGPO_LAUNCHER_LIB_DIRS=$<TARGET_FILE_DIR:SDL2>"
+        LABELS "native;platform;sample;vectorwar-host")
 endif()
 
 # Launch two instances of the real Vector War application core over native

@@ -977,11 +977,12 @@ To:
       return global_counter; /* use the global value */
    }
 
-   bool __cdecl
-   ggpo_load_game_state_callback(unsigned char *buffer, int len)
+   /* the load_game_state callback, registered as cb.load_game_state */
+   static bool GGPO_CALL
+   game_load(unsigned char *buffer, int len)
    {
       ...
-      global_counter = *((int *)buffer) /* restore it in load callback */
+      global_counter = *((int *)buffer); /* restore it in load callback */
       ...
       return true;
    }

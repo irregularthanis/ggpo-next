@@ -5,12 +5,19 @@
 #include "sdl_host.h"
 #include "sdl_renderer.h"
 
-// Linux counterpart of win32_host_contract_test.cpp. Run with
+// Linux and Android counterpart of win32_host_contract_test.cpp. Run with
 // SDL_VIDEODRIVER=dummy so CI exercises the real SDL window/renderer path
 // without a display server.
 int
 main()
 {
+#if defined(__ANDROID__)
+   // A plain executable has no SDLActivity: declare main ready ourselves, and
+   // select the dummy driver here because the adb launcher forwards only
+   // GGPO_* variables.
+   SDL_SetMainReady();
+   SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+#endif
    SDLVectorWarHost host;
    const VectorWarBounds bounds = host.GetGameBounds();
    if (bounds.left != 0 || bounds.top != 0 ||

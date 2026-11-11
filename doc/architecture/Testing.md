@@ -322,17 +322,19 @@ Windows ABI. All other pedantic diagnostics remain errors.
 #### Android: registered tests
 
 Runs every [shared test](#shared-tests) with the `android_` prefix, plus the
-test below. [`run_on_device.py`](../../tests/android/run_on_device.py) is
+tests below. [`run_on_device.py`](../../tests/android/run_on_device.py) is
 CMake's cross-compiling emulator: it pushes executables and shared libraries
 through `adb`, runs them on API 21 and a current emulator, and returns their
 output and exit status to CTest. Static arm64-v8a, armeabi-v7a, and x86_64
-fixtures also run natively on matching Linux runners. There is no CTest GUI
-host test; the SDL frontend is covered by the
-[APK smoke](#android-sdk-audit-and-apk-smoke).
+fixtures also run natively on matching Linux runners. The GUI host test is
+registered when SDL2 is supplied (`GGPO_ANDROID_SDL2_SOURCE_DIR`), as in the
+emulator CI job; the [APK smoke](#android-sdk-audit-and-apk-smoke) covers the
+packaged app.
 
 | Test | Code | What it tests |
 | --- | --- | --- |
 | `android_exports` | [`check_exports.py`](../../tests/baseline/linux/check_exports.py), [`exports.txt`](../../tests/baseline/linux/exports.txt) | The shared library exports exactly the frozen `ggpo_*` symbols (shared builds) |
+| `android_vectorwar_gui_host_contract` | [`sdl_host_contract_test.cpp`](../../tests/vectorwar/sdl_host_contract_test.cpp) | The APK's SDL2 frontend on the dummy driver: bounds, renderer, input, clock |
 
 #### Android: run locally
 
