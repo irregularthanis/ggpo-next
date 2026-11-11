@@ -4,7 +4,8 @@
 Android counterpart of scripts/ci/audit_linux_sdk.py:
 
 - libGGPO.so has SONAME libGGPO.so and no versioned files or symlinks;
-- every LOAD segment is aligned to at least 16 KB (Google Play requirement);
+- every LOAD segment is aligned to at least 16 KB on 64-bit ABIs (Google Play
+  requirement; 16 KB pages exist only on 64-bit devices) and 4 KB on 32-bit;
 - NEEDED lists only Android system libraries (no libc++_shared.so);
 - the dynamic ggpo_* exports equal the frozen manifest;
 - API-level ceiling: every undefined symbol resolves in the NDK system-library
@@ -69,8 +70,10 @@ def main():
     alignments = [int(value, 16) for value in re.findall(
         r"^\s*LOAD\s+(?:\S+\s+){5}\S+\s+(0x[0-9a-fA-F]+)\s*$",
         output(readelf, "-lW", library), re.MULTILINE)]
-    if not alignments or min(alignments) < 0x4000:
-        errors.append(f"LOAD alignment below 16 KB: {[hex(a) for a in alignments]}")
+    required = 0x4000 if args.abi in ("arm64-v8a", "x86_64") else 0x1000
+    if not alignments or min(alignments) < required:
+        errors.append(f"LOAD alignment below {required // 1024} KB: "
+                      f"{[hex(a) for a in alignments]}")
 
     defined = output(nm, "-D", "--defined-only", library)
     exports = sorted(set(re.findall(r"\b(ggpo_[A-Za-z0-9_]+)$", defined, re.MULTILINE)))
