@@ -7,6 +7,10 @@ from pathlib import Path
 
 from run_matrix import generate_matrix, validate_matrix
 
+# MinGW-built peers (player 1) against MSVC Windows and Linux peers. Generic
+# peer fixture only: Vector War is not built with MinGW.
+MINGW_SCENARIOS = ("mingw-windows", "mingw-linux")
+
 
 def build_manifest(root):
     """Validate one passing report per fixture/scenario and return the manifest."""
@@ -19,7 +23,8 @@ def build_manifest(root):
         reports.append(report)
     base = [item["scenario"] for item in validate_matrix(generate_matrix())]
     expected = ({("smoke", scenario) for scenario in base} |
-                {("vectorwar", f"vectorwar-{scenario}") for scenario in base})
+                {("vectorwar", f"vectorwar-{scenario}") for scenario in base} |
+                {("smoke", scenario) for scenario in MINGW_SCENARIOS})
     identities = [
         (report.get("fixture"), report.get("scenario")) for report in reports
     ]

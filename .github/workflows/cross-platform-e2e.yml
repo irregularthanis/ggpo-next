@@ -79,13 +79,54 @@ jobs:
           path: build/evidence/peer
           if-no-files-found: error
 
+  build-mingw:
+    name: Build native MinGW peer
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == github.repository_owner)
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: false
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+      - name: Build the Release x64 static MinGW peer
+        run: |
+          # -static: the role job runs on a plain Windows runner without the
+          # MinGW runtime DLLs on PATH.
+          cmake -S . -B build/e2e -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF -DCMAKE_EXE_LINKER_FLAGS=-static
+          cmake --build build/e2e --target ggpo_windows_peer_smoke --parallel 2
+          mkdir -p build/evidence/peer
+          cp build/e2e/bin/x64/Release/ggpo_windows_peer_smoke.exe \
+            build/evidence/peer/ggpo_peer_smoke.exe
+          objdump -p build/evidence/peer/ggpo_peer_smoke.exe | grep 'DLL Name'
+          sha256sum build/evidence/peer/ggpo_peer_smoke.exe \
+            > build/evidence/peer/sha256.txt
+          cmake --version > build/evidence/peer/toolchain.txt
+          gcc --version >> build/evidence/peer/toolchain.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e2e-peer-mingw
+          path: build/evidence/peer
+          if-no-files-found: error
+
   execute:
     name: ${{ matrix.fixture }} / ${{ matrix.scenario }} / role ${{ matrix.role }}
     if: >-
       github.event_name != 'pull_request' ||
       (github.event.pull_request.head.repo.full_name == github.repository &&
       github.actor == github.repository_owner)
-    needs: [build-linux, build-windows]
+    needs: [build-linux, build-windows, build-mingw]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 12
     strategy:
@@ -100,6 +141,11 @@ jobs:
           - {fixture: smoke, scenario: linux-windows, role: 2, platform: windows, os: windows-2022, player1: linux, player2: windows, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke}
           - {fixture: smoke, scenario: windows-linux, role: 1, platform: windows, os: windows-2022, player1: windows, player2: linux, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke.exe}
           - {fixture: smoke, scenario: windows-linux, role: 2, platform: linux, os: ubuntu-24.04, player1: windows, player2: linux, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke.exe}
+          # MinGW player 1 against MSVC Windows and Linux player 2.
+          - {fixture: smoke, scenario: mingw-windows, role: 1, platform: mingw, os: windows-2022, player1: mingw, player2: windows, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke.exe}
+          - {fixture: smoke, scenario: mingw-windows, role: 2, platform: windows, os: windows-2022, player1: mingw, player2: windows, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke.exe}
+          - {fixture: smoke, scenario: mingw-linux, role: 1, platform: mingw, os: windows-2022, player1: mingw, player2: linux, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke.exe}
+          - {fixture: smoke, scenario: mingw-linux, role: 2, platform: linux, os: ubuntu-24.04, player1: mingw, player2: linux, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke.exe}
           - {fixture: vectorwar, scenario: vectorwar-linux-linux, role: 1, platform: linux, os: ubuntu-24.04, player1: linux, player2: linux, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
           - {fixture: vectorwar, scenario: vectorwar-linux-linux, role: 2, platform: linux, os: ubuntu-24.04, player1: linux, player2: linux, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
           - {fixture: vectorwar, scenario: vectorwar-windows-windows, role: 1, platform: windows, os: windows-2022, player1: windows, player2: windows, executable: peer/vectorwar_headless.exe, player1_executable: peer/vectorwar_headless.exe}
@@ -190,7 +236,7 @@ jobs:
       (github.event_name != 'pull_request' ||
       (github.event.pull_request.head.repo.full_name == github.repository &&
       github.actor == github.repository_owner))
-    needs: [build-linux, build-windows, execute]
+    needs: [build-linux, build-windows, build-mingw, execute]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -202,10 +248,12 @@ jobs:
         env:
           BUILD_LINUX: ${{ needs.build-linux.result }}
           BUILD_WINDOWS: ${{ needs.build-windows.result }}
+          BUILD_MINGW: ${{ needs.build-mingw.result }}
           EXECUTE: ${{ needs.execute.result }}
         run: |
           test "$BUILD_LINUX" = success
           test "$BUILD_WINDOWS" = success
+          test "$BUILD_MINGW" = success
           test "$EXECUTE" = success
           python3 tests/e2e/validate_manifest.py evidence --out manifest.json
       - name: Upload the complete manifest
