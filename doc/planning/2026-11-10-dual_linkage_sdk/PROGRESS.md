@@ -16,7 +16,8 @@ Status: Planning
 
 - [ ] M1-T01: Add `GGPO_BUILD_SHARED` / `GGPO_BUILD_STATIC`; keep
   `BUILD_SHARED_LIBS` single-flavor behavior.
-- [ ] M1-T02: Build `GGPO_shared` and `GGPO_static` with distinct Windows names.
+- [ ] M1-T02: Build `GGPO_shared` and `GGPO_static` with distinct Windows names
+  (`GGPO.lib` import library, `libGGPO.lib` static).
 - [ ] M1-T03: Keep in-tree `GGPO::GGPO`, tests, and Vector War working.
 
 ### M2: CMake package selection (depends: M1)
@@ -69,6 +70,6 @@ Parallel with M3.
 | Decision | Status |
 |---|---|
 | `GGPO::GGPO` defaults to shared when both are installed | Proposed |
-| Windows static library named `GGPO_static.lib` | Proposed |
+| Windows static library named `libGGPO.lib` | Accepted (2026-11-10) |
 | Keep exactly one Debug lane (x64 static) | Proposed |
 | MSVC ASan runs on a schedule, not on every PR | Proposed |

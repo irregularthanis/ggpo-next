@@ -36,7 +36,7 @@ flowchart TD
     Src["GGPO sources<br/>compiled once"]
     Obj["GGPO_objects<br/>OBJECT library, PIC"]
     Shared["GGPO_shared<br/>GGPO.dll + GGPO.lib<br/>libGGPO.so.0"]
-    Static["GGPO_static<br/>GGPO_static.lib<br/>libGGPO.a"]
+    Static["GGPO_static<br/>libGGPO.lib<br/>libGGPO.a"]
     Config["GGPOConfig.cmake"]
     Default{"GGPO_USE_STATIC?"}
     App["Application<br/>target_link_libraries<br/>(app GGPO::GGPO)"]
@@ -65,6 +65,9 @@ flowchart TD
 
 ### Install and CMake package
 
+- On Windows the static target sets `OUTPUT_NAME libGGPO`, producing
+  `libGGPO.lib` next to the DLL import library `GGPO.lib` (the
+  `lib`-prefixed static convention used by other MSVC SDKs).
 - Separate exports: `GGPOSharedTargets.cmake` (`GGPO::shared`) and
   `GGPOStaticTargets.cmake` (`GGPO::static`). Each is optional.
 - `GGPOConfig.cmake` includes whichever exports exist and creates
@@ -81,7 +84,7 @@ flowchart TD
 
 | Platform | Before | After |
 |---|---|---|
-| Windows | `ggpo-V-windows-{x64,x86}-{shared,static}.zip` | `ggpo-V-windows-{x64,x86}.zip` containing `bin/GGPO.dll`, `lib/GGPO.lib`, `lib/GGPO_static.lib`, PDBs |
+| Windows | `ggpo-V-windows-{x64,x86}-{shared,static}.zip` | `ggpo-V-windows-{x64,x86}.zip` containing `bin/GGPO.dll`, `lib/GGPO.lib`, `lib/libGGPO.lib`, PDBs |
 | Linux tar.gz | `ggpo-V-linux-x86_64-{shared,static}.tar.gz` | `ggpo-V-linux-x86_64.tar.gz` with `libGGPO.so*` and `libGGPO.a` |
 | Linux DEB/RPM | Conflicting `ggpo-sdk-shared` / `ggpo-sdk-static` | One `ggpo-sdk` DEB and RPM that replace and provide both old names |
 
@@ -126,7 +129,7 @@ subsection per combination:
 |---|---|---|
 | Windows (CMake) | `GGPO::GGPO`; copy `GGPO.dll` next to the executable | `-DGGPO_USE_STATIC=ON`; no DLL to deploy |
 | Linux (CMake) | `GGPO::GGPO`; rpath or system install | `-DGGPO_USE_STATIC=ON`; single binary |
-| Without CMake | MSVC: `GGPO.lib` + `/DGGPO_SHARED_LIB`; GCC/Clang: `-lGGPO` | MSVC: `GGPO_static.lib` + `ws2_32 winmm`; GCC/Clang: `libGGPO.a` (link it as C++) |
+| Without CMake | MSVC: `GGPO.lib` + `/DGGPO_SHARED_LIB`; GCC/Clang: `-lGGPO` | MSVC: `libGGPO.lib` + `ws2_32 winmm`; GCC/Clang: `libGGPO.a` (link it as C++) |
 
 It also covers the trade-offs (one runtime file to deploy vs. one binary),
 licensing notes for static linking, a 0.3.0 → 0.4.0 package migration table,
@@ -145,6 +148,4 @@ and updates to [Build.md](../../architecture/Build.md) and
 
 - Default flavor for `GGPO::GGPO` when both are installed: shared (proposed;
   matches today's most common package) or static.
-- Whether `GGPO_static.lib` should instead be named `GGPOs.lib` or
-  `libGGPO.lib`. `GGPO_static.lib` is proposed for clarity.
 - Whether to ship a Debug Windows SDK later. Out of scope here.

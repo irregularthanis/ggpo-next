@@ -60,7 +60,7 @@ CMake SDKs work, and CI should test each distinct way of using it once.
   format are frozen. `GGPO_SHARED_LIB` must still reach only Windows consumers
   of the DLL (it selects `dllimport`).
 - Windows shared and static libraries need distinct names: `GGPO.lib` (DLL
-  import library) and `GGPO_static.lib`. Linux keeps `libGGPO.so.0` and
+  import library) and `libGGPO.lib`. Linux keeps `libGGPO.so.0` and
   `libGGPO.a`.
 - Windows SDKs stay Release with the dynamic CRT (`/MD`). PDBs are kept.
 - Coverage is removed only when an equal or stronger gate replaces it: one
