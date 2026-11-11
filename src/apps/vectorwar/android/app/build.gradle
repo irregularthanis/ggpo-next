@@ -8,13 +8,21 @@ def sdlDir = project.findProperty('sdlDir') ?: System.getenv('SDL2_SOURCE_DIR')
 if (!sdlDir) {
     throw new GradleException('Set -PsdlDir=<SDL2 source tree> or SDL2_SOURCE_DIR (see doc/DeveloperGuide.md)')
 }
+// Optional explicit NDK; its version must be declared alongside the path.
 def ndkDir = System.getenv('ANDROID_NDK_HOME') ?: System.getenv('ANDROID_NDK_LATEST_HOME')
+def ndkRevision = null
+if (ndkDir) {
+    def properties = new Properties()
+    new File(ndkDir, 'source.properties').withInputStream { properties.load(it) }
+    ndkRevision = properties.getProperty('Pkg.Revision')
+}
 
 android {
     namespace 'org.ggponext.vectorwar'
     compileSdk 35
     if (ndkDir) {
         ndkPath ndkDir
+        ndkVersion ndkRevision
     }
 
     defaultConfig {
