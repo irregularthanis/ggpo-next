@@ -161,8 +161,8 @@ jobs:
     needs: [build-linux, build-windows, build-mingw, build-android]
     runs-on: ${{ matrix.os }}
     # Role jobs are scheduled independently across three runner pools. Keep a
-    # bounded window large enough for one role to wait through queue skew.
-    timeout-minutes: 25
+    # bounded window for queue skew, but fail a missing pair promptly.
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -254,7 +254,7 @@ jobs:
           python tests/e2e/host_agent.py \
             --workspace "$GITHUB_WORKSPACE" \
             --address "${{ steps.address.outputs.ipv4 }}" \
-            --session-id "${{ matrix.scenario }}" --timeout 1200
+            --session-id "${{ matrix.scenario }}" --timeout 600
       - name: Coordinate player 2 and validate the session
         if: matrix.role == 2
         shell: bash
@@ -268,7 +268,7 @@ jobs:
             --player1-executable "${{ matrix.player1_executable }}" \
             --local-address "${{ steps.address.outputs.ipv4 }}" \
             --session-id "${{ matrix.scenario }}" \
-            --rendezvous-timeout 1200 \
+            --rendezvous-timeout 600 \
             --scenario "${{ matrix.scenario }}" \
             --fixture "${{ matrix.fixture }}" \
             --player1-platform "${{ matrix.player1 }}" \

@@ -45,7 +45,16 @@ class DeploymentRendezvous:
         self.run_id = str(run_id)
         self.attempt = str(attempt)
         self.session_id = session_id
-        self.environment = f"ggpo-e2e-{self.run_id}-{self.attempt}"
+        # GitHub returns only one page of deployments. Give every scenario its
+        # own environment so a large matrix cannot hide an older peer record
+        # behind newer, unrelated rendezvous deployments.
+        safe_session = "".join(
+            character if character.isalnum() or character in "-_." else "-"
+            for character in session_id
+        )[:64]
+        self.environment = (
+            f"ggpo-e2e-{self.run_id}-{self.attempt}-{safe_session}"
+        )
 
     def publish(self, address, control_port):
         record = {

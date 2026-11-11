@@ -40,6 +40,14 @@ class RendezvousTests(unittest.TestCase):
         self.assertEqual((found_id, found), (deployment_id, record))
         self.assertEqual(self.rendezvous.retire(deployment_id)["state"], "inactive")
 
+    def test_each_scenario_has_an_isolated_deployment_environment(self):
+        other = DeploymentRendezvous(
+            self.transport, "owner/repo", "abc123", "42", "1",
+            "windows-linux",
+        )
+        self.assertNotEqual(self.rendezvous.environment, other.environment)
+        self.assertTrue(self.rendezvous.environment.endswith("linux-windows"))
+
     def test_wrong_identity_is_ignored_and_times_out(self):
         valid = {"repository": "owner/repo", "sha": "abc123",
                  "run_id": "42", "attempt": "1",

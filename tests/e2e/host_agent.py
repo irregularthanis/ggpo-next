@@ -19,7 +19,7 @@ def main():
     parser.add_argument("--port", type=int, default=24871)
     parser.add_argument("--session-id", required=True)
     # The paired role can remain queued on a different runner pool.
-    parser.add_argument("--timeout", type=int, default=1200)
+    parser.add_argument("--timeout", type=int, default=600)
     args = parser.parse_args()
     required = ("GITHUB_REPOSITORY", "GITHUB_SHA", "GITHUB_RUN_ID",
                 "GITHUB_RUN_ATTEMPT", "GITHUB_TOKEN", "GGPO_E2E_SESSION_SECRET")
@@ -45,13 +45,23 @@ def main():
     server.verifier_lock = threading.Lock()
     server.supervisor = PeerSupervisor(args.workspace)
     deployment_id = None
-    timer = threading.Timer(args.timeout, server.shutdown)
+    timed_out = threading.Event()
+
+    def stop_after_deadline():
+        timed_out.set()
+        server.shutdown()
+
+    timer = threading.Timer(args.timeout, stop_after_deadline)
     try:
         deployment_id, _ = rendezvous.publish(args.address, args.port)
         print(f"published agent for {args.session_id} at {args.address}:{args.port}",
               flush=True)
         timer.start()
         server.serve_forever()
+        if timed_out.is_set():
+            raise TimeoutError(
+                f"paired role did not connect within {args.timeout} seconds"
+            )
     finally:
         timer.cancel()
         server.supervisor.cancel({})

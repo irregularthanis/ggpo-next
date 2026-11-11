@@ -176,6 +176,8 @@ never uses runner hostnames or public IPs:
 2. Role 1 starts [`host_agent.py`](../../tests/e2e/host_agent.py), which
    publishes that address as a transient GitHub Deployment keyed to the exact
    run ID and scenario ([`rendezvous.py`](../../tests/e2e/rendezvous.py)).
+   Every scenario uses a distinct Deployment environment, so a large matrix
+   cannot hide one pair's rendezvous record behind newer scenarios.
 3. Role 2's [`execute_pair.py`](../../tests/e2e/execute_pair.py) discovers that
    record, rejecting stale, duplicate, or mismatched records, and connects to
    the role-1 agent on TCP `24871` with run-bound HMAC authentication.
@@ -293,6 +295,7 @@ pushes, or manual dispatch. The workflow does not use `pull_request_target`.
 | Agent authentication or identity mismatch | Control or rendezvous validation fails closed | Supervisor cancellation and action cleanup run |
 | Peer startup/crash | Nonzero process status before the completion barrier | Surviving child is terminated |
 | Peer timeout | Bounded rendezvous, control, execution, and job deadlines | Child, server, firewall, and ephemeral node cleanup run |
+| Missing paired role | Role 1 and role 2 fail after the 10-minute rendezvous deadline | Published endpoint is retired and the surviving agent is stopped |
 | State divergence | Live snapshot never reaches the oracle or final schema validation fails | Scenario report is absent or non-passing |
 | Missing or duplicate scenario | [`validate_manifest.py`](../../tests/e2e/validate_manifest.py) rejects the evidence set | Final job fails even if other scenarios passed |
 | Role job failure | `needs.execute.result` is not `success` | Final job fails unconditionally |
