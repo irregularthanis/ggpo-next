@@ -37,8 +37,8 @@ chooses one when it links (see
 | --- | --- |
 | `ggpo-0.5.0-windows-x64.zip` | The application is 64-bit Windows |
 | `ggpo-0.5.0-windows-x86.zip` | The application is 32-bit Windows |
-| `ggpo-0.5.0-windows-x64-mingw.zip` | The application is 64-bit Windows built with MinGW-w64 (UCRT) |
-| `ggpo-0.5.0-windows-x86-mingw.zip` | The application is 32-bit Windows built with MinGW-w64 (MSVCRT) |
+| `ggpo-0.5.0-windows-x64-mingw.zip` | The application is 64-bit Windows built with MinGW-w64 (MSVCRT, MSYS2 `MINGW64`) |
+| `ggpo-0.5.0-windows-x86-mingw.zip` | The application is 32-bit Windows built with MinGW-w64 (MSVCRT, MSYS2 `MINGW32`) |
 | `ggpo-0.5.0-linux-x86_64.deb` / `.rpm` | Install system-wide on a Debian- or RPM-family distribution |
 | [`ggpo-0.5.0-linux-x86_64.tar.gz`](#linux-raw-sdk-targz) | Extract a relocatable SDK without a package manager |
 
@@ -99,8 +99,9 @@ What can be mixed:
 | MinGW application + MSVC `GGPO.dll` (C API only, linked without CMake) | Yes, see [Without CMake](#without-cmake) |
 | Any static library across toolchains, or MSVC application + MinGW DLL through CMake | No |
 
-The MinGW x64 SDK uses the UCRT C runtime (MSYS2 `UCRT64`). The x86 SDK uses
-MSVCRT (MSYS2 `MINGW32`), because MSYS2 has no 32-bit UCRT environment.
+Both MinGW SDKs use the MSVCRT C runtime: x64 is built in MSYS2 `MINGW64` and
+x86 in `MINGW32`. This matches existing MinGW projects such as FBNeo. MSYS2's
+newer `UCRT64` environment is **not** a static-library match; see below.
 `libGGPO.dll` embeds the MinGW C/C++ runtime, so applications do not need to
 ship `libgcc`, `libstdc++` or `libwinpthread` DLLs for GGPO.
 `share/GGPO/TOOLCHAIN.txt` in each MinGW SDK names its toolchain and runtime.
@@ -112,23 +113,32 @@ embeds its runtime and exposes only a C interface. **`libGGPO.a` is different.**
 It is C++ code that links against the application's own C and C++ runtime, so
 the application's toolchain must match the SDK's in three ways:
 
-1. **C runtime:** UCRT for the x64 SDK, MSVCRT for the x86 SDK.
+1. **C runtime:** MSVCRT for both SDKs.
 2. **Exception model:** SEH for x64, DWARF-2 for x86 (MSYS2's defaults).
 3. **GCC version:** the same or newer than the GCC in `TOOLCHAIN.txt`; an older
    GCC can fail with missing `libstdc++` symbols.
 
 | Toolchain | x64 `libGGPO.a` | x86 `libGGPO.a` |
 | --- | --- | --- |
-| MSYS2 `UCRT64` / `MINGW32`, current GCC | **Tested** | **Tested** |
+| MSYS2 `MINGW64` / `MINGW32`, current GCC | **Tested** | **Tested** |
 | Other GCC builds with the same runtime and exception model (e.g. matching WinLibs or MinGW-builds flavors), same or newer GCC | Expected to work, untested | Expected to work, untested |
 | x86 toolchains using SJLJ exceptions (some older MinGW-builds) | — | **Not supported:** link errors |
-| UCRT x86 or MSVCRT x64 toolchains (e.g. llvm-mingw i686-ucrt, MSYS2 `MINGW64`) | **Not supported** | **Not supported** |
+| UCRT toolchains (MSYS2 `UCRT64`, llvm-mingw `*-ucrt`) | **Not supported** | **Not supported** |
 | Clang-based MinGW (llvm-mingw, MSYS2 `CLANG64`), libc++ | **Not supported** | **Not supported** |
 | GCC older than the SDK's | May fail to link | May fail to link |
 
-If your toolchain is not in a supported row, use `libGGPO.dll`, or
-[build GGPO from source](#option-4-build-with-mingw-w64) with your own
-toolchain; the static library then matches by construction.
+If your toolchain is not in a supported row, in particular **MSYS2 `UCRT64`**
+(MSYS2's recommended environment for new projects):
+
+- **Use `libGGPO.dll`** from the MinGW SDK. It embeds its own runtime and exposes
+  only C, so it works in `UCRT64` and every other MinGW environment of the same
+  architecture. Link it with CMake (`GGPO::shared`, the default `GGPO::GGPO`).
+- **Or build GGPO from source** with your own toolchain
+  ([Option 4](#option-4-build-with-mingw-w64)); the static library then
+  matches by construction.
+- **Or use the MSVC SDK's `GGPO.dll`**, linked directly without CMake (see
+  [Without CMake](#without-cmake)). The MSVC SDK's static `libGGPO.lib` cannot
+  be used from MinGW, and CMake rejects the MSVC SDK in a MinGW project.
 
 ### Run the standalone Vector War sample
 
@@ -250,10 +260,12 @@ or `-DBUILD_TESTING=OFF` for a consumer/packaging-only build.
 
 ### Option 4: build with MinGW-w64
 
-From an MSYS2 `UCRT64` shell (x64) or `MINGW32` shell (x86):
+From an MSYS2 `MINGW64` shell (x64) or `MINGW32` shell (x86), matching the
+release SDKs (any MSYS2 environment, including `UCRT64`, works for a build that
+your own project then links):
 
 ```bash
-pacman -S --needed mingw-w64-ucrt-x86_64-{gcc,cmake,ninja,python}   # MINGW32: mingw-w64-i686-*
+pacman -S --needed mingw-w64-x86_64-{gcc,cmake,ninja,python}   # MINGW32: mingw-w64-i686-*, UCRT64: mingw-w64-ucrt-x86_64-*
 cmake -S . -B build/mingw -G Ninja -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX="$PWD/build/ggpo-sdk-mingw"
 cmake --build build/mingw --parallel

@@ -50,8 +50,9 @@ and packaging.
   convention, or wire format. The frozen MSVC baseline stays authoritative.
 - MSVC builds, names (`GGPO.dll`, `GGPO.lib`, `libGGPO.lib`) and packages
   must not change.
-- Runtimes: x64 targets **UCRT** (MSYS2 `UCRT64`). x86 targets **MSVCRT**
-  (MSYS2 `MINGW32`), because MSYS2 provides no 32-bit UCRT environment. Both
+- Runtimes: both architectures target **MSVCRT** (MSYS2 `MINGW64` and
+  `MINGW32`), matching FBNeo, the primary MinGW consumer. `UCRT64` projects use
+  the DLL or build from source (changed from UCRT x64 on 2026-11-11). Both
   are documented per download.
 - MinGW static libraries are never mixed with MSVC applications, and vice
   versa. Only the DLL's C interface is expected to cross toolchains.

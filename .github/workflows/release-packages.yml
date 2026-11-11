@@ -164,7 +164,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {label: x64, platform: x64, msystem: UCRT64, env: ucrt-x86_64, runtime: UCRT}
+          - {label: x64, platform: x64, msystem: MINGW64, env: x86_64, runtime: MSVCRT}
           - {label: x86, platform: x86, msystem: MINGW32, env: i686, runtime: MSVCRT}
     defaults:
       run:

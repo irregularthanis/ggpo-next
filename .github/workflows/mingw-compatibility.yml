@@ -15,9 +15,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # x64 uses the UCRT runtime; MSYS2 has no 32-bit UCRT environment,
-          # so x86 uses MINGW32 (MSVCRT).
-          - {label: x64, msystem: UCRT64, env: ucrt-x86_64, manifest: exports-x64.txt}
+          # Both use MSVCRT (MSYS2 MINGW64 / MINGW32), matching FBNeo and other
+          # existing MinGW projects; UCRT64 users use the DLL or build from source.
+          - {label: x64, msystem: MINGW64, env: x86_64, manifest: exports-x64.txt}
           - {label: x86, msystem: MINGW32, env: i686, manifest: exports-x86.txt}
     defaults:
       run:
@@ -113,12 +113,12 @@ jobs:
 
       - uses: msys2/setup-msys2@v2
         with:
-          msystem: UCRT64
+          msystem: MINGW64
           update: false
           install: >-
-            mingw-w64-ucrt-x86_64-gcc
-            mingw-w64-ucrt-x86_64-cmake
-            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
 
       - name: Build an MSVC SDK (x64, both libraries)
         shell: pwsh

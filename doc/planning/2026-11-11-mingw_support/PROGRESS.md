@@ -28,7 +28,8 @@ Depends on [PR #9](https://github.com/irregularthanis/ggpo-next/pull/9)
 
 ### M2: Tests and CI (depends: M1)
 
-- [x] M2-T01: `mingw-compatibility.yml` for x64 (UCRT64) and x86 (MINGW32).
+- [x] M2-T01: `mingw-compatibility.yml` for x64 and x86 (MINGW64 and MINGW32
+  since the MSVCRT decision; originally UCRT64 for x64).
 - [x] M2-T02: Full CTest suite passes on both architectures.
 - [x] M2-T03: `mingw_exports` manifest test on both architectures.
 
@@ -78,7 +79,7 @@ Parallel with M2.
 |---|---|
 | Support x64 and x86 | Accepted (2026-11-11) |
 | No MinGW Vector War | Accepted (2026-11-11) |
-| x64 uses UCRT (UCRT64); x86 uses MSVCRT (MINGW32) | Accepted (2026-11-11); static `libGGPO.a` requires a matching runtime, exception model and GCC ≥ the SDK's, documented in the Developer Guide; 32-bit UCRT via llvm-mingw is a possible follow-up |
+| Both architectures use MSVCRT (x64 `MINGW64`, x86 `MINGW32`) | Accepted (2026-11-11), replacing UCRT64 for x64: FBNeo builds x64 in `MINGW64`, and a UCRT static library cannot link there. `UCRT64` projects use `libGGPO.dll`, a source build, or the MSVC `GGPO.dll`; a `-mingw-ucrt` variant can be added later without renaming |
 | Statically link libgcc/libstdc++ into `libGGPO.dll` | Accepted (2026-11-11) |
 | Release-only MinGW lanes, no Debug lane | Accepted (implemented) |
 | 32-bit MinGW compiles with `-msse2 -mfpmath=sse` (x87 breaks cross-platform determinism) | Accepted (2026-11-11) |

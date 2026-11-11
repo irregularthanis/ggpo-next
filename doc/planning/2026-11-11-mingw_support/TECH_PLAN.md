@@ -31,7 +31,7 @@ Source: `02ac787240fe68dfe21ce60629fe6980f9885e3b`
 
 | Architecture | MSYS2 environment | Compiler | C runtime | Exceptions |
 |---|---|---|---|---|
-| x64 | `UCRT64` | `x86_64-w64-mingw32-gcc` | UCRT | SEH |
+| x64 | `MINGW64` | `x86_64-w64-mingw32-gcc` | MSVCRT | SEH |
 | x86 | `MINGW32` | `i686-w64-mingw32-gcc` | MSVCRT | DWARF-2 |
 
 Both use the Ninja generator, Release configuration, and
@@ -131,7 +131,7 @@ mixing rule: the DLL's C interface crosses toolchains; static libraries do not.
 
 | Workflow | Addition |
 |---|---|
-| New `mingw-compatibility.yml` | `MinGW x64` (UCRT64) and `MinGW x86` (MINGW32): both libraries, Release, full CTest, install, consumer cases, export manifest |
+| New `mingw-compatibility.yml` | `MinGW x64` (MINGW64) and `MinGW x86` (MINGW32): both libraries, Release, full CTest, install, consumer cases, export manifest |
 | Cross-platform E2E | Build a MinGW x64 static peer; add `mingw-windows` (MinGW↔MSVC) and `mingw-linux` scenarios for the generic peer fixture |
 | Release | `Windows x64 MinGW SDK` and `Windows x86 MinGW SDK` jobs producing `ggpo-V-windows-{x64,x86}-mingw.zip`; dry-run validated |
 | Ruleset | Add `MinGW x64` and `MinGW x86` as required checks at merge |
