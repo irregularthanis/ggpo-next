@@ -146,7 +146,8 @@ jobs:
             cat build/neg-mingw.log; echo "MinGW configure accepted the MSVC SDK" >&2; exit 1
           fi
           cat build/neg-mingw.log
-          grep -q "built with msvc, but the project uses mingw" build/neg-mingw.log
+          # CMake wraps long messages; compare with whitespace collapsed.
+          tr -s ' \r\n' '   ' < build/neg-mingw.log | grep -q "built with msvc, but the project uses mingw"
 
       - name: An MSVC project rejects the MinGW SDK
         shell: pwsh
@@ -157,7 +158,7 @@ jobs:
           $code = $LASTEXITCODE
           Write-Host $output
           if ($code -eq 0) { throw "MSVC configure accepted the MinGW SDK" }
-          if ($output -notmatch "built with mingw, but the project uses msvc") {
+          if (($output -replace '\s+', ' ') -notmatch "built with mingw, but the project uses msvc") {
             throw "MSVC configure failed without the toolchain message"
           }
 
