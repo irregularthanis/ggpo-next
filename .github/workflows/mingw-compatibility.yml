@@ -1,0 +1,102 @@
+name: MinGW compatibility
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  sdk:
+    # Both libraries: libGGPO.dll + libGGPO.dll.a and libGGPO.a.
+    name: MinGW ${{ matrix.label }}
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # x64 uses the UCRT runtime; MSYS2 has no 32-bit UCRT environment,
+          # so x86 uses MINGW32 (MSVCRT).
+          - {label: x64, msystem: UCRT64, env: ucrt-x86_64, manifest: exports-x64.txt}
+          - {label: x86, msystem: MINGW32, env: i686, manifest: exports-x86.txt}
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+          update: false
+          install: >-
+            mingw-w64-${{ matrix.env }}-gcc
+            mingw-w64-${{ matrix.env }}-cmake
+            mingw-w64-${{ matrix.env }}-ninja
+            mingw-w64-${{ matrix.env }}-python
+            mingw-w64-${{ matrix.env }}-binutils
+
+      - name: Record the toolchain
+        run: |
+          gcc --version | head -n 1
+          cmake --version | head -n 1
+          python --version
+
+      - name: Configure, build and test both libraries
+        run: |
+          cmake -S . -B build/mingw -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DGGPO_RUN_TESTS_ON_BUILD=OFF \
+            -DCMAKE_INSTALL_PREFIX="$PWD/build/install"
+          cmake --build build/mingw --parallel
+          ctest --test-dir build/mingw --output-on-failure
+          cmake --install build/mingw
+
+      - name: Check installed files, exports and runtime imports
+        run: |
+          set -euo pipefail
+          prefix=build/install
+          for file in bin/libGGPO.dll lib/libGGPO.dll.a lib/libGGPO.a \
+                      lib/cmake/GGPO/GGPOSharedTargets.cmake \
+                      lib/cmake/GGPO/GGPOStaticTargets.cmake; do
+            test -f "$prefix/$file" || { echo "missing $file" >&2; exit 1; }
+          done
+          if find "$prefix" -name '*.lib' | grep -q .; then
+            echo "MinGW install must not contain MSVC .lib files" >&2; exit 1
+          fi
+
+          objdump -p "$prefix/bin/libGGPO.dll" > build/objdump.txt
+          # Export names, in the DLL's export table, must match the MSVC manifest.
+          sed -n '/\[Ordinal\/Name Pointer\] Table/,/^$/p' build/objdump.txt \
+            | grep -oE 'ggpo_[A-Za-z0-9_@]+' | sort -u > build/exports.txt
+          cat build/exports.txt
+          diff -u tests/baseline/windows/${{ matrix.manifest }} build/exports.txt
+
+          # The DLL must embed the MinGW runtime instead of importing it.
+          grep 'DLL Name' build/objdump.txt
+          if grep -iE 'DLL Name: (libgcc|libstdc\+\+|libwinpthread)' build/objdump.txt; then
+            echo "libGGPO.dll imports MinGW runtime DLLs" >&2; exit 1
+          fi
+
+      - name: Build and run installed consumers for every linkage
+        run: |
+          python tests/consumer/verify_consumers.py \
+            --prefix build/install \
+            --work build/consumers \
+            --generator Ninja \
+            --config Release \
+            --report build/consumers/consumers.json
+
+      - name: Upload MinGW evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mingw-${{ matrix.label }}
+          path: |
+            build/mingw/Testing
+            build/objdump.txt
+            build/exports.txt
+            build/consumers/consumers.json
+          if-no-files-found: warn

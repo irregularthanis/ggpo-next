@@ -53,13 +53,14 @@ endfunction()
 set(GGPO_LIBRARY_TARGETS)
 if(GGPO_BUILD_SHARED)
 	ggpo_add_library(GGPO_shared SHARED shared)
-	# GGPO.dll + GGPO.lib (import library) on Windows, libGGPO.so on Linux.
+	# MSVC: GGPO.dll + GGPO.lib (import library). MinGW: libGGPO.dll +
+	# libGGPO.dll.a. Linux: libGGPO.so.
 	set_target_properties(GGPO_shared PROPERTIES OUTPUT_NAME GGPO)
 	list(APPEND GGPO_LIBRARY_TARGETS GGPO_shared)
 endif()
 if(GGPO_BUILD_STATIC)
 	ggpo_add_library(GGPO_static STATIC static)
-	if(WIN32)
+	if(MSVC)
 		# libGGPO.lib, distinct from the DLL import library GGPO.lib.
 		set_target_properties(GGPO_static PROPERTIES
 			OUTPUT_NAME libGGPO
@@ -68,6 +69,7 @@ if(GGPO_BUILD_STATIC)
 			COMPILE_PDB_OUTPUT_DIRECTORY_RELEASE ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE}
 		)
 	else()
+		# libGGPO.a on Linux and MinGW.
 		set_target_properties(GGPO_static PROPERTIES OUTPUT_NAME GGPO)
 	endif()
 	list(APPEND GGPO_LIBRARY_TARGETS GGPO_static)
@@ -121,6 +123,16 @@ if(GGPO_BUILD_STATIC)
 		NAMESPACE GGPO::
 		DESTINATION lib/cmake/GGPO
 	)
+endif()
+
+# Recorded in GGPOConfig.cmake so a Windows consumer built with the other
+# toolchain is rejected instead of failing at link time.
+if(MSVC)
+	set(GGPO_TOOLCHAIN msvc)
+elseif(MINGW)
+	set(GGPO_TOOLCHAIN mingw)
+else()
+	set(GGPO_TOOLCHAIN gnu)
 endif()
 
 include(CMakePackageConfigHelpers)

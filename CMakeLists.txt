@@ -20,7 +20,16 @@ endif()
 
 # What do we want to build?
 option(GGPO_BUILD_SDK "Enable the build of the GGPO SDK" ON)
-option(GGPO_BUILD_VECTORWAR "Enable the build of the Vector War example app" ON)
+# Vector War's Windows frontend is MSVC-only; MinGW builds the SDK alone.
+if(MINGW)
+	set(GGPO_BUILD_VECTORWAR_DEFAULT OFF)
+else()
+	set(GGPO_BUILD_VECTORWAR_DEFAULT ON)
+endif()
+option(GGPO_BUILD_VECTORWAR "Enable the build of the Vector War example app" ${GGPO_BUILD_VECTORWAR_DEFAULT})
+if(MINGW AND GGPO_BUILD_VECTORWAR)
+	message(FATAL_ERROR "Vector War is not supported with MinGW; configure with -DGGPO_BUILD_VECTORWAR=OFF")
+endif()
 # Linkage: leave BUILD_SHARED_LIBS unset to build both shared and static GGPO,
 # or pass -DBUILD_SHARED_LIBS=ON/OFF for one flavor (see src/CMakeLists.txt).
 option(GGPO_RUN_TESTS_ON_BUILD "Run self-contained GGPO tests during the default build" ON)
