@@ -36,7 +36,7 @@ behavior-changing refactor pass.
 | Layer | Contract | Source | Runs against |
 | --- | --- | --- | --- |
 | Public ABI | Public sizes, offsets, enum values, callback order, and DLL/shared-object exports | [`public_layout.cpp`](../../tests/baseline/windows/public_layout.cpp), [`exports-x64.txt`](../../tests/baseline/windows/exports-x64.txt), [`linux/exports.txt`](../../tests/baseline/linux/exports.txt) | Compiled header, shared DLL and `libGGPO.so` |
-| Installed consumers | C11 and C++98 compile/link use only installed SDK files | [`tests/consumer`](../../tests/consumer/CMakeLists.txt), [`verify_installed_consumers.ps1`](../../scripts/ci/verify_installed_consumers.ps1) | Installed header and shared/static library |
+| Installed consumers | C11 and C++98 programs build and run from installed files for every linkage: default, `GGPO_USE_STATIC=ON`, and `GGPO::shared`; each binary's real runtime dependency is checked | [`tests/consumer`](../../tests/consumer/CMakeLists.txt), [`verify_consumers.py`](../../tests/consumer/verify_consumers.py) | Installed header plus shared and static libraries |
 | Wire layout | Packed `UdpMsg` sizes, offsets, and representative packet lengths | [`packet_layout.cpp`](../../tests/baseline/windows/packet_layout.cpp) | Internal protocol structures on Windows and Linux |
 | Portable core | Queue prediction, rollback/replay, time sync, containers, and bit encoding | [`tests/unit`](../../tests/unit/input_queue_test.cpp) | Production algorithms with deterministic state |
 | Public API | Session construction, lifecycle, null guards, configuration, and logging | [`public_api_contract_test.cpp`](../../tests/contract/public_api_contract_test.cpp) | Production backends with fake services |
@@ -52,14 +52,17 @@ behavior-changing refactor pass.
 | Rollback behavior | Save, restore, synchronized input, replay, and deterministic final state | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | SyncTest backend without sockets |
 | Native transport | Handshake, events, prediction, rollback, UDP delivery, and shutdown | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Two Windows or Linux GGPO processes over localhost |
 | Negative peer contracts | Startup, timeout, checksum mismatch, and shutdown failures are rejected | [`peer_runner_negative.py`](../../tests/smoke/peer_runner_negative.py) | Fault-injected real peer processes |
-| Build compatibility | x64/Win32, shared/static, Debug/Release | [`windows-compatibility.yml`](../../.github/workflows/windows-compatibility.yml) | Eight Windows build variants |
+| Build compatibility | x64/Win32 Release with both libraries, plus x64 static Debug | [`windows-compatibility.yml`](../../.github/workflows/windows-compatibility.yml) | Three Windows lanes |
 | Linux transport | The same peer contract through POSIX UDP | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`platform_linux.cpp`](../../src/lib/ggpo/platform_linux.cpp) | Two native Linux processes |
-| Linux package | GCC/Clang, static/shared, installed consumers and ABI ceiling | [`linux-compatibility.yml`](../../.github/workflows/linux-compatibility.yml) | Shared Ubuntu 24.04 image |
+| Linux package | GCC/Clang with both libraries, installed consumers and ABI ceiling | [`linux-compatibility.yml`](../../.github/workflows/linux-compatibility.yml) | Shared Ubuntu 24.04 image |
 | Cross-host | Native Windows and Linux peers converge | [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml), [`tests/e2e`](../../tests/e2e) | Native GitHub-hosted Windows↔Ubuntu matrix over ephemeral Tailscale nodes |
 
-The shared/static lanes are both required. Shared builds additionally validate
-DLL exports and import linkage; static builds ensure consumers do not depend on
-DLL-only definitions or lifecycle behavior.
+Every lane builds the shared and the static library together. CTest runs the
+suite against the shared library and adds `*_static_synctest_smoke` and
+`*_static_peer_loopback` against the static one. The installed-consumer step
+then proves shared consumers depend on the GGPO runtime and static consumers do
+not (`readelf -d` on Linux; on Windows the static programs run with the SDK's
+`bin` removed from `PATH`).
 
 ## Shared coverage and platform normalization
 
@@ -414,14 +417,19 @@ ctest --test-dir build -L abi --output-on-failure   # Windows layout fixtures
 ```
 
 [`windows_compatibility_baseline.ps1`](../../scripts/ci/windows_compatibility_baseline.ps1)
-configures, builds, runs CTest, installs the SDK, compiles and links the two
-consumer fixtures, and calls the evidence collector. GitHub Actions runs it
-across this matrix:
+configures, builds, runs CTest, installs the SDK, builds and runs the consumer
+fixtures for every installed linkage, and calls the evidence collector. GitHub
+Actions runs it across this matrix:
 
-| Architecture | Linkage | Configuration |
-| --- | --- | --- |
-| x64 | Shared and static | Debug and Release |
-| Win32 | Shared and static | Debug and Release |
+| Architecture | Libraries | Configuration | Why |
+| --- | --- | --- | --- |
+| x64 | Shared and static | Release | Shipped configuration, 64-bit |
+| Win32 | Shared and static | Release | Shipped configuration, 32-bit |
+| x64 | Static only | Debug | MSVC debug runtime checks: `/RTC1`, debug heap, checked iterators |
+
+GGPO's `ASSERT` is unconditional, so additional Debug variants compile the same
+checks as Release; the scheduled MSVC AddressSanitizer lane below covers memory
+errors more thoroughly than the debug runtime.
 
 The final [Windows compatibility verifier](../../scripts/ci/verify_windows_compatibility.ps1)
 builds the frozen Windows baseline and the current candidate. It compares
@@ -431,13 +439,15 @@ baseline DLL.
 
 [`linux-compatibility.yml`](../../.github/workflows/linux-compatibility.yml)
 builds [`docker/linux/Dockerfile`](../../docker/linux/Dockerfile), then runs the
-GCC/Clang × static/shared matrix inside that image. Each lane runs CTest,
+GCC and Clang lanes inside that image, each building both libraries. Each lane runs CTest,
 installs the SDK, builds and executes external C11/C++98 consumers, and audits
 the installed Linux library.
 
 [`sanitizer-qualification.yml`](../../.github/workflows/sanitizer-qualification.yml)
 runs manually and weekly. It uses the same image to instrument production GGPO,
-all 13 tests, and installed static-library consumers with Clang ASan and UBSan.
+all registered tests, and installed static-library consumers with Clang ASan and
+UBSan. A second job builds static GGPO with MSVC `/fsanitize=address` on x64 and
+runs the full Windows CTest suite.
 Sanitizer findings fail immediately and the workflow retains CTest evidence.
 
 The GCC and Clang portable-header jobs also compile the public C11 and C++98

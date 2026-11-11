@@ -21,7 +21,7 @@ builds the Windows sample.
 
 | Product | CMake target | Inputs | Output |
 | --- | --- | --- | --- |
-| GGPO SDK | `GGPO` | Public header, backends, sync core, UDP protocol, platform source | Shared or static library |
+| GGPO SDK | `GGPO_shared`, `GGPO_static` | Public header, backends, sync core, UDP protocol, platform source | Shared and/or static library |
 | Vector War | `VectorWar` | Sample game, Win32 loop, GDI/OpenGL renderer, `GGPO` | Windows executable |
 
 ## Build graph
@@ -37,7 +37,7 @@ flowchart TD
     Windows["platform/windows/<br/>Platform.cmake<br/>Windows source,<br/>defines and libs"]
     Linux["platform/linux/<br/>Platform.cmake<br/>POSIX source<br/>and flags"]
     Unsupported["Configuration<br/>error<br/>unsupported<br/>platform"]
-    Library["GGPO library<br/>shared or<br/>static"]
+    Library["GGPO libraries<br/>shared and<br/>static"]
     SampleList["Vector War<br/>CMakeLists.txt<br/>Windows only"]
     Sample["VectorWar<br/>executable"]
 
@@ -70,8 +70,8 @@ image locally and runs configure, build, CTest, install-consumer, and ABI audits
 
 ```bash
 python3 scripts/linux/build_in_container.py \
-  --compiler gcc --library shared --packages \
-  --out build/linux-gcc-shared
+  --compiler gcc --packages \
+  --out build/linux-gcc
 ```
 
 CI builds the same Dockerfile with layer caching; it does not maintain a second
@@ -83,9 +83,11 @@ Declared in the [root build file](../../CMakeLists.txt):
 
 | Option | Default | Effect |
 | --- | ---: | --- |
-| `GGPO_BUILD_SDK` | `ON` | Adds the `GGPO` library target |
+| `GGPO_BUILD_SDK` | `ON` | Adds the GGPO library targets |
 | `GGPO_BUILD_VECTORWAR` | `ON` | Adds Vector War only when `WIN32` is true |
-| `BUILD_SHARED_LIBS` | `ON` | Chooses a shared library instead of a static library |
+| `BUILD_SHARED_LIBS` | unset | Unset builds both libraries; `ON` builds only shared, `OFF` only static |
+| `GGPO_BUILD_SHARED` | both / from `BUILD_SHARED_LIBS` | Builds `GGPO_shared` (`GGPO.dll` + `GGPO.lib`, `libGGPO.so`) |
+| `GGPO_BUILD_STATIC` | both / from `BUILD_SHARED_LIBS` | Builds `GGPO_static` (`libGGPO.lib`, `libGGPO.a`) |
 | `GGPO_RUN_TESTS_ON_BUILD` | `ON` | Runs the platform's self-contained CTests in the default build |
 
 Current Windows setup uses [`configure_windows.cmd`](../../configure_windows.cmd).
@@ -131,16 +133,31 @@ The SDK install rules in [`src/CMakeLists.txt`](../../src/CMakeLists.txt) place:
 ```text
 <prefix>/
 ├── include/ggponet.h
-├── bin/GGPO.dll                  # shared build
-├── lib/GGPO.lib                  # import or static library
-├── lib/libGGPO.so.0              # Linux shared build
-├── lib/libGGPO.a                 # Linux static build
-├── lib/cmake/GGPO/               # CMake package and target export
+├── bin/GGPO.dll                  # Windows shared library
+├── lib/GGPO.lib                  # Windows import library for GGPO.dll
+├── lib/libGGPO.lib               # Windows static library
+├── lib/libGGPO.so.0              # Linux shared library
+├── lib/libGGPO.a                 # Linux static library
+├── lib/cmake/GGPO/               # CMake package and target exports
 └── share/GGPO/                   # license and README
 ```
 
-The install also exports `lib/cmake/GGPO/GGPOConfig.cmake`; consumers use
-`find_package(GGPO CONFIG REQUIRED)` and link `GGPO::GGPO`.
+Each built flavor installs its own export, `GGPOSharedTargets.cmake` or
+`GGPOStaticTargets.cmake`. [`GGPOConfig.cmake`](../../src/cmake/GGPOConfig.cmake.in)
+loads whichever exist and provides:
+
+| Target | Resolves to |
+| --- | --- |
+| `GGPO::shared` | The shared library; carries `GGPO_SHARED_LIB` on Windows |
+| `GGPO::static` | The static library |
+| `GGPO::GGPO` | Shared when installed, otherwise static; `GGPO_USE_STATIC=ON` selects static and `OFF` requires shared |
+
+`find_package(GGPO CONFIG REQUIRED COMPONENTS shared static)` fails when a
+requested flavor is missing. Inside the source tree, `GGPO::GGPO` follows the
+same rule. [`verify_consumers.py`](../../tests/consumer/verify_consumers.py)
+checks every combination against an installed SDK; see the
+[Developer Guide](../DeveloperGuide.md#link-ggpo-into-an-application) for
+application usage.
 
 ## Release packages
 
@@ -149,21 +166,21 @@ Pushing a final tag such as `v0.2.0`, or a prerelease tag such as
 [`Package release SDK`](../../.github/workflows/release-packages.yml) workflow.
 The tag must match the version declared by the root [`project()`](../../CMakeLists.txt).
 
-The workflow builds Windows x64/x86 and Linux x86-64 SDKs with shared and
-static linkage. It also publishes standalone interactive Vector War archives
+The workflow builds one Windows x64, one Windows x86, and one Linux x86-64 SDK,
+each containing both the shared and the static library. It also publishes standalone interactive Vector War archives
 for Windows x64/x86 and Linux x86-64. Windows publishes ZIP files; Linux
 publishes the GUI as a tarball and the SDK in these formats:
 
 | Format | Install shape | Validation |
 | --- | --- | --- |
-| DEB | `/usr` SDK for Debian-family systems | Extract, run C11/C++98 consumers, ABI audit |
-| RPM | `/usr` SDK for RPM-family systems | Extract, run C11/C++98 consumers, ABI audit |
-| tar.gz | Prefix-local raw SDK | Extract, run C11/C++98 consumers, ABI audit |
+| DEB | `/usr` SDK for Debian-family systems | Extract, run C11/C++98 consumers for every linkage, ABI audit |
+| RPM | `/usr` SDK for RPM-family systems | Extract, run C11/C++98 consumers for every linkage, ABI audit |
+| tar.gz | Prefix-local raw SDK | Extract, run C11/C++98 consumers for every linkage, ABI audit |
 
 [`package_linux_sdk.py`](../../scripts/ci/package_linux_sdk.py) creates and
-validates all three formats from one installed SDK. Shared and static packages
-use distinct names and conflict metadata because they own the same headers and
-CMake files. All artifacts and the combined `SHA256SUMS` file are attached to
+validates all three formats from one installed SDK. The combined package is
+named `ggpo-sdk` and replaces the 0.3.0 `ggpo-sdk-shared` / `ggpo-sdk-static`
+packages. Single-flavor builds still produce those older names. All artifacts and the combined `SHA256SUMS` file are attached to
 the GitHub Release.
 
 ## Platform status
