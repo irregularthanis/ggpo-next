@@ -156,12 +156,25 @@ ggpo-V-android/
 
 A Prefab AAR for Gradle consumers is a possible follow-up, not in scope.
 
-## Documentation
+## Documentation (parity with existing platforms)
 
-Developer Guide: Android section (download, NDK CMake integration per ABI,
-shared vs static, packaging `libGGPO.so` into an APK, `INTERNET` permission,
-`-ffp-contract=off`, running Vector War). Build.md, Testing.md,
-CrossPlatformTesting.md, VectorWar.md, README.
+Every Developer Guide topic that exists for Linux, Windows and MinGW gets an
+Android equivalent:
+
+| Topic | Existing platforms | Android content |
+| --- | --- | --- |
+| **Install a release SDK** | Zip / DEB / RPM / tar.gz, layout, checksums | Android archive, per-ABI layout, `SHA256SUMS`, where to extract it |
+| **Build from source** | CMake on Windows, CI container on Linux, MSYS2 for MinGW | NDK + CMake commands per ABI, minimum API, CI container option, building all ABIs |
+| **Use with CMake** | `find_package(GGPO)`, `GGPO_USE_STATIC` | Same, with the per-ABI `CMAKE_PREFIX_PATH`/`CMAKE_FIND_ROOT_PATH` an NDK build needs |
+| **Use from Gradle** | n/a | `externalNativeBuild` + CMake, passing the SDK prefix per ABI |
+| **Use without CMake** | `cl`/`g++` command lines | NDK `clang++` command lines for shared and static |
+| **Shared vs static, deployment** | DLL next to the exe, RPATH | Packaging `libGGPO.so` in the APK (`jniLibs` / Gradle), static linking into the app's own `.so` |
+| **Platform notes** | Windows `/MD`, MinGW runtimes, SSE2 | `INTERNET` permission, `-ffp-contract=off`, ABI selection, API level |
+| **Run Vector War** | Windows zip, Linux tarball | Installing the APK, entering ports and peers, two devices or device + PC |
+
+Build.md, Testing.md, CrossPlatformTesting.md, VectorWar.md and README are
+updated to match. CI exercises the documented build and consumer commands, as
+`verify_consumers.py` does today, so the guide cannot drift from what works.
 
 ## Rollout
 

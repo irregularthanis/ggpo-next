@@ -34,7 +34,10 @@ build integration, test infrastructure that runs on Android, and packaging.
 - **Vector War** runs on Android: the shared SDL2 frontend as an APK with
   on-screen controls, plus `VectorWarHeadless` for E2E.
 - Releases add an Android SDK archive (all ABIs) and a Vector War APK.
-- The Developer Guide documents integrating GGPO into an Android NDK project.
+- **Documentation parity:** the Developer Guide covers Android at the same depth
+  as Linux, Windows and MinGW: how to **build** the SDK from source, how to
+  **install** a release SDK, and how to **use** it in an application (CMake,
+  Gradle, and without CMake), with shared and static linking and deployment.
 
 ## Success and constraints
 
@@ -45,6 +48,7 @@ build integration, test infrastructure that runs on Android, and packaging.
 | CTest on Android | None | Same suite as Linux passes, on arm64 when a runner allows it | CI |
 | E2E | Linux, Windows, MinGW | Android ↔ Linux/Windows/MinGW, smoke and Vector War, converge | E2E manifest |
 | Vector War | Windows, Linux | Android APK starts, connects, and plays a two-player session | CI smoke + E2E with headless |
+| Documentation | No Android content | Every Developer Guide topic that exists for Linux/Windows/MinGW has an Android equivalent; commands in the guide are exercised by CI | Doc checklist; CI runs the documented build and consumer commands |
 | Compatibility | Frozen ABI/wire baseline; all current lanes | Unchanged; existing platforms' checks and packages identical | Existing required checks and frozen baseline |
 
 ## Constraints (hard)

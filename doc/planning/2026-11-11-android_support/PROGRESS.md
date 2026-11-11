@@ -45,7 +45,10 @@ Parallel with M2.
 ### M5: Release and docs (depends: M3, M4)
 
 - [ ] M5-T01: Android SDK archive and Vector War APK; release dry run.
-- [ ] M5-T02: Developer Guide Android section; VectorWar.md.
+- [ ] M5-T02: Developer Guide parity: install, build from source, use with
+  CMake, Gradle and without CMake, shared vs static, deployment, platform notes,
+  and running Vector War; VectorWar.md.
+- [ ] M5-T05: CI exercises the documented Android build and consumer commands.
 - [ ] M5-T03: Build.md, Testing.md, CrossPlatformTesting.md, README.
 - [ ] M5-T04: Android checks added to the ruleset and branch protection.
 
@@ -63,6 +66,7 @@ Parallel with M2.
 | Test and E2E parity with existing platforms; arm64 runners preferred | Accepted (2026-11-11) |
 | Compatibility with existing platforms is a hard requirement | Accepted (2026-11-11) |
 | Port Vector War (SDL2 APK + headless for E2E) | Accepted (2026-11-11) |
+| Documentation parity: build, install, and use in apps | Accepted (2026-11-11) |
 | `-ffp-contract=off` on Android | Proposed |
 | `libc++_static` inside `libGGPO.so` | Proposed |
 | Minimum API 24, NDK r27 LTS, ABIs arm64-v8a/armeabi-v7a/x86_64 | Proposed |
