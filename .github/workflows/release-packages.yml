@@ -4,23 +4,24 @@ on:
   push:
     tags:
       - "v*"
+  # Build and validate every package without publishing (used to qualify
+  # packaging changes before a tag exists). Artifacts are named "dev".
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   package-linux:
-    name: Linux x86-64 ${{ matrix.library }} SDK
+    # One SDK containing libGGPO.so and libGGPO.a.
+    name: Linux x86-64 SDK
     runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        library: [shared, static]
 
     steps:
       - name: Check out the tagged source
         uses: actions/checkout@v4
       - name: Verify tag and project versions agree
+        if: github.event_name == 'push'
         shell: bash
         run: |
           version=$(sed -n 's/^project(GGPO VERSION \([0-9][0-9.]*\)).*/\1/p' CMakeLists.txt)
@@ -40,23 +41,23 @@ jobs:
           context: .
           file: docker/linux/Dockerfile
           load: true
-          tags: ggpo-linux-release:${{ matrix.library }}
+          tags: ggpo-linux-release:sdk
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Build, test, install and audit the SDK
         run: |
           python3 scripts/linux/build_in_container.py \
             --skip-image-build \
-            --image ggpo-linux-release:${{ matrix.library }} \
+            --image ggpo-linux-release:sdk \
             --compiler gcc \
-            --library ${{ matrix.library }} \
-            --out build/linux-${{ matrix.library }} \
+            --library both \
+            --out build/linux \
             --packages
       - name: Upload packaged SDK
         uses: actions/upload-artifact@v4
         with:
-          name: release-package-linux-x86_64-${{ matrix.library }}
-          path: build/linux-${{ matrix.library }}/packages/ggpo-*
+          name: release-package-linux-x86_64
+          path: build/linux/packages/ggpo-*
           if-no-files-found: error
 
   package-windows:
@@ -65,33 +66,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Each SDK contains GGPO.dll + GGPO.lib and libGGPO.lib.
         include:
           - architecture: x64
             platform: x64
-            shared: "ON"
-            linkage: shared
-            label: x64 shared
-          - architecture: x64
-            platform: x64
-            shared: "OFF"
-            linkage: static
-            label: x64 static
+            label: x64
           - architecture: Win32
             platform: x86
-            shared: "ON"
-            linkage: shared
-            label: x86 shared
-          - architecture: Win32
-            platform: x86
-            shared: "OFF"
-            linkage: static
-            label: x86 static
+            label: x86
 
     steps:
       - name: Check out the tagged source
         uses: actions/checkout@v4
 
       - name: Verify tag and project versions agree
+        if: github.event_name == 'push'
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -114,7 +103,6 @@ jobs:
           cmake -S . -B build/package `
             -G "Visual Studio 17 2022" `
             -A "${{ matrix.architecture }}" `
-            -DBUILD_SHARED_LIBS=${{ matrix.shared }} `
             -DGGPO_BUILD_SDK=ON `
             -DGGPO_BUILD_VECTORWAR=OFF `
             -DGGPO_RUN_TESTS_ON_BUILD=OFF `
@@ -133,8 +121,8 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
-          $version = "${{ github.ref_name }}".Substring(1)
-          $name = "ggpo-$version-windows-${{ matrix.platform }}-${{ matrix.linkage }}"
+          $version = if ("${{ github.event_name }}" -eq "push") { "${{ github.ref_name }}".Substring(1) } else { "dev" }
+          $name = "ggpo-$version-windows-${{ matrix.platform }}"
           $stage = Join-Path $PWD "build/stage/$name"
           cmake --install build/package --config Release --prefix $stage
           Compress-Archive -Path "$stage/*" -DestinationPath "build/$name.zip"
@@ -144,25 +132,26 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
-          $version = "${{ github.ref_name }}".Substring(1)
-          $name = "ggpo-$version-windows-${{ matrix.platform }}-${{ matrix.linkage }}"
+          $version = if ("${{ github.event_name }}" -eq "push") { "${{ github.ref_name }}".Substring(1) } else { "dev" }
+          $name = "ggpo-$version-windows-${{ matrix.platform }}"
           $extract = Join-Path $PWD "build/extracted/$name"
           Expand-Archive "build/$name.zip" -DestinationPath $extract
-          cmake -S tests/consumer -B build/release-consumer `
-            -G "Visual Studio 17 2022" `
-            -A "${{ matrix.architecture }}" `
-            "-DCMAKE_PREFIX_PATH=$($extract.Replace('\', '/'))"
-          cmake --build build/release-consumer --config Release --parallel
-          $env:PATH = "$(Join-Path $extract bin);$env:PATH"
-          & (Join-Path $PWD "build/release-consumer/Release/ggpo_installed_c11.exe")
-          if ($LASTEXITCODE -ne 0) { throw "Extracted C11 consumer failed" }
-          & (Join-Path $PWD "build/release-consumer/Release/ggpo_installed_cpp98.exe")
-          if ($LASTEXITCODE -ne 0) { throw "Extracted C++98 consumer failed" }
+          foreach ($file in @("bin/GGPO.dll", "lib/GGPO.lib", "lib/libGGPO.lib")) {
+            if (!(Test-Path (Join-Path $extract $file))) { throw "SDK archive is missing $file" }
+          }
+          # Default, GGPO_USE_STATIC=ON and GGPO::shared consumers, each run;
+          # static consumers run without the SDK's bin directory on PATH.
+          python tests/consumer/verify_consumers.py `
+            --prefix $extract `
+            --work build/release-consumer `
+            --config Release `
+            --generator "Visual Studio 17 2022" `
+            --architecture "${{ matrix.architecture }}"
 
       - name: Upload packaged SDK
         uses: actions/upload-artifact@v4
         with:
-          name: release-package-windows-${{ matrix.platform }}-${{ matrix.linkage }}
+          name: release-package-windows-${{ matrix.platform }}
           path: build/ggpo-*.zip
           if-no-files-found: error
 
@@ -190,7 +179,7 @@ jobs:
             '
       - name: Archive the standalone app
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          if [ "${GITHUB_EVENT_NAME}" = push ]; then version="${GITHUB_REF_NAME#v}"; else version=dev; fi
           name="ggpo-${version}-vectorwar-linux-x86_64"
           mkdir -p "build/stage/$name"
           install -m 0755 build/vectorwar-linux/build/bin/x64/Release/VectorWar \
@@ -230,7 +219,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $version = "${{ github.ref_name }}".Substring(1)
+          $version = if ("${{ github.event_name }}" -eq "push") { "${{ github.ref_name }}".Substring(1) } else { "dev" }
           $name = "ggpo-$version-vectorwar-windows-${{ matrix.platform }}"
           $stage = Join-Path $PWD "build/stage/$name"
           New-Item -ItemType Directory -Force $stage | Out-Null
@@ -245,6 +234,7 @@ jobs:
 
   publish-release:
     name: Publish release assets
+    if: github.event_name == 'push'
     needs: [package-windows, package-linux, package-vectorwar-linux, package-vectorwar-windows]
     runs-on: ubuntu-24.04
     permissions:
