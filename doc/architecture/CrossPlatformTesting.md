@@ -69,6 +69,10 @@ are named `linux-linux` etc., and Vector War scenarios `vectorwar-linux-linux`
 etc. Each scenario expands into a role-1 host job and a role-2 coordinator job,
 producing sixteen native execution jobs (eight per fixture).
 
+Two more generic-peer scenarios run a static MinGW-w64 x64 peer as player 1:
+`mingw-windows` (against MSVC) and `mingw-linux`. They add four jobs, and the
+final manifest requires their reports too.
+
 ### Why each scenario has two jobs
 
 A scenario is two GGPO peers on two different hosts, and every GitHub Actions

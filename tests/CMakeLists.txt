@@ -368,7 +368,8 @@ add_test(NAME ${GGPO_SMOKE_PREFIX}_vectorwar_native_host_contract
 set_tests_properties(${GGPO_SMOKE_PREFIX}_vectorwar_native_host_contract PROPERTIES
     LABELS "native;platform;sample;vectorwar-host")
 
-if(WIN32)
+if(MSVC)
+    # Built from Vector War's Win32/GDI frontend, which MinGW does not build.
     add_executable(ggpo_vectorwar_win32_host_contract
         vectorwar/win32_host_contract_test.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/win32_host.cpp

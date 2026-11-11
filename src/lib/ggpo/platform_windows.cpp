@@ -104,9 +104,11 @@ void
 ggpo_platform::FormatUdpEndpoint(const UdpEndpoint &endpoint, char *buffer, int length)
 {
    if (length > 0) {
-      _snprintf_s(buffer, length, _TRUNCATE, "%u.%u.%u.%u:%u",
-                  endpoint.address[0], endpoint.address[1],
-                  endpoint.address[2], endpoint.address[3], endpoint.port);
+      // C99 snprintf (MSVC 2015+ and MinGW-w64) always terminates within
+      // length and truncates like _snprintf_s(..., _TRUNCATE, ...).
+      snprintf(buffer, length, "%u.%u.%u.%u:%u",
+               endpoint.address[0], endpoint.address[1],
+               endpoint.address[2], endpoint.address[3], endpoint.port);
    }
 }
 

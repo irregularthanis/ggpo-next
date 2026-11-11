@@ -126,6 +126,10 @@ class MatrixTests(unittest.TestCase):
                     f"vw-{scenario}", f"vectorwar-{scenario}",
                     fixture="vectorwar",
                 )
+            write_report("mw", "mingw-windows")
+            with self.assertRaisesRegex(ValueError, "incomplete"):
+                build_manifest(root)
+            write_report("ml", "mingw-linux")
             self.assertEqual(build_manifest(root)["result"], "pass")
             write_report("duplicate", "linux-linux")
             with self.assertRaisesRegex(ValueError, "duplicate"):

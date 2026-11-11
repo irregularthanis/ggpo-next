@@ -43,7 +43,7 @@ integration guidance is in the [Developer Guide](doc/DeveloperGuide.md).
 
 ## Install or build the SDK
 
-The SDK supports Windows and Linux builds. The Vector War sample runs on
+The SDK supports Windows (MSVC and MinGW-w64, x64 and x86) and Linux builds. The Vector War sample runs on
 Windows (Win32/GDI) and Linux (SDL2);
 Apple and other unsupported SDK targets fail configuration explicitly.
 
