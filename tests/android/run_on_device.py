@@ -45,9 +45,15 @@ def main():
 
     adb("push", str(executable), f"{device_dir}/{executable.name}",
         stdout=subprocess.DEVNULL)
-    for library in executable.parent.glob("*.so"):
-        adb("push", str(library), f"{device_dir}/{library.name}",
-            stdout=subprocess.DEVNULL)
+    # Shared libraries beside the executable, plus any directories listed in
+    # GGPO_LAUNCHER_LIB_DIRS (an installed SDK's lib/ for consumer checks).
+    library_dirs = [executable.parent] + [
+        Path(entry) for entry in
+        os.environ.get("GGPO_LAUNCHER_LIB_DIRS", "").split(os.pathsep) if entry]
+    for directory in library_dirs:
+        for library in directory.glob("*.so"):
+            adb("push", str(library), f"{device_dir}/{library.name}",
+                stdout=subprocess.DEVNULL)
 
     mapped = {}
     arguments = []
@@ -64,7 +70,8 @@ def main():
 
     forwarded = {}
     for name, value in os.environ.items():
-        if not name.startswith("GGPO_") or name in ("GGPO_TEST_LAUNCHER", "GGPO_DEVICE_ROOT"):
+        if not name.startswith("GGPO_") or name in ("GGPO_TEST_LAUNCHER", "GGPO_DEVICE_ROOT",
+                                                         "GGPO_LAUNCHER_LIB_DIRS"):
             continue
         path = Path(value)
         if name.endswith("_FILE") and path.is_absolute():

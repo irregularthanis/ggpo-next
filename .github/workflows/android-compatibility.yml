@@ -74,6 +74,91 @@ jobs:
           path: build/android/Testing
           if-no-files-found: warn
 
+  sdk:
+    # Both libraries per ABI, installed and audited like the Linux SDK: SONAME,
+    # 16 KB alignment, system-only dependencies, frozen exports, API-21
+    # ceiling; the public header with the NDK compilers; consumers for every
+    # linkage (built and NEEDED-checked; they run in the emulator job).
+    name: Android SDK (${{ matrix.abi }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {abi: arm64-v8a, triple: aarch64-linux-android}
+          - {abi: armeabi-v7a, triple: armv7a-linux-androideabi}
+          - {abi: x86_64, triple: x86_64-linux-android}
+    env:
+      NDK: ${{ github.workspace }}/ndk
+    steps:
+      - uses: actions/checkout@v4
+      - name: Locate the NDK
+        run: ln -s "$ANDROID_NDK_LATEST_HOME" "$NDK"
+      - name: Build and install both libraries
+        run: |
+          cmake -S . -B build/sdk -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=${{ matrix.abi }} -DANDROID_PLATFORM=21 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DGGPO_BUILD_VECTORWAR=OFF -DBUILD_TESTING=OFF \
+            -DCMAKE_INSTALL_PREFIX="$PWD/build/install"
+          cmake --build build/sdk --parallel 4
+          cmake --install build/sdk
+          find build/install -type f -o -type l | sort
+      - name: Audit the installed SDK
+        run: |
+          python3 tests/android/audit_android_sdk.py build/install \
+            --ndk "$NDK" --abi ${{ matrix.abi }} --api 21 \
+            --manifest tests/baseline/linux/exports.txt \
+            --report build/audit.json
+      - name: Compile the public header with the NDK compilers
+        run: |
+          clang="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
+          "$clang" --target=${{ matrix.triple }}21 -std=c11 -pedantic-errors -Werror \
+            -Isrc/include -c tests/consumer/consumer.c -o /tmp/consumer-c.o
+          "$clang++" --target=${{ matrix.triple }}21 -std=c++98 -pedantic-errors -Werror \
+            -Wno-extern-c-compat -Isrc/include -c tests/consumer/consumer.cpp -o /tmp/consumer-cpp.o
+      - name: Build installed consumers for every linkage
+        run: |
+          python3 tests/consumer/verify_consumers.py --build-only \
+            --prefix build/install --work build/consumers --generator Ninja \
+            --cmake-arg=-DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
+            --cmake-arg=-DANDROID_ABI=${{ matrix.abi }} \
+            --cmake-arg=-DANDROID_PLATFORM=21 \
+            --report build/consumers/consumers.json
+      - name: Toolchain isolation (host Linux and Android SDKs reject each other)
+        if: matrix.abi == 'arm64-v8a'
+        run: |
+          set -u
+          if cmake -S tests/consumer -B build/neg-host -G Ninja \
+               -DGGPO_DIR="$PWD/build/install/lib/cmake/GGPO" > build/neg-host.log 2>&1; then
+            cat build/neg-host.log; echo "host Linux project accepted the Android SDK" >&2; exit 1
+          fi
+          tr -s ' \r\n' '   ' < build/neg-host.log | grep -q "built with android, but the project uses gnu"
+          cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DGGPO_BUILD_VECTORWAR=OFF -DBUILD_TESTING=OFF \
+            -DCMAKE_INSTALL_PREFIX="$PWD/build/host-install" > /dev/null
+          cmake --build build/host --parallel 4 > /dev/null
+          cmake --install build/host > /dev/null
+          if cmake -S tests/consumer -B build/neg-android -G Ninja \
+               -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
+               -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=21 \
+               -DGGPO_DIR="$PWD/build/host-install/lib/cmake/GGPO" > build/neg-android.log 2>&1; then
+            cat build/neg-android.log; echo "Android project accepted the host Linux SDK" >&2; exit 1
+          fi
+          tr -s ' \r\n' '   ' < build/neg-android.log | grep -q "built with gnu, but the project uses android"
+          echo "Both directions rejected with the toolchain message"
+      - name: Upload the installed SDK and audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-sdk-${{ matrix.abi }}
+          path: |
+            build/install
+            build/audit.json
+            build/consumers/consumers.json
+          if-no-files-found: warn
+
   emulator:
     # Full Android system: tests link the shared libGGPO.so and run inside the
     # emulator through tests/android/run_on_device.py, on the oldest supported
@@ -115,7 +200,7 @@ jobs:
           arch: x86_64
           disable-animations: true
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot
-          script: adb shell getprop ro.build.version.sdk && ctest --test-dir build/emu --output-on-failure --timeout 300
+          script: adb shell getprop ro.build.version.sdk && ctest --test-dir build/emu --output-on-failure --timeout 300 && cmake --install build/emu --prefix build/emu-install && python3 tests/consumer/verify_consumers.py --prefix build/emu-install --work build/emu-consumers --generator Ninja --cmake-arg=-DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake --cmake-arg=-DANDROID_ABI=x86_64 --cmake-arg=-DANDROID_PLATFORM=21
       - name: Upload test evidence
         if: always()
         uses: actions/upload-artifact@v4

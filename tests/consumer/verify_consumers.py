@@ -8,6 +8,9 @@ proves the binary's real dependency on the GGPO shared library:
 - Linux: readelf -d must (shared) or must not (static) list libGGPO.so.
 - Windows: the static programs must run with the SDK's bin directory removed
   from PATH; shared programs run with it added.
+- Android (GGPO_TEST_LAUNCHER set): programs run on the device through the adb
+  launcher; libGGPO.so is pushed only for shared cases, so a static program
+  that still needed it would fail to load. NEEDED is checked as on Linux.
 """
 
 import argparse
@@ -67,6 +70,19 @@ def needs_shared_ggpo(program):
 
 def run_program(program, prefix, expect):
     environment = os.environ.copy()
+    launcher = environment.get("GGPO_TEST_LAUNCHER")
+    if launcher:
+        if expect == "shared":
+            environment["GGPO_LAUNCHER_LIB_DIRS"] = str(prefix / "lib")
+        else:
+            environment.pop("GGPO_LAUNCHER_LIB_DIRS", None)
+        run([sys.executable, launcher, program], env=environment)
+        linked = needs_shared_ggpo(program)
+        if linked != (expect == "shared"):
+            raise SystemExit(
+                f"{program.name}: expected {expect} GGPO, but libGGPO.so "
+                f"{'is' if linked else 'is not'} a runtime dependency")
+        return
     if WINDOWS:
         sdk_bin = str((prefix / "bin").resolve()).lower()
         paths = [part for part in environment.get("PATH", "").split(os.pathsep)
@@ -101,6 +117,9 @@ def main():
     parser.add_argument("--cmake-arg", action="append", default=[])
     parser.add_argument("--jobs", type=int, default=os.cpu_count() or 1)
     parser.add_argument("--report", type=Path)
+    parser.add_argument("--build-only", action="store_true",
+                        help="build and check NEEDED without running (cross ABIs "
+                             "that cannot execute on this host)")
     args = parser.parse_args()
 
     prefix = args.prefix.resolve()
@@ -111,6 +130,9 @@ def main():
         shutil.rmtree(build, ignore_errors=True)
         configure = ["cmake", "-S", args.source, "-B", build,
                      f"-DCMAKE_PREFIX_PATH={prefix.as_posix()}",
+                     # Cross toolchains (Android NDK) re-root package searches;
+                     # an explicit GGPO_DIR works for every toolchain.
+                     f"-DGGPO_DIR={(prefix / 'lib/cmake/GGPO').as_posix()}",
                      f"-DGGPO_CONSUMER_LINKAGE={linkage}",
                      f"-DGGPO_EXPECT_LINKAGE={expect}",
                      f"-DCMAKE_BUILD_TYPE={args.config}"]
@@ -127,9 +149,16 @@ def main():
         run(["cmake", "--build", build, "--config", args.config,
              "--parallel", str(args.jobs)])
         for name in PROGRAMS:
-            run_program(executable(build, args.config, name), prefix, expect)
+            program = executable(build, args.config, name)
+            if args.build_only:
+                linked = needs_shared_ggpo(program)
+                if linked != (expect == "shared"):
+                    raise SystemExit(f"{program.name}: expected {expect} GGPO, but "
+                                     f"libGGPO.so {'is' if linked else 'is not'} NEEDED")
+            else:
+                run_program(program, prefix, expect)
         results.append({"case": linkage, "linkage": expect,
-                        "programs": list(PROGRAMS)})
+                        "programs": list(PROGRAMS), "ran": not args.build_only})
         print(f"consumer case {linkage}: {expect} linkage verified", flush=True)
 
     report = {"schema": 1, "installed": flavors, "cases": results}

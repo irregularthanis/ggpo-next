@@ -10,10 +10,13 @@
 # find_package(GGPO COMPONENTS shared static) fails if a requested flavor is
 # not installed.
 
-# Toolchain that built this SDK: msvc, mingw, or gnu (Linux).  MSVC and
-# MinGW libraries cannot be mixed, so a Windows consumer must match.
+# Toolchain that built this SDK: msvc, mingw, android, or gnu (Linux).
+# Libraries from different toolchains cannot be mixed, so the consuming
+# project must match.
 set(GGPO_TOOLCHAIN "@GGPO_TOOLCHAIN@")
-if(WIN32)
+if(ANDROID)
+	set(_ggpo_consumer_toolchain android)
+elseif(WIN32)
 	if(MSVC)
 		set(_ggpo_consumer_toolchain msvc)
 	elseif(MINGW)
@@ -21,15 +24,17 @@ if(WIN32)
 	else()
 		set(_ggpo_consumer_toolchain "${GGPO_TOOLCHAIN}")
 	endif()
-	if(NOT _ggpo_consumer_toolchain STREQUAL GGPO_TOOLCHAIN)
-		set(GGPO_FOUND FALSE)
-		set(GGPO_NOT_FOUND_MESSAGE
-			"This GGPO SDK was built with ${GGPO_TOOLCHAIN}, but the project uses ${_ggpo_consumer_toolchain}. Use the GGPO SDK built for ${_ggpo_consumer_toolchain} (MinGW downloads end in -mingw.zip), installed in its own folder.")
-		unset(_ggpo_consumer_toolchain)
-		return()
-	endif()
-	unset(_ggpo_consumer_toolchain)
+else()
+	set(_ggpo_consumer_toolchain gnu)
 endif()
+if(NOT _ggpo_consumer_toolchain STREQUAL GGPO_TOOLCHAIN)
+	set(GGPO_FOUND FALSE)
+	set(GGPO_NOT_FOUND_MESSAGE
+		"This GGPO SDK was built with ${GGPO_TOOLCHAIN}, but the project uses ${_ggpo_consumer_toolchain}. Use the GGPO SDK built for ${_ggpo_consumer_toolchain} (MinGW downloads end in -mingw.zip; Android SDKs are per ABI), installed in its own folder.")
+	unset(_ggpo_consumer_toolchain)
+	return()
+endif()
+unset(_ggpo_consumer_toolchain)
 
 set(GGPO_shared_FOUND FALSE)
 set(GGPO_static_FOUND FALSE)
