@@ -133,14 +133,22 @@ The SDK install rules in [`src/CMakeLists.txt`](../../src/CMakeLists.txt) place:
 ```text
 <prefix>/
 ├── include/ggponet.h
-├── bin/GGPO.dll                  # Windows shared library
-├── lib/GGPO.lib                  # Windows import library for GGPO.dll
-├── lib/libGGPO.lib               # Windows static library
+├── bin/GGPO.dll                  # Windows shared library (MSVC)
+├── lib/GGPO.lib                  # MSVC import library for GGPO.dll
+├── lib/libGGPO.lib               # MSVC static library
+├── bin/libGGPO.dll               # Windows shared library (MinGW)
+├── lib/libGGPO.dll.a             # MinGW import library for libGGPO.dll
+├── lib/libGGPO.a                 # MinGW and Linux static library
 ├── lib/libGGPO.so.0              # Linux shared library
-├── lib/libGGPO.a                 # Linux static library
 ├── lib/cmake/GGPO/               # CMake package and target exports
 └── share/GGPO/                   # license and README
 ```
+
+Windows names depend on the toolchain (`MSVC` vs `MINGW`), never on `WIN32`
+alone. A MinGW `libGGPO.dll` is linked with `-static`, embedding libgcc,
+libstdc++ and winpthread. `GGPOConfig.cmake` records the building toolchain
+(`GGPO_TOOLCHAIN`: `msvc`, `mingw` or `gnu`) and rejects a Windows consumer
+built with the other one.
 
 Each built flavor installs its own export, `GGPOSharedTargets.cmake` or
 `GGPOStaticTargets.cmake`. [`GGPOConfig.cmake`](../../src/cmake/GGPOConfig.cmake.in)
@@ -166,8 +174,10 @@ Pushing a final tag such as `v0.2.0`, or a prerelease tag such as
 [`Package release SDK`](../../.github/workflows/release-packages.yml) workflow.
 The tag must match the version declared by the root [`project()`](../../CMakeLists.txt).
 
-The workflow builds one Windows x64, one Windows x86, and one Linux x86-64 SDK,
-each containing both the shared and the static library. It also publishes standalone interactive Vector War archives
+The workflow builds Windows x64 and x86 SDKs for MSVC and for MinGW-w64, and one
+Linux x86-64 SDK, each containing both the shared and the static library. MinGW
+zips end in `-mingw.zip` and carry `share/GGPO/TOOLCHAIN.txt`; validation
+rejects `.lib` files in MinGW zips and `.a` files in MSVC zips. It also publishes standalone interactive Vector War archives
 for Windows x64/x86 and Linux x86-64. Windows publishes ZIP files; Linux
 publishes the GUI as a tarball and the SDK in these formats:
 

@@ -35,10 +35,12 @@ chooses one when it links (see
 
 | Archive | Use it when |
 | --- | --- |
-| `ggpo-0.4.0-windows-x64.zip` | The application is 64-bit Windows |
-| `ggpo-0.4.0-windows-x86.zip` | The application is 32-bit Windows |
-| `ggpo-0.4.0-linux-x86_64.deb` / `.rpm` | Install system-wide on a Debian- or RPM-family distribution |
-| [`ggpo-0.4.0-linux-x86_64.tar.gz`](#linux-raw-sdk-targz) | Extract a relocatable SDK without a package manager |
+| `ggpo-0.5.0-windows-x64.zip` | The application is 64-bit Windows |
+| `ggpo-0.5.0-windows-x86.zip` | The application is 32-bit Windows |
+| `ggpo-0.5.0-windows-x64-mingw.zip` | The application is 64-bit Windows built with MinGW-w64 (UCRT) |
+| `ggpo-0.5.0-windows-x86-mingw.zip` | The application is 32-bit Windows built with MinGW-w64 (MSVCRT) |
+| `ggpo-0.5.0-linux-x86_64.deb` / `.rpm` | Install system-wide on a Debian- or RPM-family distribution |
+| [`ggpo-0.5.0-linux-x86_64.tar.gz`](#linux-raw-sdk-targz) | Extract a relocatable SDK without a package manager |
 
 Extract the ZIP to a stable location such as `C:/ggpo-sdk`. Each release archive
 is an installed CMake package rather than a source tree:
@@ -74,6 +76,35 @@ Windows SDKs are Release builds that use the dynamic C runtime (`/MD`):
   [build GGPO from source](#option-3-build-windows-from-source) with
   `--config Debug`.
 
+#### MSVC or MinGW?
+
+Pick the Windows SDK built with the same toolchain as the application:
+
+| Application built with | Use | Shared library | Static library |
+| --- | --- | --- | --- |
+| Visual Studio (MSVC, clang-cl) | `windows-x64.zip` / `windows-x86.zip` | `GGPO.dll` + `GGPO.lib` | `libGGPO.lib` |
+| MinGW-w64 (MSYS2, `x86_64/i686-w64-mingw32` cross compilers) | `windows-x64-mingw.zip` / `windows-x86-mingw.zip` | `libGGPO.dll` + `libGGPO.dll.a` | `libGGPO.a` |
+
+Install each SDK in **its own folder** and never merge them: both contain
+`lib/cmake/GGPO/`, and MinGW's linker also searches `.lib` names. CMake
+enforces the match: `find_package(GGPO)` fails with a clear message if the SDK
+was built by the other toolchain.
+
+What can be mixed:
+
+| Combination | Supported |
+| --- | --- |
+| MSVC application + MSVC SDK, shared or static | Yes |
+| MinGW application + MinGW SDK, shared or static | Yes |
+| MinGW application + MSVC `GGPO.dll` (C API only, linked without CMake) | Yes, see [Without CMake](#without-cmake) |
+| Any static library across toolchains, or MSVC application + MinGW DLL through CMake | No |
+
+The MinGW x64 SDK uses the UCRT C runtime (MSYS2 `UCRT64`). The x86 SDK uses
+MSVCRT (MSYS2 `MINGW32`), because MSYS2 has no 32-bit UCRT environment.
+`libGGPO.dll` embeds the MinGW C/C++ runtime, so applications do not need to
+ship `libgcc`, `libstdc++` or `libwinpthread` DLLs for GGPO.
+`share/GGPO/TOOLCHAIN.txt` in each MinGW SDK names its toolchain and runtime.
+
 ### Run the standalone Vector War sample
 
 Release pages also attach GUI sample archives independent of the SDK linkage:
@@ -102,9 +133,9 @@ sample archives include the license and the detailed
 
 ```bash
 # Debian or Ubuntu
-sudo apt install ./ggpo-0.4.0-linux-x86_64.deb
+sudo apt install ./ggpo-0.5.0-linux-x86_64.deb
 # Fedora or another RPM-family system
-sudo dnf install ./ggpo-0.4.0-linux-x86_64.rpm
+sudo dnf install ./ggpo-0.5.0-linux-x86_64.rpm
 ```
 
 The package is named `ggpo-sdk` and installs under `/usr`: the public header in
@@ -121,19 +152,19 @@ Use the raw archive for an unprivileged, application-local, or CI installation:
 
 ```bash
 sha256sum --check SHA256SUMS --ignore-missing
-tar -xzf ggpo-0.4.0-linux-x86_64.tar.gz
-cmake -S . -B build -DCMAKE_PREFIX_PATH="$PWD/ggpo-0.4.0-linux-x86_64"
+tar -xzf ggpo-0.5.0-linux-x86_64.tar.gz
+cmake -S . -B build -DCMAKE_PREFIX_PATH="$PWD/ggpo-0.5.0-linux-x86_64"
 cmake --build build --parallel
 ```
 
 The extracted SDK contains:
 
 ```text
-ggpo-0.4.0-linux-x86_64/
+ggpo-0.5.0-linux-x86_64/
 ├── include/ggponet.h
 ├── lib/libGGPO.so -> libGGPO.so.0
-├── lib/libGGPO.so.0 -> libGGPO.so.0.4.0
-├── lib/libGGPO.so.0.4.0
+├── lib/libGGPO.so.0 -> libGGPO.so.0.5.0
+├── lib/libGGPO.so.0.5.0
 ├── lib/libGGPO.a
 ├── lib/cmake/GGPO/
 └── share/GGPO/
@@ -192,13 +223,37 @@ To build only one flavor, add `-DBUILD_SHARED_LIBS=ON` (shared only) or
 Use `-DGGPO_RUN_TESTS_ON_BUILD=OFF` only when test execution must be explicit,
 or `-DBUILD_TESTING=OFF` for a consumer/packaging-only build.
 
+### Option 4: build with MinGW-w64
+
+From an MSYS2 `UCRT64` shell (x64) or `MINGW32` shell (x86):
+
+```bash
+pacman -S --needed mingw-w64-ucrt-x86_64-{gcc,cmake,ninja,python}   # MINGW32: mingw-w64-i686-*
+cmake -S . -B build/mingw -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX="$PWD/build/ggpo-sdk-mingw"
+cmake --build build/mingw --parallel
+cmake --install build/mingw
+```
+
+To cross-compile from Linux, use a CMake toolchain file that sets
+`CMAKE_SYSTEM_NAME Windows` and the `x86_64-w64-mingw32-gcc`/`g++` (or `i686-`)
+compilers; the commands are otherwise the same. Tests need Windows (or Wine) to
+run, so pass `-DBUILD_TESTING=OFF` when only producing the SDK.
+
+Vector War is not built with MinGW. 32-bit MinGW builds compile with
+`-msse2 -mfpmath=sse`: GCC's x87 default rounds floating point differently from
+MSVC, x64 and Linux, which desynchronizes deterministic simulations. Compile a
+32-bit MinGW **game** with the same flags if it uses floating point in its
+simulation and plays against other platforms.
+
 ### Link GGPO into an application
 
 Every SDK installs two libraries. The application chooses one per target:
 
 | | Dynamic (shared) | Static |
 | --- | --- | --- |
-| Windows | `GGPO.dll` + import library `GGPO.lib` | `libGGPO.lib` |
+| Windows (MSVC) | `GGPO.dll` + import library `GGPO.lib` | `libGGPO.lib` |
+| Windows (MinGW) | `libGGPO.dll` + import library `libGGPO.dll.a` | `libGGPO.a` |
 | Linux | `libGGPO.so.0` | `libGGPO.a` |
 | What you ship | The application **and** the GGPO runtime library | The application only |
 | Updating GGPO | Replace the runtime library (same major version) | Relink the application |
@@ -256,7 +311,8 @@ executable, not both.
 
 #### Deploy a dynamically linked application
 
-- **Windows:** copy `bin/GGPO.dll` next to `application_x.exe`. For
+- **Windows:** copy `bin/GGPO.dll` (MSVC) or `bin/libGGPO.dll` (MinGW) next
+  to `application_x.exe`. For
   development, adding the SDK's `bin` directory to `PATH` is enough.
 - **Linux:** ship `libGGPO.so.0` with the application and set an
   application-relative RPATH, for example:
@@ -281,6 +337,14 @@ library requires `GGPO_SHARED_LIB` so the header imports its functions from
 | --- | --- | --- |
 | MSVC | `cl /I C:\ggpo-sdk\include /DGGPO_SHARED_LIB main.cpp /link /LIBPATH:C:\ggpo-sdk\lib GGPO.lib` | `cl /MD /I C:\ggpo-sdk\include main.cpp /link /LIBPATH:C:\ggpo-sdk\lib libGGPO.lib ws2_32.lib winmm.lib` |
 | GCC/Clang (Linux) | `g++ -I/path/to/ggpo-sdk/include main.cpp -L/path/to/ggpo-sdk/lib -lGGPO -Wl,-rpath,'$ORIGIN'` | `g++ -I/path/to/ggpo-sdk/include main.cpp /path/to/ggpo-sdk/lib/libGGPO.a` |
+| MinGW-w64 | `g++ -DGGPO_SHARED_LIB -I/c/ggpo-sdk-mingw/include main.cpp -L/c/ggpo-sdk-mingw/lib -lGGPO` | `g++ -I/c/ggpo-sdk-mingw/include main.cpp /c/ggpo-sdk-mingw/lib/libGGPO.a -lws2_32 -lwinmm` |
+
+A MinGW program can also use the **MSVC** `GGPO.dll` by linking the DLL file
+directly, because GGPO's interface is plain C:
+
+```bash
+gcc -DGGPO_SHARED_LIB -I/c/ggpo-sdk/include main.c /c/ggpo-sdk/bin/GGPO.dll
+```
 
 GGPO is written in C++. A C application that links `libGGPO.a` statically must
 use the C++ compiler driver (`g++`/`clang++`) for its final link step, or add
