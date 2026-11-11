@@ -98,12 +98,12 @@ flowchart TD
 
 | ABI | Use | Minimum API |
 |---|---|---|
-| `arm64-v8a` | All current devices | 24 (proposed) |
-| `armeabi-v7a` | Older 32-bit devices | 24 |
-| `x86_64` | Emulators, Chromebooks | 24 |
+| `arm64-v8a` | All current devices | 21 |
+| `armeabi-v7a` | Older 32-bit devices, TV boxes | 21 |
+| `x86_64` | Emulators, Chromebooks | 21 |
 
-NDK r27 LTS (proposed), `-DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake
--DANDROID_ABI=<abi> -DANDROID_PLATFORM=24`, `libc++_static` for the shared
+The newest NDK LTS on the runners (pinned in M1), `-DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake
+-DANDROID_ABI=<abi> -DANDROID_PLATFORM=21`, `libc++_static` for the shared
 library so `libGGPO.so` carries no C++ runtime dependency (mirrors the MinGW
 decision); the static library uses the application's STL.
 
@@ -129,6 +129,11 @@ Tests stay command-line executables; no test APK is needed for CTest.
 | 1 | GitHub `ubuntu-24.04-arm` with an arm64 Android emulator | arm64-v8a natively | **M0 spike**: needs KVM on the arm runner and a Linux arm64 emulator build |
 | 2 | GitHub `ubuntu-24.04` with KVM and an x86_64 emulator (`reactivecircus/android-emulator-runner`) | x86_64 ABI | Known to work; PR fallback |
 | 3 | Real arm64/armv7 devices (Firebase Test Lab or AWS Device Farm) through a small test APK | arm64-v8a, armeabi-v7a | Scheduled/pre-release if option 1 fails |
+
+API coverage: tests run on the **oldest supported API (21)** and a current API
+level, so the minimum is proven rather than assumed. GGPO uses only POSIX calls
+present in API 21; any new call newer than 21 must be guarded or raise the
+minimum through a recorded decision.
 
 The required PR check runs on option 1 if the spike succeeds, otherwise option 2
 with option 3 weekly. Emulator images and AVD snapshots are cached.
@@ -223,8 +228,8 @@ updated to match. CI exercises the documented build and consumer commands, as
 
 ## Open decisions
 
-- Minimum API level (proposed 24) and NDK version (proposed r27 LTS).
-- Rename `platform_linux.cpp` to `platform_posix.cpp` or keep the name.
-- Whether `armeabi-v7a` is in scope or dropped (32-bit Android is declining).
+- NDK version: the newest LTS on the runners, pinned in M1; libraries must be
+  16 KB page aligned (default in newer NDKs, `-Wl,-z,max-page-size=16384` on
+  older ones) and CI checks it.
 - Required test runner: arm64 emulator (if the spike succeeds) or x86_64
   emulator plus scheduled devices.

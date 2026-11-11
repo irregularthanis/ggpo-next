@@ -32,6 +32,8 @@ Status: Planning
   (SONAME, API-level ceiling).
 - [ ] M2-T06: Toolchain isolation and portable-header checks for Android.
 - [ ] M2-T07: Android Debug lane and scheduled sanitizer job.
+- [ ] M2-T08: Tests on the oldest supported API (21) and a current API.
+- [ ] M2-T09: 16 KB page alignment check on every `libGGPO.so`.
 
 ### M3: Vector War (depends: M1)
 
@@ -77,4 +79,7 @@ Parallel with M2.
 | Full parity with existing platforms, tracked in the parity matrix | Accepted (2026-11-11) |
 | `-ffp-contract=off` on Android | Proposed |
 | `libc++_static` inside `libGGPO.so` | Proposed |
-| Minimum API 24, NDK r27 LTS, ABIs arm64-v8a/armeabi-v7a/x86_64 | Proposed |
+| Minimum API 21 (Android 5.0): floor only, newer devices unaffected; tested on API 21 and a current API | Accepted (2026-11-11) |
+| Keep 32-bit `armeabi-v7a` alongside arm64-v8a and x86_64 | Accepted (2026-11-11) |
+| Rename `platform_linux.cpp` to `platform_posix.cpp`, shared by Linux and Android | Accepted (2026-11-11), done in `8f4fd11` |
+| NDK: newest LTS on the runners, 16 KB page aligned | Proposed (pinned in M1) |

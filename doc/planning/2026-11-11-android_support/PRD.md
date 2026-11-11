@@ -30,7 +30,7 @@ only be marked "not applicable" with a written reason in that matrix.
 ## Outcomes
 
 - The SDK builds with the Android NDK through the existing CMake build for
-  `arm64-v8a`, `armeabi-v7a`, and `x86_64`, producing both the shared and
+  `arm64-v8a`, `armeabi-v7a`, and `x86_64` (minimum API 21), producing both the shared and
   the static library with the same CMake package (`GGPO::GGPO`,
   `GGPO::shared`, `GGPO::static`, `GGPO_USE_STATIC`).
 - Platform code is shared: Android uses the POSIX adapter that Linux uses, with
