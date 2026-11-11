@@ -22,7 +22,7 @@ Depends on [PR #9](https://github.com/irregularthanis/ggpo-next/pull/9)
 - [x] M1-T04: Undecorated x86 exports; link libgcc/libstdc++ statically and
   verify `libGGPO.dll` imports no MinGW runtime DLLs.
 - [x] M1-T05: Disable Vector War under MinGW with a clear message.
-- [ ] M1-T06: Record the toolchain in `GGPOConfig.cmake`; reject a mismatched
+- [x] M1-T06: Record the toolchain in `GGPOConfig.cmake`; reject a mismatched
   consumer toolchain on Windows.
 - [x] M1-T07: MSVC and Linux CI unchanged.
 
@@ -36,10 +36,10 @@ Depends on [PR #9](https://github.com/irregularthanis/ggpo-next/pull/9)
 
 Parallel with M2.
 
-- [ ] M3-T01: `verify_consumers.py` MinGW runtime checks.
+- [x] M3-T01: `verify_consumers.py` MinGW runtime checks.
 - [x] M3-T02: Default, static, and shared cases on both architectures.
-- [ ] M3-T03: MinGW program against the MSVC `GGPO.dll`.
-- [ ] M3-T04: Negative tests: MinGW consumer vs MSVC SDK and MSVC consumer vs
+- [x] M3-T03: MinGW program against the MSVC `GGPO.dll`.
+- [x] M3-T04: Negative tests: MinGW consumer vs MSVC SDK and MSVC consumer vs
   MinGW SDK fail at configure time.
 
 ### M4: Interoperability (depends: M2)
@@ -66,6 +66,7 @@ Parallel with M2.
 | M3-T02 | Same run | Default, `GGPO_USE_STATIC=ON` and `GGPO::shared` consumers build and run on both architectures; static consumers run without the SDK `bin` on `PATH` |
 | x86 FP | [MinGW run at `8a8e0b6`](https://github.com/irregularthanis/ggpo-next/actions/runs/42956989680) vs `3db4014` | x87 default diverged `vectorwar_state_contract` at frame 30 (2768577444 vs 3703441302); `-msse2 -mfpmath=sse` restores the frozen checksum |
 | M1-T07 | MSVC Windows, Linux and E2E runs at `8a8e0b6` and `3db4014` | All pass, including the frozen Windows baseline |
+| M1-T06, M3-T03, M3-T04 | [MinGW run 42958727700](https://github.com/irregularthanis/ggpo-next/actions/runs/42958727700) (`eb7c24c`), job "MinGW toolchain isolation" | MinGW project rejects the MSVC SDK and MSVC project rejects the MinGW SDK, both with the toolchain message; MinGW C program linked directly to the MSVC `GGPO.dll` imports it and runs |
 
 ## Decisions
 
