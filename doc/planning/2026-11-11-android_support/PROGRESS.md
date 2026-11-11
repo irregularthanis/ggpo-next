@@ -19,7 +19,7 @@ Status: In progress
 - [x] M1-T01: `platform/android/Platform.cmake` selected for `Android`.
 - [x] M1-T02: Share the POSIX adapter between Linux and Android.
 - [ ] M1-T03: Android-only behavior isolated in the platform layer (logcat).
-- [ ] M1-T04: Both libraries for arm64-v8a, armeabi-v7a, x86_64; `-ffp-contract=off`.
+- [x] M1-T04: Both libraries for arm64-v8a, armeabi-v7a, x86_64; `-ffp-contract=off`.
 - [ ] M1-T05: Existing platforms unchanged (all current required checks pass).
 
 ### M2: Tests (depends: M1)
@@ -27,13 +27,13 @@ Status: In progress
 - [x] M2-T01: `adb` wrapper as `CMAKE_CROSSCOMPILING_EMULATOR`.
 - [x] M2-T02: Full CTest suite passes on Android (arm64 preferred).
 - [x] M2-T03: Frozen Vector War checksum matches on arm64.
-- [ ] M2-T04: Installed consumers (default, static, shared) on Android.
-- [ ] M2-T05: Layout and export manifest tests on every ABI; SDK audit
+- [x] M2-T04: Installed consumers (default, static, shared) on Android.
+- [x] M2-T05: Layout and export manifest tests on every ABI; SDK audit
   (SONAME, API-level ceiling).
-- [ ] M2-T06: Toolchain isolation and portable-header checks for Android.
-- [ ] M2-T07: Android Debug lane and scheduled sanitizer job.
+- [x] M2-T06: Toolchain isolation and portable-header checks for Android.
+- [x] M2-T07: Android Debug lane and scheduled sanitizer job.
 - [x] M2-T08: Tests on the oldest supported API (21) and a current API.
-- [ ] M2-T09: 16 KB page alignment check on every `libGGPO.so`.
+- [x] M2-T09: 16 KB page alignment check on every `libGGPO.so`.
 
 ### M3: Vector War (depends: M1)
 
@@ -74,6 +74,10 @@ Parallel with M2.
 | M2 (partial) | [Android compatibility 42966850489](https://github.com/irregularthanis/ggpo-next/actions/runs/42966850489) (`562f1e2`) | Full CTest 22/22 on arm64-v8a and **armeabi-v7a (32-bit EABI5, executed natively on the arm64 runner)** and x86_64; Vector War frozen checksum matches on all three |
 | M0-T02, M2-T01, M2-T02, M2-T08 | [Android compatibility 42967759434](https://github.com/irregularthanis/ggpo-next/actions/runs/42967759434) (`89ebc6f`) | x86_64 emulator with KVM on API **21** and **35**: full CTest 25/25 each against the shared `libGGPO.so` through `tests/android/run_on_device.py` (including `android_exports`, schema-2 loopback with the live completion barrier, negative contracts, static runtime smokes); LastTest.log confirms on-device execution. Native arm64-v8a, armeabi-v7a and x86_64 jobs 22/22 |
 | Launcher fix | `89ebc6f` | API 21 exposed that device-written ready files were pulled once; they are now pulled every cycle and host-written files pushed on change |
+| M1-T04, M2-T05, M2-T06, M2-T09 | [Android compatibility 42969259450](https://github.com/irregularthanis/ggpo-next/actions/runs/42969259450) (`37f3e54`), "Android SDK" jobs | Both libraries for arm64-v8a, armeabi-v7a, x86_64. Audit: SONAME `libGGPO.so`, no versioned files, NEEDED only libc/libdl/libm, 16 frozen exports, every import available at API 21, LOAD alignment 16 KB on 64-bit ABIs and 4 KB on armeabi-v7a (16 KB pages are 64-bit only). Public header compiles with the NDK for each ABI in C11/C++98 strict modes. Host Linux and Android SDKs reject each other's CMake projects with the toolchain message |
+| M2-T04 | Same run, emulator jobs (API 21, 35) | Installed consumers built with the NDK and **run on the device** for default, `GGPO_USE_STATIC=ON` and `GGPO::shared`; static programs load without `libGGPO.so` |
+| M2-T07 | Same run: "Android tests (arm64-v8a, Debug)"; [sanitizers 42969253326](https://github.com/irregularthanis/ggpo-next/actions/runs/42969253326) | arm64 Debug full suite passes natively; Android ASan+UBSan (x86_64 emulator, runtime pushed with each test) 22/22 with no reports, alongside the Linux and MSVC sanitizer jobs |
+| M1-T05 (partial) | Same commit | Linux, MinGW, E2E and owner checks pass; Windows baseline pending at record time |
 
 ## Decisions
 
