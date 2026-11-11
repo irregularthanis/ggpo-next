@@ -15,12 +15,17 @@ on:
 
 jobs:
   build:
-    name: Android build (${{ matrix.abi }})
+    name: Android build (${{ matrix.abi }}${{ matrix.config == 'Debug' && ', Debug' || '' }})
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        abi: [arm64-v8a, armeabi-v7a, x86_64]
+        # One Debug build, like the single Windows Debug lane.
+        include:
+          - {abi: arm64-v8a, config: Release}
+          - {abi: armeabi-v7a, config: Release}
+          - {abi: x86_64, config: Release}
+          - {abi: arm64-v8a, config: Debug}
     steps:
       - uses: actions/checkout@v4
       - name: Cross-compile GGPO and its tests
@@ -29,23 +34,23 @@ jobs:
           cmake -S . -B build/android -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake" \
             -DANDROID_ABI=${{ matrix.abi }} -DANDROID_PLATFORM=21 \
-            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
             -DBUILD_SHARED_LIBS=OFF \
             -DGGPO_BUILD_VECTORWAR=OFF \
             -DBUILD_TESTING=ON \
             -DCMAKE_EXE_LINKER_FLAGS=-static
           cmake --build build/android --parallel 4
-          file build/android/bin/*/Release/ggpo_android_peer_smoke
+          file build/android/bin/*/${{ matrix.config }}/ggpo_android_peer_smoke
       - name: Package the build tree for the test runner
         run: tar -czf android-build.tar.gz build/android
       - uses: actions/upload-artifact@v4
         with:
-          name: android-build-${{ matrix.abi }}
+          name: android-build-${{ matrix.abi }}-${{ matrix.config }}
           path: android-build.tar.gz
           if-no-files-found: error
 
   test:
-    name: Android tests (${{ matrix.abi }})
+    name: Android tests (${{ matrix.abi }}${{ matrix.config == 'Debug' && ', Debug' || '' }})
     needs: build
     runs-on: ${{ matrix.runner }}
     strategy:
@@ -53,14 +58,15 @@ jobs:
       matrix:
         include:
           # The arm64 runner also executes 32-bit ARM (EABI5) natively.
-          - {abi: arm64-v8a, runner: ubuntu-24.04-arm}
-          - {abi: armeabi-v7a, runner: ubuntu-24.04-arm}
-          - {abi: x86_64, runner: ubuntu-24.04}
+          - {abi: arm64-v8a, config: Release, runner: ubuntu-24.04-arm}
+          - {abi: armeabi-v7a, config: Release, runner: ubuntu-24.04-arm}
+          - {abi: x86_64, config: Release, runner: ubuntu-24.04}
+          - {abi: arm64-v8a, config: Debug, runner: ubuntu-24.04-arm}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: android-build-${{ matrix.abi }}
+          name: android-build-${{ matrix.abi }}-${{ matrix.config }}
       - name: Run the full CTest suite natively
         run: |
           uname -m
@@ -70,7 +76,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: android-tests-${{ matrix.abi }}
+          name: android-tests-${{ matrix.abi }}-${{ matrix.config }}
           path: build/android/Testing
           if-no-files-found: warn
 
