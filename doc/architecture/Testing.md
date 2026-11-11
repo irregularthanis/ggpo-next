@@ -3,6 +3,7 @@
 ## Contents
 
 - [Overview](#overview)
+  - [Testing sequence](#testing-sequence)
 - [Platforms](#platforms)
   - [Windows with MSVC](#windows-with-msvc)
     - [MSVC: registered tests](#msvc-registered-tests)
@@ -88,6 +89,61 @@ behavior-changing refactor pass.
 The [platform sections](#platforms) say what runs where and how to run it; the
 [common sections](#common-to-all-platforms) describe the contracts every
 platform shares.
+
+### Testing sequence
+
+Each stage only starts proving something once the stage before it holds, so a
+failure points at the lowest broken layer. Every platform runs the same
+sequence; only the tools in each box differ.
+
+```mermaid
+flowchart TB
+    subgraph B["1. Build"]
+        direction TB
+        B1["Configure and compile<br/>GGPO, shared + static"]
+        B2["Public header<br/>C11 and C++98<br/>portability gates"]
+    end
+
+    subgraph L["2. Library"]
+        direction TB
+        L1["Frozen public and<br/>packet layouts"]
+        L2["Export manifest,<br/>dependencies,<br/>ABI ceiling"]
+        L3["Installed SDK:<br/>consumers for every<br/>linkage"]
+    end
+
+    subgraph R["3. Run, in process"]
+        direction TB
+        R1["Portable core:<br/>queues, sync,<br/>time sync, protocol"]
+        R2["Public API<br/>contract, all<br/>16 entry points"]
+        R3["Platform<br/>conformance,<br/>fake and native"]
+        R4["SyncTest:<br/>save, load,<br/>replay"]
+    end
+
+    subgraph N["4. Network"]
+        direction TB
+        N1["Two-process<br/>peer loopback<br/>over local UDP"]
+        N2["Negative peer<br/>contracts"]
+        N3["Cross-platform<br/>E2E, every<br/>ordered pair"]
+    end
+
+    subgraph A["5. Application"]
+        direction TB
+        A1["Vector War<br/>simulation and<br/>gameplay contracts"]
+        A2["Native host<br/>contracts: Win32,<br/>SDL2, Android"]
+        A3["Headless Vector<br/>War loopback<br/>and E2E"]
+        A4["APK smoke<br/>on API 21 / 35"]
+    end
+
+    B --> L --> R --> N --> A
+```
+
+| Stage | Proves | Where it is described |
+| --- | --- | --- |
+| 1. Build | GGPO and the tests compile with every supported toolchain | [Platforms](#platforms) |
+| 2. Library | The binaries keep the frozen ABI, exports and packaging; consumers link either flavor | [Platforms](#platforms), [coverage map](#coverage-map) |
+| 3. Run | Core, API, adapter and rollback behave the same without a network | [Shared contracts](#shared-contracts), [Deterministic SyncTest](#deterministic-synctest) |
+| 4. Network | Real UDP sessions converge, locally and between platforms | [Two-process loopback](#two-process-loopback), [Cross-platform E2E](#cross-platform-e2e) |
+| 5. Application | A real game integration stays deterministic end to end | [Vector War contracts](#vector-war-two-layer-contracts) |
 
 ## Platforms
 
