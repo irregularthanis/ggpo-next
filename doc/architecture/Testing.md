@@ -25,6 +25,7 @@
     - [Android: CI lanes](#android-ci-lanes)
     - [Android: SDK audit and APK smoke](#android-sdk-audit-and-apk-smoke)
 - [Common to all platforms](#common-to-all-platforms)
+  - [Shared tests](#shared-tests)
   - [Coverage map](#coverage-map)
   - [Shared contracts](#shared-contracts)
   - [Validation flow](#validation-flow)
@@ -167,40 +168,13 @@ not (`readelf -d` on Linux; on Windows the static programs run with the SDK's
 
 #### MSVC: registered tests
 
-[`tests/CMakeLists.txt`](../../tests/CMakeLists.txt) registers these tests.
-The `static_` rows need a build with both libraries (the default). MSVC checks DLL exports in the
-[CI lane](#msvc-ci-lanes) with `dumpbin` rather than as a CTest test.
+Runs every [shared test](#shared-tests) with the `windows_` prefix, plus the
+test below. DLL exports are checked in the [CI lane](#msvc-ci-lanes) with
+`dumpbin` rather than as a CTest test.
 
 | Test | Code | What it tests |
 | --- | --- | --- |
-| `windows_public_layout` | [`public_layout.cpp`](../../tests/baseline/windows/public_layout.cpp) | Public struct sizes, offsets, enum values and callback order match the frozen ABI |
-| `windows_packet_layout` | [`packet_layout.cpp`](../../tests/baseline/windows/packet_layout.cpp) | Packed `UdpMsg` wire layout and packet sizes are byte-identical |
-| `windows_synctest_smoke` | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | Local rollback: save, load and replay converge to the reference state |
-| `windows_peer_loopback` | [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py), [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp) | Two processes play 180 frames over real UDP and finish with equal checksums |
-| `windows_peer_schema2_loopback` | [`run_schema2_loopback.py`](../../tests/e2e/run_schema2_loopback.py) | The cross-platform result schema and completion barrier, run locally |
-| `windows_peer_negative_contracts` | [`peer_runner_negative.py`](../../tests/smoke/peer_runner_negative.py) | The peer runner rejects startup failure, timeout, divergence and dirty shutdown |
-| `windows_static_synctest_smoke` | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | SyncTest again, linked to the static library |
-| `windows_static_peer_loopback` | [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Peer loopback again, linked to the static library |
-| `windows_platform_conformance` | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | The native OS adapter: clock, waits, config, endpoints, UDP lifecycle |
-| `windows_vectorwar_native_host_contract` | [`native_host_contract_test.cpp`](../../tests/vectorwar/native_host_contract_test.cpp) | Vector War native clock, sleep, bounds, input and diagnostics |
 | `windows_vectorwar_gui_host_contract` | [`win32_host_contract_test.cpp`](../../tests/vectorwar/win32_host_contract_test.cpp) | Real hidden Win32 window: client bounds, GDI renderer, diagnostics |
-| *Shared tests below* | | |
-| `cross_host_result_contract` | [`test_result_schema.py`](../../tests/e2e/test_result_schema.py) | E2E result schema and the independent state oracle |
-| `cross_host_orchestration_contract` | [`test_orchestration.py`](../../tests/e2e/test_orchestration.py) | E2E matrix completeness and control-request authentication |
-| `cross_host_rendezvous_contract` | [`test_rendezvous.py`](../../tests/e2e/test_rendezvous.py) | E2E rendezvous record fails closed on stale or duplicate data |
-| `fake_platform_synctest` | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp), [`platform_fake.cpp`](../../tests/platform/fake/platform_fake.cpp) | Production rollback core runs with no OS adapter at all |
-| `fake_platform_contract` | [`platform_fake_test.cpp`](../../tests/platform/fake/platform_fake_test.cpp) | The deterministic fake adapter itself: virtual time, fallbacks, failures |
-| `input_queue_contract` | [`input_queue_test.cpp`](../../tests/unit/input_queue_test.cpp) | Input prediction, confirmation and frame delay |
-| `sync_contract` | [`sync_contract_test.cpp`](../../tests/unit/sync_contract_test.cpp) | Rollback bookkeeping: save, load and replay windows |
-| `timesync_contract` | [`timesync_test.cpp`](../../tests/unit/timesync_test.cpp) | Frame-advantage estimation and recommended waits |
-| `core_utilities_contract` | [`core_utilities_test.cpp`](../../tests/unit/core_utilities_test.cpp) | Ring buffer, static buffer and bit-vector encoding |
-| `protocol_contract` | [`protocol_test.cpp`](../../tests/unit/protocol_test.cpp) | Packet validation: exact sizes, truncated, trailing or unknown messages |
-| `public_api_contract` | [`public_api_contract_test.cpp`](../../tests/contract/public_api_contract_test.cpp) | All 16 public entry points: construction, lifecycle, null guards, config, logging |
-| `fake_platform_conformance` | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | The shared adapter conformance contract against the fake adapter |
-| `vectorwar_state_contract` | [`gamestate_contract_test.cpp`](../../tests/vectorwar/gamestate_contract_test.cpp) | Vector War simulation hits the canonical checkpoints over 180 frames |
-| `vectorwar_gameplay_contract` | [`gameplay_determinism_test.cpp`](../../tests/vectorwar/gameplay_determinism_test.cpp) | Vector War starts and initialization are identical on every platform |
-| `vectorwar_headless_loopback` | [`run_headless_loopback.py`](../../tests/vectorwar/run_headless_loopback.py) | Two headless Vector War processes converge over UDP with rollback |
-| `vectorwar_headless_negative_contracts` | [`headless_negative.py`](../../tests/vectorwar/headless_negative.py) | The Vector War runner rejects controlled failures |
 
 #### MSVC: run locally
 
@@ -269,40 +243,12 @@ protocol-version compatibility; those require separate execution tests.
 
 #### MinGW: registered tests
 
-MinGW compiles the Windows adapter, so it registers the same `windows_*` tests
-as [MSVC](#msvc-registered-tests) except where Vector War's Win32/GDI frontend
-and headless app are needed: `windows_vectorwar_gui_host_contract`,
-`vectorwar_headless_loopback` and `vectorwar_headless_negative_contracts` are
-not built. The `static_` rows need a build with both libraries (the default). Exports and runtime imports are checked in the
+Runs every [shared test](#shared-tests) with the `windows_` prefix, except
+the two headless Vector War tests: MinGW builds neither Vector War's Win32/GDI
+frontend nor its headless app. Exports and runtime imports are checked in the
 [CI lane](#mingw-ci-lanes).
 
-| Test | Code | What it tests |
-| --- | --- | --- |
-| `windows_public_layout` | [`public_layout.cpp`](../../tests/baseline/windows/public_layout.cpp) | Public struct sizes, offsets, enum values and callback order match the frozen ABI |
-| `windows_packet_layout` | [`packet_layout.cpp`](../../tests/baseline/windows/packet_layout.cpp) | Packed `UdpMsg` wire layout and packet sizes are byte-identical |
-| `windows_synctest_smoke` | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | Local rollback: save, load and replay converge to the reference state |
-| `windows_peer_loopback` | [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py), [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp) | Two processes play 180 frames over real UDP and finish with equal checksums |
-| `windows_peer_schema2_loopback` | [`run_schema2_loopback.py`](../../tests/e2e/run_schema2_loopback.py) | The cross-platform result schema and completion barrier, run locally |
-| `windows_peer_negative_contracts` | [`peer_runner_negative.py`](../../tests/smoke/peer_runner_negative.py) | The peer runner rejects startup failure, timeout, divergence and dirty shutdown |
-| `windows_static_synctest_smoke` | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | SyncTest again, linked to the static library |
-| `windows_static_peer_loopback` | [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Peer loopback again, linked to the static library |
-| `windows_platform_conformance` | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | The native OS adapter: clock, waits, config, endpoints, UDP lifecycle |
-| `windows_vectorwar_native_host_contract` | [`native_host_contract_test.cpp`](../../tests/vectorwar/native_host_contract_test.cpp) | Vector War native clock, sleep, bounds, input and diagnostics |
-| *Shared tests below* | | |
-| `cross_host_result_contract` | [`test_result_schema.py`](../../tests/e2e/test_result_schema.py) | E2E result schema and the independent state oracle |
-| `cross_host_orchestration_contract` | [`test_orchestration.py`](../../tests/e2e/test_orchestration.py) | E2E matrix completeness and control-request authentication |
-| `cross_host_rendezvous_contract` | [`test_rendezvous.py`](../../tests/e2e/test_rendezvous.py) | E2E rendezvous record fails closed on stale or duplicate data |
-| `fake_platform_synctest` | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp), [`platform_fake.cpp`](../../tests/platform/fake/platform_fake.cpp) | Production rollback core runs with no OS adapter at all |
-| `fake_platform_contract` | [`platform_fake_test.cpp`](../../tests/platform/fake/platform_fake_test.cpp) | The deterministic fake adapter itself: virtual time, fallbacks, failures |
-| `input_queue_contract` | [`input_queue_test.cpp`](../../tests/unit/input_queue_test.cpp) | Input prediction, confirmation and frame delay |
-| `sync_contract` | [`sync_contract_test.cpp`](../../tests/unit/sync_contract_test.cpp) | Rollback bookkeeping: save, load and replay windows |
-| `timesync_contract` | [`timesync_test.cpp`](../../tests/unit/timesync_test.cpp) | Frame-advantage estimation and recommended waits |
-| `core_utilities_contract` | [`core_utilities_test.cpp`](../../tests/unit/core_utilities_test.cpp) | Ring buffer, static buffer and bit-vector encoding |
-| `protocol_contract` | [`protocol_test.cpp`](../../tests/unit/protocol_test.cpp) | Packet validation: exact sizes, truncated, trailing or unknown messages |
-| `public_api_contract` | [`public_api_contract_test.cpp`](../../tests/contract/public_api_contract_test.cpp) | All 16 public entry points: construction, lifecycle, null guards, config, logging |
-| `fake_platform_conformance` | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | The shared adapter conformance contract against the fake adapter |
-| `vectorwar_state_contract` | [`gamestate_contract_test.cpp`](../../tests/vectorwar/gamestate_contract_test.cpp) | Vector War simulation hits the canonical checkpoints over 180 frames |
-| `vectorwar_gameplay_contract` | [`gameplay_determinism_test.cpp`](../../tests/vectorwar/gameplay_determinism_test.cpp) | Vector War starts and initialization are identical on every platform |
+*No platform-only tests.*
 
 #### MinGW: run locally
 
@@ -331,41 +277,15 @@ the MSVC `GGPO.dll`.
 
 #### Linux: registered tests
 
-The `static_` rows need a build with both libraries (the default). The layout tests reuse the frozen Windows sources, whose values
-are identical on LP64. See the
+Runs every [shared test](#shared-tests) with the `linux_` prefix, plus the
+tests below. The layout tests reuse the frozen Windows sources, whose values
+are identical on LP64; see the
 [Linux baseline README](../../tests/baseline/linux/README.md).
 
 | Test | Code | What it tests |
 | --- | --- | --- |
-| `linux_public_layout` | [`public_layout.cpp`](../../tests/baseline/windows/public_layout.cpp) | Public struct sizes, offsets, enum values and callback order match the frozen ABI |
-| `linux_packet_layout` | [`packet_layout.cpp`](../../tests/baseline/windows/packet_layout.cpp) | Packed `UdpMsg` wire layout and packet sizes are byte-identical |
-| `linux_exports` | [`check_exports.py`](../../tests/baseline/linux/check_exports.py), [`exports.txt`](../../tests/baseline/linux/exports.txt) | `libGGPO.so` exports exactly the frozen `ggpo_*` symbols (shared builds) |
-| `linux_synctest_smoke` | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | Local rollback: save, load and replay converge to the reference state |
-| `linux_peer_loopback` | [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py), [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp) | Two processes play 180 frames over real UDP and finish with equal checksums |
-| `linux_peer_schema2_loopback` | [`run_schema2_loopback.py`](../../tests/e2e/run_schema2_loopback.py) | The cross-platform result schema and completion barrier, run locally |
-| `linux_peer_negative_contracts` | [`peer_runner_negative.py`](../../tests/smoke/peer_runner_negative.py) | The peer runner rejects startup failure, timeout, divergence and dirty shutdown |
-| `linux_static_synctest_smoke` | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | SyncTest again, linked to the static library |
-| `linux_static_peer_loopback` | [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Peer loopback again, linked to the static library |
-| `linux_platform_conformance` | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | The native OS adapter: clock, waits, config, endpoints, UDP lifecycle |
-| `linux_vectorwar_native_host_contract` | [`native_host_contract_test.cpp`](../../tests/vectorwar/native_host_contract_test.cpp) | Vector War native clock, sleep, bounds, input and diagnostics |
+| `linux_exports` | [`check_exports.py`](../../tests/baseline/linux/check_exports.py), [`exports.txt`](../../tests/baseline/linux/exports.txt) | The shared library exports exactly the frozen `ggpo_*` symbols (shared builds) |
 | `linux_vectorwar_gui_host_contract` | [`sdl_host_contract_test.cpp`](../../tests/vectorwar/sdl_host_contract_test.cpp) | SDL2 frontend with `SDL_VIDEODRIVER=dummy`: bounds, input, renderer |
-| *Shared tests below* | | |
-| `cross_host_result_contract` | [`test_result_schema.py`](../../tests/e2e/test_result_schema.py) | E2E result schema and the independent state oracle |
-| `cross_host_orchestration_contract` | [`test_orchestration.py`](../../tests/e2e/test_orchestration.py) | E2E matrix completeness and control-request authentication |
-| `cross_host_rendezvous_contract` | [`test_rendezvous.py`](../../tests/e2e/test_rendezvous.py) | E2E rendezvous record fails closed on stale or duplicate data |
-| `fake_platform_synctest` | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp), [`platform_fake.cpp`](../../tests/platform/fake/platform_fake.cpp) | Production rollback core runs with no OS adapter at all |
-| `fake_platform_contract` | [`platform_fake_test.cpp`](../../tests/platform/fake/platform_fake_test.cpp) | The deterministic fake adapter itself: virtual time, fallbacks, failures |
-| `input_queue_contract` | [`input_queue_test.cpp`](../../tests/unit/input_queue_test.cpp) | Input prediction, confirmation and frame delay |
-| `sync_contract` | [`sync_contract_test.cpp`](../../tests/unit/sync_contract_test.cpp) | Rollback bookkeeping: save, load and replay windows |
-| `timesync_contract` | [`timesync_test.cpp`](../../tests/unit/timesync_test.cpp) | Frame-advantage estimation and recommended waits |
-| `core_utilities_contract` | [`core_utilities_test.cpp`](../../tests/unit/core_utilities_test.cpp) | Ring buffer, static buffer and bit-vector encoding |
-| `protocol_contract` | [`protocol_test.cpp`](../../tests/unit/protocol_test.cpp) | Packet validation: exact sizes, truncated, trailing or unknown messages |
-| `public_api_contract` | [`public_api_contract_test.cpp`](../../tests/contract/public_api_contract_test.cpp) | All 16 public entry points: construction, lifecycle, null guards, config, logging |
-| `fake_platform_conformance` | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | The shared adapter conformance contract against the fake adapter |
-| `vectorwar_state_contract` | [`gamestate_contract_test.cpp`](../../tests/vectorwar/gamestate_contract_test.cpp) | Vector War simulation hits the canonical checkpoints over 180 frames |
-| `vectorwar_gameplay_contract` | [`gameplay_determinism_test.cpp`](../../tests/vectorwar/gameplay_determinism_test.cpp) | Vector War starts and initialization are identical on every platform |
-| `vectorwar_headless_loopback` | [`run_headless_loopback.py`](../../tests/vectorwar/run_headless_loopback.py) | Two headless Vector War processes converge over UDP with rollback |
-| `vectorwar_headless_negative_contracts` | [`headless_negative.py`](../../tests/vectorwar/headless_negative.py) | The Vector War runner rejects controlled failures |
 
 #### Linux: run locally
 
@@ -401,45 +321,18 @@ Windows ABI. All other pedantic diagnostics remain errors.
 
 #### Android: registered tests
 
-Android registers the same POSIX tests as Linux with an `android_` prefix.
-[`run_on_device.py`](../../tests/android/run_on_device.py) is CMake's
-cross-compiling emulator: it pushes executables and shared libraries through
-`adb`, runs them on API 21 and a current emulator, and returns their output and
-exit status to CTest. Static arm64-v8a, armeabi-v7a, and x86_64 fixtures also
-run natively on matching Linux runners. There is no CTest GUI host test; the
-SDL frontend is covered by the [APK smoke](#android-sdk-audit-and-apk-smoke).
-The `static_` rows need a build with both libraries (the default).
+Runs every [shared test](#shared-tests) with the `android_` prefix, plus the
+test below. [`run_on_device.py`](../../tests/android/run_on_device.py) is
+CMake's cross-compiling emulator: it pushes executables and shared libraries
+through `adb`, runs them on API 21 and a current emulator, and returns their
+output and exit status to CTest. Static arm64-v8a, armeabi-v7a, and x86_64
+fixtures also run natively on matching Linux runners. There is no CTest GUI
+host test; the SDL frontend is covered by the
+[APK smoke](#android-sdk-audit-and-apk-smoke).
 
 | Test | Code | What it tests |
 | --- | --- | --- |
-| `android_public_layout` | [`public_layout.cpp`](../../tests/baseline/windows/public_layout.cpp) | Public struct sizes, offsets, enum values and callback order match the frozen ABI |
-| `android_packet_layout` | [`packet_layout.cpp`](../../tests/baseline/windows/packet_layout.cpp) | Packed `UdpMsg` wire layout and packet sizes are byte-identical |
-| `android_exports` | [`check_exports.py`](../../tests/baseline/linux/check_exports.py), [`exports.txt`](../../tests/baseline/linux/exports.txt) | `libGGPO.so` exports exactly the frozen `ggpo_*` symbols (shared builds) |
-| `android_synctest_smoke` | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | Local rollback: save, load and replay converge to the reference state |
-| `android_peer_loopback` | [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py), [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp) | Two processes play 180 frames over real UDP and finish with equal checksums |
-| `android_peer_schema2_loopback` | [`run_schema2_loopback.py`](../../tests/e2e/run_schema2_loopback.py) | The cross-platform result schema and completion barrier, run locally |
-| `android_peer_negative_contracts` | [`peer_runner_negative.py`](../../tests/smoke/peer_runner_negative.py) | The peer runner rejects startup failure, timeout, divergence and dirty shutdown |
-| `android_static_synctest_smoke` | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | SyncTest again, linked to the static library |
-| `android_static_peer_loopback` | [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Peer loopback again, linked to the static library |
-| `android_platform_conformance` | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | The native OS adapter: clock, waits, config, endpoints, UDP lifecycle |
-| `android_vectorwar_native_host_contract` | [`native_host_contract_test.cpp`](../../tests/vectorwar/native_host_contract_test.cpp) | Vector War native clock, sleep, bounds, input and diagnostics |
-| *Shared tests below* | | |
-| `cross_host_result_contract` | [`test_result_schema.py`](../../tests/e2e/test_result_schema.py) | E2E result schema and the independent state oracle |
-| `cross_host_orchestration_contract` | [`test_orchestration.py`](../../tests/e2e/test_orchestration.py) | E2E matrix completeness and control-request authentication |
-| `cross_host_rendezvous_contract` | [`test_rendezvous.py`](../../tests/e2e/test_rendezvous.py) | E2E rendezvous record fails closed on stale or duplicate data |
-| `fake_platform_synctest` | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp), [`platform_fake.cpp`](../../tests/platform/fake/platform_fake.cpp) | Production rollback core runs with no OS adapter at all |
-| `fake_platform_contract` | [`platform_fake_test.cpp`](../../tests/platform/fake/platform_fake_test.cpp) | The deterministic fake adapter itself: virtual time, fallbacks, failures |
-| `input_queue_contract` | [`input_queue_test.cpp`](../../tests/unit/input_queue_test.cpp) | Input prediction, confirmation and frame delay |
-| `sync_contract` | [`sync_contract_test.cpp`](../../tests/unit/sync_contract_test.cpp) | Rollback bookkeeping: save, load and replay windows |
-| `timesync_contract` | [`timesync_test.cpp`](../../tests/unit/timesync_test.cpp) | Frame-advantage estimation and recommended waits |
-| `core_utilities_contract` | [`core_utilities_test.cpp`](../../tests/unit/core_utilities_test.cpp) | Ring buffer, static buffer and bit-vector encoding |
-| `protocol_contract` | [`protocol_test.cpp`](../../tests/unit/protocol_test.cpp) | Packet validation: exact sizes, truncated, trailing or unknown messages |
-| `public_api_contract` | [`public_api_contract_test.cpp`](../../tests/contract/public_api_contract_test.cpp) | All 16 public entry points: construction, lifecycle, null guards, config, logging |
-| `fake_platform_conformance` | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | The shared adapter conformance contract against the fake adapter |
-| `vectorwar_state_contract` | [`gamestate_contract_test.cpp`](../../tests/vectorwar/gamestate_contract_test.cpp) | Vector War simulation hits the canonical checkpoints over 180 frames |
-| `vectorwar_gameplay_contract` | [`gameplay_determinism_test.cpp`](../../tests/vectorwar/gameplay_determinism_test.cpp) | Vector War starts and initialization are identical on every platform |
-| `vectorwar_headless_loopback` | [`run_headless_loopback.py`](../../tests/vectorwar/run_headless_loopback.py) | Two headless Vector War processes converge over UDP with rollback |
-| `vectorwar_headless_negative_contracts` | [`headless_negative.py`](../../tests/vectorwar/headless_negative.py) | The Vector War runner rejects controlled failures |
+| `android_exports` | [`check_exports.py`](../../tests/baseline/linux/check_exports.py), [`exports.txt`](../../tests/baseline/linux/exports.txt) | The shared library exports exactly the frozen `ggpo_*` symbols (shared builds) |
 
 #### Android: run locally
 
@@ -476,6 +369,51 @@ The Vector War APK smoke installs and launches the SDL frontend on API 21 and
 API 35, then waits for the application's explicit frontend-ready log marker.
 
 ## Common to all platforms
+
+### Shared tests
+
+Every platform runs these tests from the same source. The platform sections
+list only what a platform adds or skips.
+
+**Platform-prefixed:** one copy per platform, named `windows_`, `linux_` or
+`android_` (MinGW uses `windows_`). The `static_` rows need a build with both
+libraries, which is the default.
+
+| Test | Code | What it tests |
+| --- | --- | --- |
+| `<platform>_public_layout` | [`public_layout.cpp`](../../tests/baseline/windows/public_layout.cpp) | Public struct sizes, offsets, enum values and callback order match the frozen ABI |
+| `<platform>_packet_layout` | [`packet_layout.cpp`](../../tests/baseline/windows/packet_layout.cpp) | Packed `UdpMsg` wire layout and packet sizes are byte-identical |
+| `<platform>_synctest_smoke` | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | Local rollback: save, load and replay converge to the reference state |
+| `<platform>_peer_loopback` | [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py), [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp) | Two processes play 180 frames over real UDP and finish with equal checksums |
+| `<platform>_peer_schema2_loopback` | [`run_schema2_loopback.py`](../../tests/e2e/run_schema2_loopback.py) | The cross-platform result schema and completion barrier, run locally |
+| `<platform>_peer_negative_contracts` | [`peer_runner_negative.py`](../../tests/smoke/peer_runner_negative.py) | The peer runner rejects startup failure, timeout, divergence and dirty shutdown |
+| `<platform>_static_synctest_smoke` | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | SyncTest again, linked to the static library |
+| `<platform>_static_peer_loopback` | [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Peer loopback again, linked to the static library |
+| `<platform>_platform_conformance` | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | The native OS adapter: clock, waits, config, endpoints, UDP lifecycle |
+| `<platform>_vectorwar_native_host_contract` | [`native_host_contract_test.cpp`](../../tests/vectorwar/native_host_contract_test.cpp) | Vector War native clock, sleep, bounds, input and diagnostics |
+
+**Unprefixed:** the same name on every platform.
+
+| Test | Code | What it tests |
+| --- | --- | --- |
+| `cross_host_result_contract` | [`test_result_schema.py`](../../tests/e2e/test_result_schema.py) | E2E result schema and the independent state oracle |
+| `cross_host_orchestration_contract` | [`test_orchestration.py`](../../tests/e2e/test_orchestration.py) | E2E matrix completeness and control-request authentication |
+| `cross_host_rendezvous_contract` | [`test_rendezvous.py`](../../tests/e2e/test_rendezvous.py) | E2E rendezvous record fails closed on stale or duplicate data |
+| `fake_platform_synctest` | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp), [`platform_fake.cpp`](../../tests/platform/fake/platform_fake.cpp) | Production rollback core runs with no OS adapter at all |
+| `fake_platform_contract` | [`platform_fake_test.cpp`](../../tests/platform/fake/platform_fake_test.cpp) | The deterministic fake adapter itself: virtual time, fallbacks, failures |
+| `input_queue_contract` | [`input_queue_test.cpp`](../../tests/unit/input_queue_test.cpp) | Input prediction, confirmation and frame delay |
+| `sync_contract` | [`sync_contract_test.cpp`](../../tests/unit/sync_contract_test.cpp) | Rollback bookkeeping: save, load and replay windows |
+| `timesync_contract` | [`timesync_test.cpp`](../../tests/unit/timesync_test.cpp) | Frame-advantage estimation and recommended waits |
+| `core_utilities_contract` | [`core_utilities_test.cpp`](../../tests/unit/core_utilities_test.cpp) | Ring buffer, static buffer and bit-vector encoding |
+| `protocol_contract` | [`protocol_test.cpp`](../../tests/unit/protocol_test.cpp) | Packet validation: exact sizes, truncated, trailing or unknown messages |
+| `public_api_contract` | [`public_api_contract_test.cpp`](../../tests/contract/public_api_contract_test.cpp) | All 16 public entry points: construction, lifecycle, null guards, config, logging |
+| `fake_platform_conformance` | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | The shared adapter conformance contract against the fake adapter |
+| `vectorwar_state_contract` | [`gamestate_contract_test.cpp`](../../tests/vectorwar/gamestate_contract_test.cpp) | Vector War simulation hits the canonical checkpoints over 180 frames |
+| `vectorwar_gameplay_contract` | [`gameplay_determinism_test.cpp`](../../tests/vectorwar/gameplay_determinism_test.cpp) | Vector War starts and initialization are identical on every platform |
+| `vectorwar_headless_loopback` ¹ | [`run_headless_loopback.py`](../../tests/vectorwar/run_headless_loopback.py) | Two headless Vector War processes converge over UDP with rollback |
+| `vectorwar_headless_negative_contracts` ¹ | [`headless_negative.py`](../../tests/vectorwar/headless_negative.py) | The Vector War runner rejects controlled failures |
+
+¹ Needs the headless Vector War app, which MinGW does not build.
 
 ### Coverage map
 
