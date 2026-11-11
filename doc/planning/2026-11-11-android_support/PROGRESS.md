@@ -1,6 +1,6 @@
 # PROGRESS — Android support
 
-Status: Planning
+Status: In progress
 
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
@@ -8,16 +8,16 @@ Status: Planning
 
 ### M0: Feasibility (spikes run in CI)
 
-- [ ] M0-T01: arm64 Android emulator on `ubuntu-24.04-arm`: KVM availability,
+- [x] M0-T01: arm64 Android emulator on `ubuntu-24.04-arm`: KVM availability,
   boot time, `adb shell` executable run.
 - [ ] M0-T02: x86_64 emulator on `ubuntu-24.04` with KVM as fallback.
-- [ ] M0-T03: NDK build of the unmodified tree; record every failure.
-- [ ] M0-T04: Inventory of Android-specific differences in the platform layer.
+- [x] M0-T03: NDK build of the unmodified tree; record every failure.
+- [x] M0-T04: Inventory of Android-specific differences in the platform layer.
 
 ### M1: Build (depends: M0)
 
-- [ ] M1-T01: `platform/android/Platform.cmake` selected for `Android`.
-- [ ] M1-T02: Share the POSIX adapter between Linux and Android.
+- [x] M1-T01: `platform/android/Platform.cmake` selected for `Android`.
+- [x] M1-T02: Share the POSIX adapter between Linux and Android.
 - [ ] M1-T03: Android-only behavior isolated in the platform layer (logcat).
 - [ ] M1-T04: Both libraries for arm64-v8a, armeabi-v7a, x86_64; `-ffp-contract=off`.
 - [ ] M1-T05: Existing platforms unchanged (all current required checks pass).
@@ -65,7 +65,13 @@ Parallel with M2.
 
 | ID | Evidence | Result |
 |---|---|---|
-| — | — | — |
+| M0-T01 | [Spike run 42966490968](https://github.com/irregularthanis/ggpo-next/actions/runs/42966490968) (`3a28a73`), probe job | `ubuntu-24.04-arm` has **no `/dev/kvm`**: arm64 Android system images exist but no hosted arm64 emulator. Full-Android checks (dynamic `libGGPO.so`, APK) need the x86_64 emulator on `ubuntu-24.04` |
+| M0-T01 (alt) | Same run, static execution | NDK `-static` arm64 executables (bionic linked in) run natively on the arm64 runner: 15/16 binaries pass; peer loopback reaches 180 frames with canonical checksum 2109130363, equal to Linux/Windows peers |
+| M0-T03 | Same run, build job | Unmodified tree only failed platform selection (`Unsupported GGPO platform: Android`); POSIX adapter compiles unchanged with NDK 30 |
+| FP | Same run: `vectorwar_state_contract` checkpoint 60 expected 3529340798, got 1851563108 | ARM FMA contraction; fixed by `-ffp-contract=off` on every Android target (`562f1e2`) |
+| M0-T04 | Source inventory | No Android-specific source change needed so far; only build selection, unversioned `libGGPO.so`, and the FP flag |
+| M1-T01, M1-T02 | `8f4fd11`; [Linux](https://github.com/irregularthanis/ggpo-next/actions/runs/42966143288), [MinGW](https://github.com/irregularthanis/ggpo-next/actions/runs/42966143117), [E2E](https://github.com/irregularthanis/ggpo-next/actions/runs/42966143136) | `platform_linux.cpp` → `platform_posix.cpp` shared by Linux and Android; existing platforms' CI passes, including the frozen Windows baseline |
+| M2 (partial) | [Android compatibility 42966850489](https://github.com/irregularthanis/ggpo-next/actions/runs/42966850489) (`562f1e2`) | Full CTest 22/22 on arm64-v8a and **armeabi-v7a (32-bit EABI5, executed natively on the arm64 runner)** and x86_64; Vector War frozen checksum matches on all three |
 
 ## Decisions
 
@@ -77,7 +83,8 @@ Parallel with M2.
 | Port Vector War (SDL2 APK + headless for E2E) | Accepted (2026-11-11) |
 | Documentation parity: build, install, and use in apps | Accepted (2026-11-11) |
 | Full parity with existing platforms, tracked in the parity matrix | Accepted (2026-11-11) |
-| `-ffp-contract=off` on Android | Proposed |
+| `-ffp-contract=off` on every Android target | Accepted (required: arm64 diverged without it) |
+| Test runners: arm64-v8a and armeabi-v7a natively on `ubuntu-24.04-arm` (static executables), x86_64 natively on `ubuntu-24.04`; x86_64 emulator with KVM for full-Android checks | Accepted (M0 evidence) |
 | `libc++_static` inside `libGGPO.so` | Proposed |
 | Minimum API 21 (Android 5.0): floor only, newer devices unaffected; tested on API 21 and a current API | Accepted (2026-11-11) |
 | Keep 32-bit `armeabi-v7a` alongside arm64-v8a and x86_64 | Accepted (2026-11-11) |

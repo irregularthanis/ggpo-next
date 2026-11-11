@@ -135,8 +135,13 @@ level, so the minimum is proven rather than assumed. GGPO uses only POSIX calls
 present in API 21; any new call newer than 21 must be guarded or raise the
 minimum through a recorded decision.
 
-The required PR check runs on option 1 if the spike succeeds, otherwise option 2
-with option 3 weekly. Emulator images and AVD snapshots are cached.
+**M0 result:** option 1 is not available (no KVM on `ubuntu-24.04-arm`). Instead,
+static Android executables run natively on hosted runners: arm64-v8a **and**
+armeabi-v7a on `ubuntu-24.04-arm`, x86_64 on `ubuntu-24.04`. That covers the full
+CTest suite on real ARM hardware for both ARM ABIs. The x86_64 emulator (option
+2) covers what needs a full Android system: dynamically linked `libGGPO.so`,
+consumers, API 21 vs current, the Vector War APK, and E2E networking. Real
+devices (option 3) remain optional. Emulator images and AVD snapshots are cached.
 
 ## Determinism
 

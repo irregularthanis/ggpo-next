@@ -48,16 +48,14 @@ jobs:
     name: Android tests (${{ matrix.abi }})
     needs: build
     runs-on: ${{ matrix.runner }}
-    # armeabi-v7a: whether the arm64 runner executes 32-bit ARM is unknown;
-    # experimental until proven.
-    continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - {abi: arm64-v8a, runner: ubuntu-24.04-arm, experimental: false}
-          - {abi: x86_64, runner: ubuntu-24.04, experimental: false}
-          - {abi: armeabi-v7a, runner: ubuntu-24.04-arm, experimental: true}
+          # The arm64 runner also executes 32-bit ARM (EABI5) natively.
+          - {abi: arm64-v8a, runner: ubuntu-24.04-arm}
+          - {abi: armeabi-v7a, runner: ubuntu-24.04-arm}
+          - {abi: x86_64, runner: ubuntu-24.04}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
