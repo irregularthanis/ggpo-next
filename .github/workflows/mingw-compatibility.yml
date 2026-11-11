@@ -161,6 +161,8 @@ jobs:
           if (($output -replace '\s+', ' ') -notmatch "built with mingw, but the project uses msvc") {
             throw "MSVC configure failed without the toolchain message"
           }
+          # The expected cmake failure must not become the step's exit code.
+          exit 0
 
       - name: A MinGW program uses the MSVC GGPO.dll
         shell: msys2 {0}
