@@ -120,13 +120,46 @@ jobs:
           path: build/evidence/peer
           if-no-files-found: error
 
+  build-android:
+    name: Build native Android peer
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == github.repository_owner)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the Release arm64-v8a static Android peers
+        run: |
+          # -static: bionic linked in, so the peers run natively on the
+          # ubuntu-24.04-arm role runners.
+          cmake -S . -B build/e2e -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=21 \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+            -DGGPO_BUILD_VECTORWAR=ON -DCMAKE_EXE_LINKER_FLAGS=-static
+          cmake --build build/e2e --target ggpo_android_peer_smoke VectorWarHeadless --parallel 2
+          install -D -m 0755 build/e2e/bin/*/Release/ggpo_android_peer_smoke \
+            build/evidence/peer/ggpo_peer_smoke
+          install -D -m 0755 build/e2e/bin/*/Release/VectorWarHeadless \
+            build/evidence/peer/vectorwar_headless
+          file build/evidence/peer/*
+          sha256sum build/evidence/peer/ggpo_peer_smoke build/evidence/peer/vectorwar_headless \
+            > build/evidence/peer/sha256.txt
+          cat "$ANDROID_NDK_LATEST_HOME/source.properties" > build/evidence/peer/toolchain.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e2e-peer-android
+          path: build/evidence/peer
+          if-no-files-found: error
+
   execute:
     name: ${{ matrix.fixture }} / ${{ matrix.scenario }} / role ${{ matrix.role }}
     if: >-
       github.event_name != 'pull_request' ||
       (github.event.pull_request.head.repo.full_name == github.repository &&
       github.actor == github.repository_owner)
-    needs: [build-linux, build-windows, build-mingw]
+    needs: [build-linux, build-windows, build-mingw, build-android]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 12
     strategy:
@@ -141,6 +174,32 @@ jobs:
           - {fixture: smoke, scenario: linux-windows, role: 2, platform: windows, os: windows-2022, player1: linux, player2: windows, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke}
           - {fixture: smoke, scenario: windows-linux, role: 1, platform: windows, os: windows-2022, player1: windows, player2: linux, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke.exe}
           - {fixture: smoke, scenario: windows-linux, role: 2, platform: linux, os: ubuntu-24.04, player1: windows, player2: linux, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke.exe}
+          # Android (NDK arm64 static peers, run natively on the arm64 runner) against
+          # every platform, both fixtures, both player orders.
+          - {fixture: smoke, scenario: android-android, role: 1, platform: android, os: ubuntu-24.04-arm, player1: android, player2: android, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: android-android, role: 2, platform: android, os: ubuntu-24.04-arm, player1: android, player2: android, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: android-linux, role: 1, platform: android, os: ubuntu-24.04-arm, player1: android, player2: linux, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: android-linux, role: 2, platform: linux, os: ubuntu-24.04, player1: android, player2: linux, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: linux-android, role: 1, platform: linux, os: ubuntu-24.04, player1: linux, player2: android, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: linux-android, role: 2, platform: android, os: ubuntu-24.04-arm, player1: linux, player2: android, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: android-windows, role: 1, platform: android, os: ubuntu-24.04-arm, player1: android, player2: windows, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: android-windows, role: 2, platform: windows, os: windows-2022, player1: android, player2: windows, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: windows-android, role: 1, platform: windows, os: windows-2022, player1: windows, player2: android, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke.exe}
+          - {fixture: smoke, scenario: windows-android, role: 2, platform: android, os: ubuntu-24.04-arm, player1: windows, player2: android, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke.exe}
+          - {fixture: smoke, scenario: android-mingw, role: 1, platform: android, os: ubuntu-24.04-arm, player1: android, player2: mingw, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: android-mingw, role: 2, platform: mingw, os: windows-2022, player1: android, player2: mingw, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: mingw-android, role: 1, platform: mingw, os: windows-2022, player1: mingw, player2: android, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke.exe}
+          - {fixture: smoke, scenario: mingw-android, role: 2, platform: android, os: ubuntu-24.04-arm, player1: mingw, player2: android, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke.exe}
+          - {fixture: vectorwar, scenario: vectorwar-android-android, role: 1, platform: android, os: ubuntu-24.04-arm, player1: android, player2: android, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-android-android, role: 2, platform: android, os: ubuntu-24.04-arm, player1: android, player2: android, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-android-linux, role: 1, platform: android, os: ubuntu-24.04-arm, player1: android, player2: linux, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-android-linux, role: 2, platform: linux, os: ubuntu-24.04, player1: android, player2: linux, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-linux-android, role: 1, platform: linux, os: ubuntu-24.04, player1: linux, player2: android, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-linux-android, role: 2, platform: android, os: ubuntu-24.04-arm, player1: linux, player2: android, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-android-windows, role: 1, platform: android, os: ubuntu-24.04-arm, player1: android, player2: windows, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-android-windows, role: 2, platform: windows, os: windows-2022, player1: android, player2: windows, executable: peer/vectorwar_headless.exe, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-windows-android, role: 1, platform: windows, os: windows-2022, player1: windows, player2: android, executable: peer/vectorwar_headless.exe, player1_executable: peer/vectorwar_headless.exe}
+          - {fixture: vectorwar, scenario: vectorwar-windows-android, role: 2, platform: android, os: ubuntu-24.04-arm, player1: windows, player2: android, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless.exe}
           # MinGW player 1 against MSVC Windows and Linux player 2.
           - {fixture: smoke, scenario: mingw-windows, role: 1, platform: mingw, os: windows-2022, player1: mingw, player2: windows, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke.exe}
           - {fixture: smoke, scenario: mingw-windows, role: 2, platform: windows, os: windows-2022, player1: mingw, player2: windows, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke.exe}
@@ -236,7 +295,7 @@ jobs:
       (github.event_name != 'pull_request' ||
       (github.event.pull_request.head.repo.full_name == github.repository &&
       github.actor == github.repository_owner))
-    needs: [build-linux, build-windows, build-mingw, execute]
+    needs: [build-linux, build-windows, build-mingw, build-android, execute]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -249,11 +308,13 @@ jobs:
           BUILD_LINUX: ${{ needs.build-linux.result }}
           BUILD_WINDOWS: ${{ needs.build-windows.result }}
           BUILD_MINGW: ${{ needs.build-mingw.result }}
+          BUILD_ANDROID: ${{ needs.build-android.result }}
           EXECUTE: ${{ needs.execute.result }}
         run: |
           test "$BUILD_LINUX" = success
           test "$BUILD_WINDOWS" = success
           test "$BUILD_MINGW" = success
+          test "$BUILD_ANDROID" = success
           test "$EXECUTE" = success
           python3 tests/e2e/validate_manifest.py evidence --out manifest.json
       - name: Upload the complete manifest
