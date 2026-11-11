@@ -73,7 +73,8 @@ jobs:
           sed -n '/\[Ordinal\/Name Pointer\] Table/,/^$/p' build/objdump.txt \
             | grep -oE 'ggpo_[A-Za-z0-9_@]+' | sort -u > build/exports.txt
           cat build/exports.txt
-          diff -u tests/baseline/windows/${{ matrix.manifest }} build/exports.txt
+          # The checkout may use CRLF line endings on Windows runners.
+          diff -u --strip-trailing-cr tests/baseline/windows/${{ matrix.manifest }} build/exports.txt
 
           # The DLL must embed the MinGW runtime instead of importing it.
           grep 'DLL Name' build/objdump.txt
