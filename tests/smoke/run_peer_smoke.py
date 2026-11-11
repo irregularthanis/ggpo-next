@@ -13,6 +13,7 @@ import os
 import socket
 import statistics
 import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -42,6 +43,11 @@ def run_pair(executable_a, executable_b, frames, run_number,
             [str(executable_a), "1", str(port_a), str(port_b), str(frames), str(result_a)],
             [str(executable_b), "2", str(port_b), str(port_a), str(frames), str(result_b)],
         ]
+        # GGPO_TEST_LAUNCHER runs each peer through a launcher (Android: adb).
+        launcher = os.environ.get("GGPO_TEST_LAUNCHER")
+        if launcher:
+            prefix = [sys.executable, launcher]
+            commands = [prefix + command for command in commands]
         started = time.perf_counter()
         environments = []
         for fault in (fault_a, fault_b):

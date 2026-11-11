@@ -5,6 +5,7 @@ import argparse
 import json
 import socketserver
 import subprocess
+import sys
 import threading
 from pathlib import Path
 
@@ -68,6 +69,10 @@ class PeerSupervisor:
             "GGPO_SMOKE_READY_FILE": str(self.command["ready"]),
             "GGPO_SMOKE_FINALIZE_FILE": str(self.command["finalize"]),
         })
+        # GGPO_TEST_LAUNCHER runs the peer through a launcher (Android: adb).
+        launcher = environment.get("GGPO_TEST_LAUNCHER")
+        if launcher:
+            command = [sys.executable, launcher] + command
         log = self.safe_path(arguments.get("log", "peer.log"))
         self._log = log.open("w", encoding="utf-8")
         self.process = subprocess.Popen(command, cwd=self.workspace, env=environment,

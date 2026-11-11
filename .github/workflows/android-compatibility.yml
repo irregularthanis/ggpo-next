@@ -73,3 +73,53 @@ jobs:
           name: android-tests-${{ matrix.abi }}
           path: build/android/Testing
           if-no-files-found: warn
+
+  emulator:
+    # Full Android system: tests link the shared libGGPO.so and run inside the
+    # emulator through tests/android/run_on_device.py, on the oldest supported
+    # API (21) and a current one. x86_64 because hosted arm64 runners have no KVM.
+    name: Android emulator (API ${{ matrix.api }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {api: 21, target: default}
+          - {api: 35, target: google_apis}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Cross-compile both libraries and the tests (x86_64)
+        run: |
+          cmake -S . -B build/emu -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=x86_64 -DANDROID_PLATFORM=21 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DGGPO_BUILD_VECTORWAR=OFF \
+            -DBUILD_TESTING=ON \
+            "-DCMAKE_CROSSCOMPILING_EMULATOR=python3;$GITHUB_WORKSPACE/tests/android/run_on_device.py"
+          cmake --build build/emu --parallel 4
+          ls build/emu/bin/*/Release/*.so
+      - name: Run the full CTest suite in the emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          GGPO_TEST_LAUNCHER: ${{ github.workspace }}/tests/android/run_on_device.py
+        with:
+          api-level: ${{ matrix.api }}
+          target: ${{ matrix.target }}
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot
+          script: adb shell getprop ro.build.version.sdk && ctest --test-dir build/emu --output-on-failure --timeout 300
+      - name: Upload test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-emulator-api${{ matrix.api }}
+          path: build/emu/Testing
+          if-no-files-found: warn
