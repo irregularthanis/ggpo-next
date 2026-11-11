@@ -14,7 +14,15 @@ on:
   workflow_dispatch:
 
 jobs:
+  changes:
+    uses: ./.github/workflows/classify-changes.yml
+    with:
+      base: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+      force: ${{ github.event_name == 'workflow_dispatch' }}
+
   build:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     name: Android build (${{ matrix.abi }}${{ matrix.config == 'Debug' && ', Debug' || '' }})
     runs-on: ubuntu-24.04
     strategy:
@@ -51,7 +59,8 @@ jobs:
 
   test:
     name: Android tests (${{ matrix.abi }}${{ matrix.config == 'Debug' && ', Debug' || '' }})
-    needs: build
+    needs: [changes, build]
+    if: needs.changes.outputs.code == 'true'
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -81,6 +90,8 @@ jobs:
           if-no-files-found: warn
 
   sdk:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     # Both libraries per ABI, installed and audited like the Linux SDK: SONAME,
     # 16 KB alignment, system-only dependencies, frozen exports, API-21
     # ceiling; the public header with the NDK compilers; consumers for every
@@ -166,6 +177,8 @@ jobs:
           if-no-files-found: warn
 
   emulator:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     # Full Android system: tests link the shared libGGPO.so and run inside the
     # emulator through tests/android/run_on_device.py, on the oldest supported
     # API (21) and a current one. x86_64 because hosted arm64 runners have no KVM.
@@ -219,6 +232,8 @@ jobs:
           if-no-files-found: warn
 
   vectorwar-apk:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     # The SDL2 frontend as an APK: Gradle drives the repository's CMake build.
     name: Vector War APK
     runs-on: ubuntu-24.04
@@ -249,7 +264,8 @@ jobs:
 
   vectorwar-apk-smoke:
     name: Vector War APK smoke (API ${{ matrix.api }})
-    needs: vectorwar-apk
+    needs: [changes, vectorwar-apk]
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false

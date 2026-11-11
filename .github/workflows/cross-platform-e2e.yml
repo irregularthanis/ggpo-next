@@ -13,12 +13,20 @@ permissions:
   deployments: write
 
 jobs:
+  changes:
+    uses: ./.github/workflows/classify-changes.yml
+    with:
+      base: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+      force: ${{ github.event_name == 'workflow_dispatch' }}
+
   build-linux:
+    needs: changes
     name: Build native Linux peer
     if: >-
-      github.event_name != 'pull_request' ||
+      needs.changes.outputs.code == 'true' &&
+      (github.event_name != 'pull_request' ||
       (github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor == github.repository_owner)
+      github.actor == github.repository_owner))
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -45,11 +53,13 @@ jobs:
           if-no-files-found: error
 
   build-windows:
+    needs: changes
     name: Build native Windows peer
     if: >-
-      github.event_name != 'pull_request' ||
+      needs.changes.outputs.code == 'true' &&
+      (github.event_name != 'pull_request' ||
       (github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor == github.repository_owner)
+      github.actor == github.repository_owner))
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
@@ -79,11 +89,13 @@ jobs:
           if-no-files-found: error
 
   build-mingw:
+    needs: changes
     name: Build native MinGW peer
     if: >-
-      github.event_name != 'pull_request' ||
+      needs.changes.outputs.code == 'true' &&
+      (github.event_name != 'pull_request' ||
       (github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor == github.repository_owner)
+      github.actor == github.repository_owner))
     runs-on: windows-2022
     defaults:
       run:
@@ -120,11 +132,13 @@ jobs:
           if-no-files-found: error
 
   build-android:
+    needs: changes
     name: Build native Android peer
     if: >-
-      github.event_name != 'pull_request' ||
+      needs.changes.outputs.code == 'true' &&
+      (github.event_name != 'pull_request' ||
       (github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor == github.repository_owner)
+      github.actor == github.repository_owner))
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -155,10 +169,11 @@ jobs:
   execute:
     name: ${{ matrix.fixture }} / ${{ matrix.scenario }} / role ${{ matrix.role }}
     if: >-
-      github.event_name != 'pull_request' ||
+      needs.changes.outputs.code == 'true' &&
+      (github.event_name != 'pull_request' ||
       (github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor == github.repository_owner)
-    needs: [build-linux, build-windows, build-mingw, build-android]
+      github.actor == github.repository_owner))
+    needs: [changes, build-linux, build-windows, build-mingw, build-android]
     runs-on: ${{ matrix.os }}
     # Role jobs are scheduled independently across three runner pools. Keep a
     # bounded window for queue skew, but fail a missing pair promptly.
@@ -293,11 +308,11 @@ jobs:
   final-report:
     name: Complete native E2E matrix
     if: >-
-      always() &&
+      always() && needs.changes.outputs.code == 'true' &&
       (github.event_name != 'pull_request' ||
       (github.event.pull_request.head.repo.full_name == github.repository &&
       github.actor == github.repository_owner))
-    needs: [build-linux, build-windows, build-mingw, build-android, execute]
+    needs: [changes, build-linux, build-windows, build-mingw, build-android, execute]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4

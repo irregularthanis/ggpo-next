@@ -21,7 +21,7 @@ Status: In progress
 - [x] M1-T03: No Android-only runtime source was needed; Android selects the
   shared POSIX adapter and keeps its flags in `platform/android/Platform.cmake`.
 - [x] M1-T04: Both libraries for arm64-v8a, armeabi-v7a, x86_64; `-ffp-contract=off`.
-- [ ] M1-T05: Existing platforms unchanged (all current required checks pass).
+- [x] M1-T05: Existing platforms unchanged (all current required checks pass).
 
 ### M2: Tests (depends: M1)
 
@@ -47,19 +47,20 @@ Parallel with M2.
 ### M4: E2E (depends: M2)
 
 - [x] M4-T01: Static NDK arm64 peer bundle runs natively on hosted arm64 role jobs.
-- [ ] M4-T02: Android ↔ Linux, Windows and MinGW scenarios, smoke and Vector War
-  implemented; final green qualification pending.
+- [x] M4-T02: Android ↔ Linux, Windows and MinGW scenarios qualified for the
+  generic fixture; Android ↔ Linux/Windows and Android ↔ Android qualified for
+  Vector War (Vector War has no MinGW build).
 
 ### M5: Release, docs and parity close-out (depends: M3, M4)
 
-- [ ] M5-T00: Every row of the [parity matrix](TECH_PLAN.md#parity-matrix)
+- [x] M5-T00: Every row of the [parity matrix](TECH_PLAN.md#parity-matrix)
   is done or has a written "not applicable" reason.
 
 - [x] M5-T01: Android SDK archive and Vector War APK; release dry run passed.
 - [x] M5-T02: Developer Guide parity: install, build from source, use with
   CMake, Gradle and without CMake, shared vs static, deployment, platform notes,
   and running Vector War; VectorWar.md.
-- [ ] M5-T05: CI exercises the documented Android build and consumer commands.
+- [x] M5-T05: CI exercises the documented Android build and consumer commands.
 - [x] M5-T03: Build.md, Testing.md, CrossPlatformTesting.md, VectorWar.md, README.
 - [ ] M5-T04: Android checks added to the ruleset and branch protection.
 
@@ -83,6 +84,7 @@ Parallel with M2.
 | M3-T01–T03 | [Android compatibility 42970482329](https://github.com/irregularthanis/ggpo-next/actions/runs/42970482329) (`209def9`) | Shared SDL2 frontend built as `libmain.so` with touch controls; Gradle APK (launcher + SDLActivity, root CMake, SDL 2.30.9 from source) packs `libGGPO.so`, `libSDL2.so`, `libmain.so` for arm64-v8a, armeabi-v7a, x86_64; installed and smoke-launched on API 21 and API 35 emulators ("frontend smoke: OK" in logcat). 16/16 Android jobs pass |
 | Vector War headless | Same run | `VectorWarHeadless` builds for Android; `vectorwar_headless_loopback` and negative contracts pass natively on all ABIs, arm64 Debug, and both emulators |
 | M5-T01 | [Release dry run 43037303201](https://github.com/irregularthanis/ggpo-next/actions/runs/43037303201) (`c45c0e4`) | Multi-ABI Android SDK archive and Vector War APK packaged successfully alongside every existing release artifact |
+| M1-T05, M4-T02, M5-T00, M5-T05 | [PR qualification 43058914867](https://github.com/irregularthanis/ggpo-next/actions/runs/43058914867), attempt 3 (`4c1c24a`) | Existing platform checks pass; complete native generic/Vector War matrix passes with Android; documented ABI, emulator, consumer and packaging commands are exercised |
 
 ## Decisions
 

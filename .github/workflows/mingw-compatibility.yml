@@ -7,7 +7,15 @@ on:
   workflow_dispatch:
 
 jobs:
+  changes:
+    uses: ./.github/workflows/classify-changes.yml
+    with:
+      base: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+      force: ${{ github.event_name == 'workflow_dispatch' }}
+
   sdk:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     # Both libraries: libGGPO.dll + libGGPO.dll.a and libGGPO.a.
     name: MinGW ${{ matrix.label }}
     runs-on: windows-2022
@@ -104,6 +112,8 @@ jobs:
           if-no-files-found: warn
 
   toolchain-isolation:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     # MSVC and MinGW SDKs must not be mixed through CMake; the MSVC GGPO.dll
     # C interface is the one supported cross-toolchain path.
     name: MinGW toolchain isolation

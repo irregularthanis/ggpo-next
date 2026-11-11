@@ -344,7 +344,8 @@ event, no unexpected disconnect, clean session close, and zero exit status.
 The generic fixture uses its independently advanced integer-state oracle;
 Vector War uses the frozen 180-frame application checksum `b3381958`.
 [`validate_manifest.py`](../../tests/e2e/validate_manifest.py) rejects a run
-unless all eight fixture/scenario combinations produce passing role-2 reports.
+unless every required generic and Vector War scenario for Linux, Windows,
+MinGW, and Android produces a passing role-2 report.
 [`compare_peer_results.py`](../../tests/smoke/compare_peer_results.py) exposes
 that validator for standalone result files. Wine is not native Windows
 interoperability evidence.
@@ -354,6 +355,12 @@ complete scenario matrix, build artifacts, control/data boundaries, completion
 protocol, security model, failure contracts, evidence, and execution guide.
 
 ## Build and CI integration
+
+[`classify-changes.yml`](../../.github/workflows/classify-changes.yml) keeps
+documentation-only changes (`doc/**`, `docs/**`, and Markdown files) on a
+lightweight path. Compatibility workflows still report their check state, but
+skip build, emulator, and E2E matrices. Manual dispatch always runs the full
+suite.
 
 [`tests/CMakeLists.txt`](../../tests/CMakeLists.txt) registers native layout
 checks plus shared smoke families on each platform. Linux registers:
@@ -483,10 +490,10 @@ its existing x64 Windows builds. Unsupported SDK platforms now fail CMake
 configuration explicitly instead of selecting the incomplete legacy Unix file.
 
 The trusted-only [native E2E workflow](../../.github/workflows/cross-platform-e2e.yml)
-builds static Release x64 peers on their native runners. It joins ephemeral
-Tailscale nodes with a commit-pinned action, executes all four ordered platform
-roles, uploads per-role evidence, and rejects a missing, duplicate, or failed
-scenario in an unconditional final job. It runs for owner-authored
+builds static Release peers on their native runners. It joins ephemeral
+Tailscale nodes with a commit-pinned action, executes the required ordered
+Linux, Windows, MinGW, and Android roles, uploads per-role evidence, and rejects
+a missing, duplicate, or failed scenario in an unconditional final job. It runs for owner-authored
 same-repository PRs, trusted `master` pushes, and manual dispatch; fork and
 non-owner PR jobs are skipped.
 
@@ -510,7 +517,8 @@ established by the frame, checksum, callback, and lifecycle assertions.
 
 - No spectator, disconnect/resume, simulated loss, or multi-player automated
   session exists.
-- The automated matrix covers native Windows↔Ubuntu, but not SteamOS hardware.
+- The automated matrix covers native Linux, Windows, MinGW, and Android peers,
+  but not SteamOS hardware.
 - The clean cross-platform workflow does not inject latency or packet loss;
   deterministic impairment remains a follow-up after clean-run qualification.
 - No macOS adapter or build exists.
