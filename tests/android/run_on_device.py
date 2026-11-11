@@ -86,15 +86,32 @@ def main():
         return adb("shell", f"test -e {device_path} && echo yes", check=False,
                    capture_output=True, text=True).stdout.strip() == "yes"
 
+    # A file's direction is fixed the first time it is seen: created on the
+    # device -> pulled every cycle (peers rewrite their ready state until the
+    # corrected state settles); created on the host -> pushed, and re-pushed
+    # when it changes (the coordinator's finalize file).
+    direction = {}
+    pushed_mtime = {}
+
     def sync_once():
         for device_path, host_path in mapped.items():
-            on_host = host_path.exists()
-            if on_host and not device_exists(device_path):
-                adb("push", str(host_path), device_path, check=False,
-                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            elif not on_host and device_exists(device_path):
+            mode = direction.get(device_path)
+            if mode is None:
+                if device_exists(device_path):
+                    mode = direction[device_path] = "pull"
+                elif host_path.exists():
+                    mode = direction[device_path] = "push"
+                else:
+                    continue
+            if mode == "pull":
                 adb("pull", device_path, str(host_path), check=False,
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                mtime = host_path.stat().st_mtime if host_path.exists() else None
+                if mtime is not None and pushed_mtime.get(device_path) != mtime:
+                    adb("push", str(host_path), device_path, check=False,
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    pushed_mtime[device_path] = mtime
 
     stop = threading.Event()
 
@@ -130,6 +147,8 @@ def main():
 
     # Final state: everything the program wrote replaces the host copy.
     for device_path, host_path in mapped.items():
+        if direction.get(device_path) == "push":
+            continue
         adb("pull", device_path, str(host_path), check=False,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     adb("shell", f"rm -rf {device_dir}", check=False, stdout=subprocess.DEVNULL)
