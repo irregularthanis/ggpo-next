@@ -410,6 +410,26 @@ With `BUILD_TESTING=ON` and the default `GGPO_RUN_TESTS_ON_BUILD=ON`, the
 `ggpo_check` target runs these tests as part of the normal build. Packaging or
 consumer-only builds can disable execution explicitly.
 
+Android registers the same portable, API, protocol, SyncTest, peer, negative,
+Vector War, and platform-conformance contracts with an `android_` prefix.
+[`run_on_device.py`](../../tests/android/run_on_device.py) is CMake's
+cross-compiling emulator: it pushes executables and shared libraries through
+`adb`, runs them on API 21 and a current emulator, and returns their output and
+exit status to CTest. Static arm64-v8a, armeabi-v7a, and x86_64 fixtures also
+run natively on matching Linux runners. This is execution evidence, not merely
+cross-compilation evidence.
+
+The Android SDK lane separately verifies all three installed prefixes:
+
+- frozen public layout and 16-symbol export manifest;
+- API 21 imported-symbol ceiling and system-only dependencies;
+- 16 KB load alignment on 64-bit ABIs;
+- C11/C++98 public-header compilation and installed consumers; and
+- rejection when a host Linux project consumes an Android SDK or vice versa.
+
+The Vector War APK smoke installs and launches the SDL frontend on API 21 and
+API 35, then waits for the application's explicit frontend-ready log marker.
+
 CTest labels select contract families without changing their stable names:
 
 ```bash
@@ -494,8 +514,10 @@ established by the frame, checksum, callback, and lifecycle assertions.
 - The clean cross-platform workflow does not inject latency or packet loss;
   deterministic impairment remains a follow-up after clean-run qualification.
 - No macOS adapter or build exists.
-- Sanitizers qualify Linux Clang static builds; Windows and shared-library
-  sanitizer configurations are not currently automated.
+- Android ASan+UBSan is scheduled on an x86_64 emulator; Linux Clang and MSVC
+  sanitizer configurations remain in the same qualification workflow.
+- Android physical devices are not yet part of required CI; current device
+  semantics use API 21/API 35 x86_64 emulators plus native ARM execution.
 
 The focused core, API, protocol, and platform suites are tracked by the
 [shared-core testing plan](../planning/2026-11-07-shared_core_testing_ci/TECH_PLAN.md).

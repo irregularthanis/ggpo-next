@@ -18,7 +18,8 @@ Status: In progress
 
 - [x] M1-T01: `platform/android/Platform.cmake` selected for `Android`.
 - [x] M1-T02: Share the POSIX adapter between Linux and Android.
-- [ ] M1-T03: Android-only behavior isolated in the platform layer (logcat).
+- [x] M1-T03: No Android-only runtime source was needed; Android selects the
+  shared POSIX adapter and keeps its flags in `platform/android/Platform.cmake`.
 - [x] M1-T04: Both libraries for arm64-v8a, armeabi-v7a, x86_64; `-ffp-contract=off`.
 - [ ] M1-T05: Existing platforms unchanged (all current required checks pass).
 
@@ -45,20 +46,21 @@ Parallel with M2.
 
 ### M4: E2E (depends: M2)
 
-- [ ] M4-T01: Android peer bundle and emulator role jobs with UDP forwarding.
-- [ ] M4-T02: Android ↔ Linux, Windows and MinGW scenarios, smoke and Vector War.
+- [x] M4-T01: Static NDK arm64 peer bundle runs natively on hosted arm64 role jobs.
+- [ ] M4-T02: Android ↔ Linux, Windows and MinGW scenarios, smoke and Vector War
+  implemented; final green qualification pending.
 
 ### M5: Release, docs and parity close-out (depends: M3, M4)
 
 - [ ] M5-T00: Every row of the [parity matrix](TECH_PLAN.md#parity-matrix)
   is done or has a written "not applicable" reason.
 
-- [ ] M5-T01: Android SDK archive and Vector War APK; release dry run.
-- [ ] M5-T02: Developer Guide parity: install, build from source, use with
+- [ ] M5-T01: Android SDK archive and Vector War APK implemented; release dry run pending.
+- [x] M5-T02: Developer Guide parity: install, build from source, use with
   CMake, Gradle and without CMake, shared vs static, deployment, platform notes,
   and running Vector War; VectorWar.md.
 - [ ] M5-T05: CI exercises the documented Android build and consumer commands.
-- [ ] M5-T03: Build.md, Testing.md, CrossPlatformTesting.md, README.
+- [x] M5-T03: Build.md, Testing.md, CrossPlatformTesting.md, VectorWar.md, README.
 - [ ] M5-T04: Android checks added to the ruleset and branch protection.
 
 ## Evidence ledger

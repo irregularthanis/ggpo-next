@@ -45,7 +45,7 @@ performance benchmark.
 | Role symmetry | Each mixed-platform pair runs in both player orders | Detects behavior tied to host role |
 | Deterministic convergence | Both peers match an independent canonical oracle | Detects prediction, rollback, serialization, or input divergence |
 | Lifecycle | One running event, clean close, zero unexpected disconnects | Detects incomplete sessions hidden by a matching checksum |
-| Completeness | Final manifest requires exactly LL, WW, LW, and WL for both fixtures | Prevents a partial matrix from appearing successful |
+| Completeness | Final manifest requires every declared ordered platform/fixture scenario | Prevents a partial matrix from appearing successful |
 | Cleanup | Firewall removal, process cancellation, Deployment retirement, and ephemeral logout run unconditionally | Keeps failed CI runs from leaving durable test infrastructure |
 
 A pass does not certify Internet matchmaking, NAT traversal, performance,
@@ -62,16 +62,25 @@ input timing, and platform-specific behavior.
 | WW | Windows | Windows | 180 frames and canonical convergence |
 | LW | Linux | Windows | 180 frames and canonical convergence |
 | WL | Windows | Linux | 180 frames and canonical convergence |
+| AA | Android | Android | 180 frames and canonical convergence |
+| AL / LA | Android / Linux | Linux / Android | 180 frames and canonical convergence |
+| AW / WA | Android / Windows | Windows / Android | 180 frames and canonical convergence |
+| AM / MA | Android / MinGW | MinGW / Android | 180 frames and canonical convergence (generic fixture) |
 
-[`run_matrix.py`](../../tests/e2e/run_matrix.py) defines and validates the four
-ordered assignments. The workflow runs them for each fixture: `smoke` scenarios
-are named `linux-linux` etc., and Vector War scenarios `vectorwar-linux-linux`
-etc. Each scenario expands into a role-1 host job and a role-2 coordinator job,
-producing sixteen native execution jobs (eight per fixture).
+[`validate_manifest.py`](../../tests/e2e/validate_manifest.py) defines the
+required assignments. The workflow names generic scenarios `linux-linux`,
+`android-windows`, etc., and Vector War scenarios `vectorwar-linux-linux`,
+`vectorwar-android-windows`, etc. Each scenario expands into a role-1 host job
+and a role-2 coordinator job.
 
 Two more generic-peer scenarios run a static MinGW-w64 x64 peer as player 1:
 `mingw-windows` (against MSVC) and `mingw-linux`. They add four jobs, and the
 final manifest requires their reports too.
+
+Android peers are NDK arm64 static executables running natively on the hosted
+arm64 runner. They cover Android against Linux, MSVC Windows, MinGW, and Android
+in both useful player orders. This tests Android's production socket/platform
+adapter; it is not an Android emulator or APK lifecycle test.
 
 ### Why each scenario has two jobs
 
@@ -345,10 +354,11 @@ two-process loopback, and package/consumer checks described in
 enter this ordered interoperability matrix.
 
 macOS can use a native GitHub-hosted runner and the same ephemeral Tailscale
-control plane. Android and iOS require separate proof that the tested emulator,
-simulator, or physical device itself reaches the tailnet; joining only its host
-does not establish direct mobile-peer connectivity. A host proxy is a distinct
-test topology and must be reported as such.
+control plane. Android currently uses native NDK executables on an arm64 Linux
+runner, while emulator/API and APK lifecycle coverage lives in the Android
+compatibility workflow. A future physical-device topology must separately prove
+that the device itself reaches the tailnet; a host proxy must be reported as a
+distinct topology.
 
 The complete ordered matrix grows as the square of the platform count. Keep a
 small required per-change matrix and move the complete matrix to scheduled
@@ -356,8 +366,8 @@ qualification when its cost becomes excessive.
 
 ## Limits
 
-- The matrix covers native Ubuntu and Windows hosted runners, not SteamOS,
-  macOS, consoles, emulators, simulators, or physical mobile devices.
+- The matrix covers native Ubuntu, Windows, and Android-NDK peers on hosted
+  runners, not SteamOS, macOS, consoles, simulators, or physical devices.
 - It uses two players and does not cover spectators or disconnect/resume.
 - Clean qualification injects no latency or packet loss.
 - It does not test NAT traversal, relay selection, matchmaking, encryption, or

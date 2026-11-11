@@ -1,8 +1,8 @@
 # TECH_PLAN — Android support
 
-Status: Planning only
+Status: Implementation and qualification
 
-Source: `a9407a88ffbd9d593806e6d520e00c3d3ad0b0f6`
+Baseline: `a9407a88ffbd9d593806e6d520e00c3d3ad0b0f6` (`v0.5.0`)
 
 [Product brief](PRD.md) · [Tracker](PROGRESS.md)
 
@@ -11,7 +11,7 @@ Source: `a9407a88ffbd9d593806e6d520e00c3d3ad0b0f6`
 - [`src/CMakeLists.txt`](../../../src/CMakeLists.txt) selects
   `platform/windows` or `platform/linux` and fails for any other
   `CMAKE_SYSTEM_NAME`; the NDK reports `Android`.
-- [`platform_linux.cpp`](../../../src/lib/ggpo/platform_linux.cpp) (252 lines)
+- [`platform_posix.cpp`](../../../src/lib/ggpo/platform_posix.cpp)
   implements all 16 operations in [`platform.h`](../../../src/lib/ggpo/platform.h)
   with POSIX calls: `clock_gettime`, `poll`/`nanosleep`, `getpid`,
   `getenv`, `mkdir`, `inet_pton`, and non-blocking UDP sockets. Bionic
@@ -70,7 +70,7 @@ Android reuses the POSIX adapter instead of copying it:
 flowchart TD
     Core["Portable core<br/>(unchanged)"]
     API["platform.h<br/>16 operations"]
-    Posix["platform_posix.cpp<br/>(today platform_linux.cpp)"]
+    Posix["platform_posix.cpp<br/>shared POSIX adapter"]
     Win["platform_windows.cpp<br/>MSVC and MinGW"]
     LinuxCfg["platform/linux/Platform.cmake"]
     AndroidCfg["platform/android/Platform.cmake<br/>NDK flags, log library"]
@@ -81,9 +81,8 @@ flowchart TD
     Posix --> AndroidCfg
 ```
 
-- Rename `platform_linux.cpp` to `platform_posix.cpp` (`git mv`, no
-  behavior change), or keep the name and include it from both platform files;
-  decided in M1 by the size of the Android delta.
+- `platform_posix.cpp` is shared by Linux and Android; the rename preserved the
+  Linux implementation while making ownership explicit.
 - Android-specific behavior, if any, stays behind `#ifdef __ANDROID__` inside
   the platform file or in a small `platform_android.cpp`:
   - `AssertFailed` also writes to logcat (`__android_log_print`).
@@ -168,12 +167,12 @@ developers to do the same.
 
 ## E2E
 
-- New peer bundle `e2e-peer-android`: `ggpo_peer_smoke` and
-  `vectorwar_headless` for the runner's ABI.
-- Android role jobs run on the emulator runner: the job joins the tailnet on the
-  host, forwards the UDP ports with the emulator console
-  (`redir add udp:<port>:<port>`), and starts the peer inside the emulator
-  through the same `adb` wrapper. The control agent stays on the host.
+- Peer bundle `e2e-peer-android`: statically linked arm64
+  `ggpo_peer_smoke` and `vectorwar_headless` executables.
+- Android role jobs run those NDK/bionic executables natively on
+  `ubuntu-24.04-arm`. This isolates GGPO's Android platform and socket adapter
+  while avoiding a host-to-emulator UDP proxy. Emulator/API and APK lifecycle
+  coverage remains in `android-compatibility.yml`.
 - Scenarios (both fixtures): `android-linux`, `linux-android`,
   `android-windows`, `windows-android`, `android-mingw`, plus
   `vectorwar-android-*` equivalents. The manifest requires all of them.
@@ -193,11 +192,9 @@ Existing workflows are not modified except to add jobs.
 
 ```text
 ggpo-V-android/
-├── include/ggponet.h
-├── <abi>/lib/libGGPO.so
-├── <abi>/lib/libGGPO.a
-├── <abi>/lib/cmake/GGPO/          # one CMake package per ABI
-└── share/GGPO/
+├── arm64-v8a/{include,lib,share}/
+├── armeabi-v7a/{include,lib,share}/
+└── x86_64/{include,lib,share}/
 ```
 
 A Prefab AAR for Gradle consumers is a possible follow-up, not in scope.
@@ -231,10 +228,9 @@ updated to match. CI exercises the documented build and consumer commands, as
 5. E2E scenarios.
 6. Release, docs, required checks.
 
-## Open decisions
+## Resolved decisions
 
-- NDK version: the newest LTS on the runners, pinned in M1; libraries must be
-  16 KB page aligned (default in newer NDKs, `-Wl,-z,max-page-size=16384` on
-  older ones) and CI checks it.
-- Required test runner: arm64 emulator (if the spike succeeds) or x86_64
-  emulator plus scheduled devices.
+- NDK 30.0.16248370 is the qualified runner toolchain. Libraries must be 16 KB
+  page aligned on 64-bit ABIs; CI audits every release ABI.
+- Static ARM fixtures run natively on hosted arm64 runners. API 21/API 35
+  x86_64 emulators cover dynamic loading, installed consumers, and APK startup.

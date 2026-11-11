@@ -24,8 +24,8 @@
 
 Vector War is GGPO's reference game integration under
 [`src/apps/vectorwar`](../../src/apps/vectorwar). It is a small deterministic
-four-ship simulation with a portable application core and Windows (Win32/GDI)
-and Linux (SDL2) hosts. It demonstrates how
+four-ship simulation with a portable application core and Windows (Win32/GDI),
+Linux (SDL2), and Android (SDL2/touch) hosts. It demonstrates how
 an application owns game state and presentation while GGPO owns input prediction,
 network synchronization, saved checkpoints, and rollback scheduling.
 
@@ -65,6 +65,7 @@ flowchart TD
 | --- | --- | --- |
 | Process host (Windows) | Window, command line, Winsock, message loop, frame schedule | [`main.cpp`](../../src/apps/vectorwar/main.cpp), [`win32_host.cpp`](../../src/apps/vectorwar/win32_host.cpp) |
 | Process host (Linux) | SDL window, command line, event loop, frame schedule | [`sdl_main.cpp`](../../src/apps/vectorwar/sdl_main.cpp), [`sdl_host.cpp`](../../src/apps/vectorwar/sdl_host.cpp) |
+| Process host (Android) | SDLActivity lifecycle, intent arguments, touch input, frame schedule | [`VectorWarActivity.java`](../../src/apps/vectorwar/android/app/src/main/java/org/ggponext/vectorwar/VectorWarActivity.java), [`sdl_main.cpp`](../../src/apps/vectorwar/sdl_main.cpp), [`sdl_touch_controls.h`](../../src/apps/vectorwar/sdl_touch_controls.h) |
 | Process host (headless) | Renderer-free E2E fixture with run identity and reports | [`headless_main.cpp`](../../src/apps/vectorwar/headless_main.cpp), [`headless_host.cpp`](../../src/apps/vectorwar/headless_host.cpp) |
 | Host contract | Bounds, input, renderer creation, clock, sleep, and diagnostics | [`vectorwar_host.h`](../../src/apps/vectorwar/vectorwar_host.h) |
 | GGPO adapter | Session lifecycle, callbacks, input submission, simulation/render split | [`vectorwar.cpp`](../../src/apps/vectorwar/vectorwar.cpp), [`vectorwar.h`](../../src/apps/vectorwar/vectorwar.h) |
@@ -79,7 +80,8 @@ flowchart TD
 builds portable `VectorWarCore` and the `VectorWarHeadless` fixture whenever
 `GGPO_BUILD_VECTORWAR` is enabled. The `VectorWar` GUI executable is built from
 the same core with the Win32 host on Windows and with the SDL2 host on Linux
-(SDL2 development files are required). The SDK's Windows platform layer carries
+(SDL2 development files are required). Android's Gradle project calls the same
+CMake graph and packages the SDL frontend for all supported ABIs. The SDK's Windows platform layer carries
 `winmm` and `ws2_32` transitively.
 
 Both GUIs accept the same command line, parsed by
@@ -422,9 +424,14 @@ is exposed in the window title. Its `--frontend-smoke` mode creates and tears
 down the real SDL window/renderer using SDL's dummy video driver, allowing CI
 to verify the GUI lifecycle without a desktop session.
 
+Android uses the same SDL host and renderer, with `SDLActivity` providing the
+native window and lifecycle. [`sdl_touch_controls.h`](../../src/apps/vectorwar/sdl_touch_controls.h)
+maps screen regions to the existing steering, fire, and bomb input bits; it
+does not change the deterministic simulation or GGPO callback contract.
+
 Release tags attach standalone GUI archives for Windows x64/x86 and Linux
-x86-64 alongside the SDK packages. The Linux executable requires the SDL2
-runtime supplied by the target distribution.
+x86-64 plus one multi-ABI Android APK alongside the SDK packages. The Linux
+executable requires the distribution SDL2 runtime; the APK bundles SDL2.
 
 ## End-to-end two-player example
 

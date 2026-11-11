@@ -22,8 +22,8 @@ Each player in a GGPO networked game has a complete copy of your game running.  
 
 ## Install the SDK
 
-The SDK supports Windows and Linux. Choose a prebuilt release SDK for normal
-application integration or use the repository container when developing Linux.
+The SDK supports Windows, Linux, and Android. Choose a prebuilt release SDK for
+normal integration; source builds use the native toolchain or Android NDK.
 
 ### Option 1: use a release SDK
 
@@ -41,6 +41,17 @@ chooses one when it links (see
 | `ggpo-0.5.0-windows-x86-mingw.zip` | The application is 32-bit Windows built with MinGW-w64 (MSVCRT, MSYS2 `MINGW32`) |
 | `ggpo-0.5.0-linux-x86_64.deb` / `.rpm` | Install system-wide on a Debian- or RPM-family distribution |
 | [`ggpo-0.5.0-linux-x86_64.tar.gz`](#linux-raw-sdk-targz) | Extract a relocatable SDK without a package manager |
+| `ggpo-0.5.0-android.tar.gz` | Android NDK applications: arm64-v8a, armeabi-v7a, or x86_64 |
+
+The Android archive contains one complete CMake prefix per ABI. Select exactly
+the directory matching the application's `ANDROID_ABI`:
+
+```text
+ggpo-0.5.0-android/
+├── arm64-v8a/{include,lib,share}/
+├── armeabi-v7a/{include,lib,share}/
+└── x86_64/{include,lib,share}/
+```
 
 Extract the ZIP to a stable location such as `C:/ggpo-sdk`. Each release archive
 is an installed CMake package rather than a source tree:
@@ -149,6 +160,7 @@ Release pages also attach GUI sample archives independent of the SDK linkage:
 | `vectorwar-windows-x64.zip` | 64-bit Win32/GDI Vector War executable |
 | `vectorwar-windows-x86.zip` | 32-bit Win32/GDI Vector War executable |
 | `vectorwar-linux-x86_64.tar.gz` | 64-bit SDL2 Vector War executable |
+| `vectorwar-android.apk` | SDL2 Vector War APK for all supported Android ABIs |
 
 On Linux, install the SDL2 runtime, extract the archive, and launch two local
 players in separate terminals:
@@ -163,6 +175,10 @@ Windows uses the same arguments with `VectorWar.exe`. Arrow keys steer, `D`
 fires, `S` bombs, function keys disconnect players, and Escape exits. The
 sample archives include the license and the detailed
 [Vector War architecture guide](architecture/VectorWar.md).
+
+Install the Android sample with `adb install ggpo-0.5.0-vectorwar-android.apk`.
+Its launcher accepts the same local port, player count, and peer endpoints;
+touch controls map to the same steering, fire, and bomb inputs.
 
 #### Linux DEB and RPM
 
@@ -282,6 +298,25 @@ Vector War is not built with MinGW. 32-bit MinGW builds compile with
 MSVC, x64 and Linux, which desynchronizes deterministic simulations. See the
 [linkage matrix](#linkage-matrix) for what this means for a 32-bit game.
 
+### Option 5: build Android with the NDK
+
+Install Android Studio or the command-line SDK with the NDK, CMake, and Ninja.
+Build one ABI at a time; API 21 is the supported floor:
+
+```bash
+cmake -S . -B build/android -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
+  -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=21 \
+  -DCMAKE_BUILD_TYPE=Release -DGGPO_BUILD_VECTORWAR=OFF \
+  -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX="$PWD/build/android-install"
+cmake --build build/android --parallel
+cmake --install build/android
+```
+
+Use `armeabi-v7a` or `x86_64` for the other release ABIs. Normal repository CI
+also builds and runs the Android test suite; `BUILD_TESTING=OFF` above is only
+for an application SDK build without a connected device.
+
 ### Link GGPO into an application
 
 Every SDK installs both a shared and a static library. The public header and
@@ -322,6 +357,8 @@ time.
 | Windows, any MinGW, without CMake | `windows-x64.zip`, `windows-x86.zip` (MSVC) | Dynamic | `bin/GGPO.dll` directly | Defined | `bin/GGPO.dll` |
 | Linux, GCC / Clang | `.deb`, `.rpm`, `linux-x86_64.tar.gz` | Dynamic | `lib/libGGPO.so` | Not used | `libGGPO.so.0` (packages install it system-wide) |
 | | | Static | `lib/libGGPO.a` | Not used | None besides the usual `libstdc++` |
+| Android NDK | `android.tar.gz`, matching ABI prefix | Dynamic | `lib/libGGPO.so` | Not used | Package `libGGPO.so` in the APK |
+| | | Static | `lib/libGGPO.a` | Not used | None; GGPO is linked into the application's native library |
 
 Combinations not listed fail, for example an MSVC static library in a MinGW
 application or a MinGW SDK in an MSVC project. CMake rejects a mismatched
@@ -365,6 +402,7 @@ Link one flavor per executable, not both. Configure commands per toolchain:
 | MinGW cross-compile from Linux | `cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=mingw-w64-x86_64.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$HOME/ggpo-sdk-mingw` | add `-DGGPO_USE_STATIC=ON` |
 | Linux, `.deb` / `.rpm` | `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release` | add `-DGGPO_USE_STATIC=ON` |
 | Linux, `tar.gz` | `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$HOME/ggpo-sdk` | add `-DGGPO_USE_STATIC=ON` |
+| Android NDK | Add `-DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=21 -DCMAKE_PREFIX_PATH=$HOME/ggpo-android/arm64-v8a` | add `-DGGPO_USE_STATIC=ON` |
 
 Then build with `cmake --build build --config Release --parallel`.
 
@@ -437,6 +475,7 @@ from the DLL; the static library must **not** define it.
 | MinGW cross from Linux | `x86_64-w64-mingw32-g++ -DGGPO_SHARED_LIB -I$HOME/ggpo-sdk-mingw/include main.cpp -L$HOME/ggpo-sdk-mingw/lib -lGGPO` | `x86_64-w64-mingw32-g++ -I$HOME/ggpo-sdk-mingw/include main.cpp $HOME/ggpo-sdk-mingw/lib/libGGPO.a -lws2_32 -lwinmm -static` |
 | MinGW + MSVC `GGPO.dll` | `gcc -DGGPO_SHARED_LIB -I/c/ggpo-sdk/include main.c /c/ggpo-sdk/bin/GGPO.dll` | Not supported |
 | GCC/Clang (Linux) | `g++ -I$HOME/ggpo-sdk/include main.cpp -L$HOME/ggpo-sdk/lib -lGGPO -Wl,-rpath,'$ORIGIN'` | `g++ -I$HOME/ggpo-sdk/include main.cpp $HOME/ggpo-sdk/lib/libGGPO.a` |
+| Android NDK (`$triple` = `aarch64-linux-android21`, etc.) | `$triple-clang++ -I$HOME/ggpo-android/$abi/include main.cpp -L$HOME/ggpo-android/$abi/lib -lGGPO` | `$triple-clang++ -I$HOME/ggpo-android/$abi/include main.cpp $HOME/ggpo-android/$abi/lib/libGGPO.a` |
 
 Libraries go **after** the sources: GNU linkers resolve left to right. GGPO is
 written in C++, so a C application that links `libGGPO.a` must do its final
@@ -444,10 +483,10 @@ link with `g++`/`clang++` or add `-lstdc++`. CMake does this automatically.
 
 #### Deploy the application
 
-| Linkage | Windows | Linux |
-| --- | --- | --- |
-| Dynamic | Copy `bin/GGPO.dll` (MSVC) or `bin/libGGPO.dll` (MinGW) next to `application_x.exe`. For development, adding the SDK's `bin` directory to `PATH` is enough. | Ship `libGGPO.so.0` and set an application-relative RPATH (below). `.deb`/`.rpm` installs need neither. |
-| Static | No GGPO file. MSVC: the usual VC++ redistributable for `/MD`. MinGW: the toolchain runtime DLLs unless linked with `-static`. | No GGPO file. |
+| Linkage | Windows | Linux | Android |
+| --- | --- | --- | --- |
+| Dynamic | Copy `bin/GGPO.dll` (MSVC) or `bin/libGGPO.dll` (MinGW) next to `application_x.exe`. For development, adding the SDK's `bin` directory to `PATH` is enough. | Ship `libGGPO.so.0` and set an application-relative RPATH (below). `.deb`/`.rpm` installs need neither. | Package the matching ABI's unversioned `libGGPO.so` under the APK's `lib/<abi>/` directory; Gradle does this for linked native libraries. |
+| Static | No GGPO file. MSVC: the usual VC++ redistributable for `/MD`. MinGW: the toolchain runtime DLLs unless linked with `-static`. | No GGPO file. | No separate GGPO file; package the application's native library. |
 
 Linux RPATH example:
 
