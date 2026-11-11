@@ -1,6 +1,6 @@
 # PROGRESS — MinGW-w64 SDK support
 
-Status: In progress
+Status: Complete (pending merge)
 
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
@@ -49,12 +49,12 @@ Parallel with M2.
 
 ### M5: Release and docs (depends: M3, M4)
 
-- [ ] M5-T01: MinGW x64/x86 SDK release jobs; dry run validates both zips,
+- [x] M5-T01: MinGW x64/x86 SDK release jobs; dry run validates both zips,
   including no `*.lib` in MinGW zips and no `*.a` in MSVC zips.
-- [ ] M5-T02: Developer Guide: install, build, link, deploy, compatibility
+- [x] M5-T02: Developer Guide: install, build, link, deploy, compatibility
   table, and separate install folders per toolchain.
-- [ ] M5-T03: Build.md and Testing.md.
-- [ ] M5-T04: Add `MinGW x64` and `MinGW x86` to the ruleset's required checks.
+- [x] M5-T03: Build.md and Testing.md.
+- [x] M5-T04: Add `MinGW x64` and `MinGW x86` to the ruleset's required checks.
 
 ## Evidence ledger
 
@@ -67,6 +67,9 @@ Parallel with M2.
 | x86 FP | [MinGW run at `8a8e0b6`](https://github.com/irregularthanis/ggpo-next/actions/runs/42956989680) vs `3db4014` | x87 default diverged `vectorwar_state_contract` at frame 30 (2768577444 vs 3703441302); `-msse2 -mfpmath=sse` restores the frozen checksum |
 | M1-T07 | MSVC Windows, Linux and E2E runs at `8a8e0b6` and `3db4014` | All pass, including the frozen Windows baseline |
 | M4-T01, M4-T02 | [E2E run 42959262218](https://github.com/irregularthanis/ggpo-next/actions/runs/42959262218) (`d601f16`) | Static MinGW x64 peer built; `mingw-windows` and `mingw-linux` converge at 180 frames over the tailnet; final manifest passes with 10 scenarios; 24/24 jobs pass |
+| M5-T01 | [Release dry run 42959935878](https://github.com/irregularthanis/ggpo-next/actions/runs/42959935878) (`f645708`, `workflow_dispatch`) | `Windows x64 MinGW SDK` and `Windows x86 MinGW SDK` build, run CTest, package, and validate the extracted zips (no `.lib`, every consumer linkage); MSVC zips contain no `.a`; all SDK and Vector War jobs pass; publish skipped |
+| M5-T02, M5-T03 | `bd23f98` | Developer Guide, Build.md, Testing.md, CrossPlatformTesting.md and README cover MinGW; version 0.5.0 |
+| M5-T04 | `master` ruleset 26776893 and classic branch protection | Required checks 9 → 12: `MinGW x64`, `MinGW x86`, `MinGW toolchain isolation` |
 | M1-T06, M3-T03, M3-T04 | [MinGW run 42958727700](https://github.com/irregularthanis/ggpo-next/actions/runs/42958727700) (`eb7c24c`), job "MinGW toolchain isolation" | MinGW project rejects the MSVC SDK and MSVC project rejects the MinGW SDK, both with the toolchain message; MinGW C program linked directly to the MSVC `GGPO.dll` imports it and runs |
 
 ## Decisions
