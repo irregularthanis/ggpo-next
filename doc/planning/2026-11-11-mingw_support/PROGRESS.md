@@ -19,7 +19,8 @@ Depends on [PR #9](https://github.com/irregularthanis/ggpo-next/pull/9)
 - [ ] M1-T01: Split Windows flags and system libraries by `MSVC`.
 - [ ] M1-T02: MinGW library names (`libGGPO.dll`, `libGGPO.dll.a`, `libGGPO.a`).
 - [ ] M1-T03: Replace `_snprintf_s` with portable formatting.
-- [ ] M1-T04: Undecorated x86 exports; decide on static libgcc/libstdc++.
+- [ ] M1-T04: Undecorated x86 exports; link libgcc/libstdc++ statically and
+  verify `libGGPO.dll` imports no MinGW runtime DLLs.
 - [ ] M1-T05: Disable Vector War under MinGW with a clear message.
 - [ ] M1-T06: MSVC and Linux CI unchanged.
 
@@ -62,5 +63,5 @@ Parallel with M2.
 | Support x64 and x86 | Accepted (2026-11-11) |
 | No MinGW Vector War | Accepted (2026-11-11) |
 | x64 uses UCRT (UCRT64); x86 uses MSVCRT (MINGW32) | Proposed |
-| Statically link libgcc/libstdc++ into `libGGPO.dll` | Proposed |
+| Statically link libgcc/libstdc++ into `libGGPO.dll` | Accepted (2026-11-11) |
 | Release-only MinGW lanes, no Debug lane | Proposed |

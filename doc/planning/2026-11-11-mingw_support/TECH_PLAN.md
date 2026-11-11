@@ -61,7 +61,9 @@ flowchart TD
 - Shared library: keep undecorated `ggpo_*` exports on x86 (check for
   `@N`/leading-underscore decoration; add `-Wl,--kill-at` only if needed).
   Link `-static-libgcc -static-libstdc++` so `libGGPO.dll` does not require
-  MinGW runtime DLLs on the user's machine (decision to confirm in M1).
+  MinGW runtime DLLs on the user's machine (accepted). The export test also
+  checks that `objdump -p libGGPO.dll` lists no `libgcc_s*`, `libstdc++*` or
+  `libwinpthread*` imports.
 - `GGPO_BUILD_VECTORWAR` defaults to `OFF` under MinGW; explicitly enabling
   it fails with a clear message.
 - `platform_windows.cpp`: replace `_snprintf_s` with portable `snprintf` and
@@ -132,7 +134,5 @@ ggpo-V-windows-x64-mingw/
 
 ## Open decisions
 
-- Statically link libgcc/libstdc++ into `libGGPO.dll` (proposed) or ship
-  the MinGW runtime DLLs alongside it.
 - Whether the x86 MinGW download should wait for a 32-bit UCRT toolchain
   instead of using MSVCRT (proposed: ship MSVCRT now, documented).
