@@ -69,6 +69,29 @@ are named `linux-linux` etc., and Vector War scenarios `vectorwar-linux-linux`
 etc. Each scenario expands into a role-1 host job and a role-2 coordinator job,
 producing sixteen native execution jobs (eight per fixture).
 
+### Why each scenario has two jobs
+
+A scenario is two GGPO peers on two different hosts, and every GitHub Actions
+job runs on its own runner, so each peer needs its own job. Mixed scenarios
+also need two operating systems at once, which one runner cannot provide.
+Same-OS scenarios use two runners as well, so every scenario sends real
+traffic between hosts rather than over loopback.
+
+The two jobs are deliberately asymmetric:
+
+| | Role 1 (`player1`) | Role 2 (`player2`) |
+| --- | --- | --- |
+| Peer | Runs player 1 | Runs player 2 |
+| Startup | Publishes its tailnet address, then waits | Discovers role 1 and connects to it |
+| Control | Executes authenticated requests | Decides when to start, finalize, collect, and shut down |
+| Result | Uploads its own log | Validates both peers and writes the scenario report |
+
+One side must decide when both peers have converged; making role 2 the single
+coordinator avoids two jobs racing to that decision. Only role-2 reports feed
+the final manifest, and "Complete native E2E matrix" is the single check that
+summarizes all scenarios. Because each mixed pair also runs in reverse order
+(LW and WL), each operating system serves in both roles.
+
 ## Components
 
 | Component | Responsibility | Source |
