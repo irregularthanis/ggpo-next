@@ -11,6 +11,14 @@ set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
 include(src/cmake/properties.cmake)
 include(src/cmake/helper_methods.cmake)
 
+# 32-bit GCC defaults to x87 floating point (80-bit intermediates), which rounds
+# differently from SSE2 used by MSVC x86, every x64 compiler, and Linux. Match
+# them so deterministic simulations agree across peers. MSVC x86 already
+# requires SSE2 by default.
+if(MINGW AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+	add_compile_options(-msse2 -mfpmath=sse)
+endif()
+
 if(WIN32)
 	## Prevent the CMake trying to install GGPO in Program Files on Windows
 	if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)

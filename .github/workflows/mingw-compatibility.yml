@@ -36,6 +36,7 @@ jobs:
             mingw-w64-${{ matrix.env }}-ninja
             mingw-w64-${{ matrix.env }}-python
             mingw-w64-${{ matrix.env }}-binutils
+            diffutils
 
       - name: Record the toolchain
         run: |
