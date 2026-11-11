@@ -62,7 +62,8 @@ Parallel with M2.
   and running Vector War; VectorWar.md.
 - [x] M5-T05: CI exercises the documented Android build and consumer commands.
 - [x] M5-T03: Build.md, Testing.md, CrossPlatformTesting.md, VectorWar.md, README.
-- [ ] M5-T04: Android checks added to the ruleset and branch protection.
+- [x] M5-T04: Stable Android and native E2E aggregate checks added to the
+  `master` ruleset and branch protection.
 
 ## Evidence ledger
 
@@ -85,6 +86,7 @@ Parallel with M2.
 | Vector War headless | Same run | `VectorWarHeadless` builds for Android; `vectorwar_headless_loopback` and negative contracts pass natively on all ABIs, arm64 Debug, and both emulators |
 | M5-T01 | [Release dry run 43037303201](https://github.com/irregularthanis/ggpo-next/actions/runs/43037303201) (`c45c0e4`) | Multi-ABI Android SDK archive and Vector War APK packaged successfully alongside every existing release artifact |
 | M1-T05, M4-T02, M5-T00, M5-T05 | [PR qualification 43058914867](https://github.com/irregularthanis/ggpo-next/actions/runs/43058914867), attempt 3 (`4c1c24a`) | Existing platform checks pass; complete native generic/Vector War matrix passes with Android; documented ABI, emulator, consumer and packaging commands are exercised |
+| M5-T04 | [`Master PR and CI baseline` ruleset](https://github.com/irregularthanis/ggpo-next/rules/26776893), `09a843a` | `Complete Android compatibility` and `Complete native E2E matrix` are required on `master`; each aggregates its full matrix and preserves the documentation-only fast path |
 
 ## Decisions
 
