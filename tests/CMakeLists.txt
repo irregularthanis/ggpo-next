@@ -35,9 +35,8 @@ function(ggpo_configure_test target)
         ${PROJECT_SOURCE_DIR}/src/lib/ggpo
         ${CMAKE_CURRENT_SOURCE_DIR}/smoke
     )
-    if(BUILD_SHARED_LIBS)
-        target_compile_definitions(${target} PRIVATE GGPO_SHARED_LIB)
-    endif()
+    # GGPO_SHARED_LIB (Windows dllimport) arrives through GGPO::shared's
+    # interface, so tests linked to GGPO::static never receive it.
 endfunction()
 
 # Configure fixtures that compile GGPO sources directly into a static target.
@@ -100,11 +99,11 @@ else()
     set_tests_properties(linux_packet_layout PROPERTIES LABELS "native;abi;protocol")
 
     # Shared builds freeze the dynamic ggpo_* export set like the DLL manifest.
-    if(BUILD_SHARED_LIBS)
+    if(TARGET GGPO_shared)
         add_test(NAME linux_exports
             COMMAND ${PYTHON_EXECUTABLE}
                     ${CMAKE_CURRENT_SOURCE_DIR}/baseline/linux/check_exports.py
-                    $<TARGET_FILE:GGPO>
+                    $<TARGET_FILE:GGPO_shared>
                     ${CMAKE_CURRENT_SOURCE_DIR}/baseline/linux/exports.txt
         )
         set_tests_properties(linux_exports PROPERTIES LABELS "native;abi")
@@ -168,6 +167,46 @@ set_tests_properties(${GGPO_SMOKE_PREFIX}_peer_negative_contracts PROPERTIES
     TIMEOUT 45
     LABELS "native;negative"
 )
+
+# When both flavors are built, GGPO::GGPO is the shared library.  Run the
+# runtime smokes against the static library too so each lane covers both.
+if(TARGET GGPO_shared AND TARGET GGPO_static)
+    set(GGPO_STATIC_SYNCTEST_TARGET ggpo_${GGPO_SMOKE_PREFIX}_static_synctest_smoke)
+    add_executable(${GGPO_STATIC_SYNCTEST_TARGET}
+        smoke/synctest_smoke.cpp
+        ${GGPO_SMOKE_COMMON}
+    )
+    ggpo_configure_test(${GGPO_STATIC_SYNCTEST_TARGET})
+    target_link_libraries(${GGPO_STATIC_SYNCTEST_TARGET} PRIVATE GGPO::static)
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/static-synctest)
+    add_test(NAME ${GGPO_SMOKE_PREFIX}_static_synctest_smoke
+        COMMAND ${GGPO_STATIC_SYNCTEST_TARGET})
+    set_tests_properties(${GGPO_SMOKE_PREFIX}_static_synctest_smoke PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/static-synctest
+        TIMEOUT 60
+        LABELS "native;core;static"
+    )
+
+    set(GGPO_STATIC_PEER_TARGET ggpo_${GGPO_SMOKE_PREFIX}_static_peer_smoke)
+    add_executable(${GGPO_STATIC_PEER_TARGET}
+        smoke/peer_smoke.cpp
+        ${GGPO_SMOKE_COMMON}
+    )
+    ggpo_configure_test(${GGPO_STATIC_PEER_TARGET})
+    target_link_libraries(${GGPO_STATIC_PEER_TARGET} PRIVATE GGPO::static)
+    add_test(NAME ${GGPO_SMOKE_PREFIX}_static_peer_loopback
+        COMMAND ${PYTHON_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/smoke/run_peer_smoke.py
+                $<TARGET_FILE:${GGPO_STATIC_PEER_TARGET}>
+                --frames 180
+    )
+    set_tests_properties(${GGPO_SMOKE_PREFIX}_static_peer_loopback PROPERTIES
+        TIMEOUT 90
+        LABELS "native;network;static"
+    )
+    set(GGPO_STATIC_RUNTIME_TEST_TARGETS
+        ${GGPO_STATIC_SYNCTEST_TARGET} ${GGPO_STATIC_PEER_TARGET})
+endif()
 
 # Build the production rollback core against a deterministic adapter. This is
 # intentionally a separate static library: it proves SyncTest does not acquire
@@ -411,6 +450,9 @@ if(TARGET VectorWarHeadless)
 endif()
 if(TARGET ggpo_vectorwar_win32_host_contract)
     list(APPEND GGPO_PORTABLE_TEST_TARGETS ggpo_vectorwar_win32_host_contract)
+endif()
+if(GGPO_STATIC_RUNTIME_TEST_TARGETS)
+    list(APPEND GGPO_PORTABLE_TEST_TARGETS ${GGPO_STATIC_RUNTIME_TEST_TARGETS})
 endif()
 if(TARGET ggpo_vectorwar_sdl_host_contract)
     list(APPEND GGPO_PORTABLE_TEST_TARGETS ggpo_vectorwar_sdl_host_contract)

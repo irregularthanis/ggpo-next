@@ -27,19 +27,18 @@ application integration or use the repository container when developing Linux.
 
 ### Option 1: use a release SDK
 
-Download the archive matching the application's architecture and linkage from
-[GGPO Next Releases](https://github.com/irregularthanis/ggpo-next/releases):
+Download the archive matching the application's platform and architecture from
+[GGPO Next Releases](https://github.com/irregularthanis/ggpo-next/releases).
+Every SDK contains **both** the shared and the static library; the application
+chooses one when it links (see
+[Link GGPO into an application](#link-ggpo-into-an-application)).
 
-| Archive suffix | Use it when |
+| Archive | Use it when |
 | --- | --- |
-| `windows-x64-shared` | The application is 64-bit and deploys `GGPO.dll` |
-| `windows-x64-static` | The application is 64-bit and links GGPO into its executable |
-| `windows-x86-shared` | The application is 32-bit and deploys `GGPO.dll` |
-| `windows-x86-static` | The application is 32-bit and links GGPO into its executable |
-| `linux-x86_64-shared.deb` / `.rpm` | Install the shared SDK system-wide on a Debian- or RPM-family distribution |
-| `linux-x86_64-static.deb` / `.rpm` | Install the static SDK system-wide on a Debian- or RPM-family distribution |
-| [`linux-x86_64-shared.tar.gz`](#linux-raw-sdk-targz) | Extract a relocatable shared SDK without a package manager |
-| [`linux-x86_64-static.tar.gz`](#linux-raw-sdk-targz) | Extract a relocatable static SDK without a package manager |
+| `ggpo-0.4.0-windows-x64.zip` | The application is 64-bit Windows |
+| `ggpo-0.4.0-windows-x86.zip` | The application is 32-bit Windows |
+| `ggpo-0.4.0-linux-x86_64.deb` / `.rpm` | Install system-wide on a Debian- or RPM-family distribution |
+| [`ggpo-0.4.0-linux-x86_64.tar.gz`](#linux-raw-sdk-targz) | Extract a relocatable SDK without a package manager |
 
 Extract the ZIP to a stable location such as `C:/ggpo-sdk`. Each release archive
 is an installed CMake package rather than a source tree:
@@ -47,8 +46,10 @@ is an installed CMake package rather than a source tree:
 ```text
 C:/ggpo-sdk/
 ├── include/ggponet.h
-├── bin/GGPO.dll                  # shared archive only
-├── lib/GGPO.lib
+├── bin/GGPO.dll                  # shared library (runtime)
+├── lib/GGPO.lib                  # import library for GGPO.dll
+├── lib/libGGPO.lib               # static library
+├── lib/*.pdb                     # debug symbols
 ├── lib/cmake/GGPO/
 └── share/GGPO/
 ```
@@ -61,9 +62,17 @@ cmake --build build --config Release --parallel
 ```
 
 The release page also provides `SHA256SUMS`. Compare the archive's
-`Get-FileHash -Algorithm SHA256` result before extracting it. Shared builds must
-place `C:/ggpo-sdk/bin/GGPO.dll` beside the application executable or otherwise
-make that directory available to the Windows loader.
+`Get-FileHash -Algorithm SHA256` result before extracting it.
+
+Windows SDKs are Release builds that use the dynamic C runtime (`/MD`):
+
+- **Dynamic:** `GGPO.dll` works with Debug and Release applications alike.
+- **Static:** `libGGPO.lib` links only into applications that also use `/MD`
+  (Release or RelWithDebInfo). MSVC rejects it in a Debug (`/MDd`) or `/MT`
+  build with a runtime-library mismatch (`LNK2038`). For a Debug static build,
+  either link the DLL in Debug configurations or
+  [build GGPO from source](#option-3-build-windows-from-source) with
+  `--config Debug`.
 
 ### Run the standalone Vector War sample
 
@@ -91,30 +100,20 @@ sample archives include the license and the detailed
 
 #### Linux DEB and RPM
 
-Install the package matching the required linkage:
-
 ```bash
-# Debian or Ubuntu, shared SDK
-sudo apt install ./ggpo-0.3.0-linux-x86_64-shared.deb
-# Debian or Ubuntu, static SDK
-sudo apt install ./ggpo-0.3.0-linux-x86_64-static.deb
-
-# Fedora or another RPM-family system, shared SDK
-sudo dnf install ./ggpo-0.3.0-linux-x86_64-shared.rpm
-# Fedora or another RPM-family system, static SDK
-sudo dnf install ./ggpo-0.3.0-linux-x86_64-static.rpm
+# Debian or Ubuntu
+sudo apt install ./ggpo-0.4.0-linux-x86_64.deb
+# Fedora or another RPM-family system
+sudo dnf install ./ggpo-0.4.0-linux-x86_64.rpm
 ```
 
-Run one command for the chosen package format and linkage, not both linkage
-variants on the same system.
-The DEB and RPM install under `/usr`; shared and static packages conflict by
-design because they own the same headers and CMake metadata. After installation,
-ordinary `find_package(GGPO CONFIG REQUIRED)` resolves the SDK without an
-additional prefix.
+The package is named `ggpo-sdk` and installs under `/usr`: the public header in
+`/usr/include`, `libGGPO.so*`, `libGGPO.a` and the CMake metadata in `/usr/lib`,
+and license/readme files in `/usr/share/GGPO`. Ordinary
+`find_package(GGPO CONFIG REQUIRED)` finds it without an additional prefix.
 
-Their installed files mirror the raw SDK below under `/usr`: the public header
-in `/usr/include`, libraries and CMake metadata in `/usr/lib`, and license/readme
-files in `/usr/share/GGPO`.
+Upgrading from 0.3.0 replaces whichever of `ggpo-sdk-shared` or
+`ggpo-sdk-static` is installed.
 
 #### Linux raw SDK (`tar.gz`)
 
@@ -122,59 +121,44 @@ Use the raw archive for an unprivileged, application-local, or CI installation:
 
 ```bash
 sha256sum --check SHA256SUMS --ignore-missing
-tar -xzf ggpo-0.3.0-linux-x86_64-shared.tar.gz
-cmake -S . -B build \
-  -DCMAKE_PREFIX_PATH="$PWD/ggpo-0.3.0-linux-x86_64-shared"
+tar -xzf ggpo-0.4.0-linux-x86_64.tar.gz
+cmake -S . -B build -DCMAKE_PREFIX_PATH="$PWD/ggpo-0.4.0-linux-x86_64"
 cmake --build build --parallel
 ```
 
-The extracted shared SDK contains:
+The extracted SDK contains:
 
 ```text
-ggpo-0.3.0-linux-x86_64-shared/
+ggpo-0.4.0-linux-x86_64/
 ├── include/ggponet.h
 ├── lib/libGGPO.so -> libGGPO.so.0
-├── lib/libGGPO.so.0 -> libGGPO.so.0.3.0
-├── lib/libGGPO.so.0.3.0
+├── lib/libGGPO.so.0 -> libGGPO.so.0.4.0
+├── lib/libGGPO.so.0.4.0
+├── lib/libGGPO.a
 ├── lib/cmake/GGPO/
 └── share/GGPO/
     ├── LICENSE
     └── README.md
 ```
 
-The static archive has the same layout and consumer metadata, but replaces the
-three shared-library entries with `lib/libGGPO.a`.
-
-The shared archive contains `lib/libGGPO.so.0`; deploy that library with the
-application and make its directory available to the loader, for example with
-an application-relative RPATH. The static archive contains `lib/libGGPO.a` and
-does not require a GGPO runtime library.
-
-All Linux release formats contain the same public header and CMake target. The
-package format controls installation; `shared` versus `static` controls how the
-application links and deploys GGPO.
+All Linux formats contain the same files. The package format only controls how
+the SDK is installed.
 
 ### Option 2: build Linux with the CI container
 
 Install Docker, then run the same Ubuntu 24.04 image used by Linux CI:
 
 ```bash
-# Build and install the shared SDK.
 python3 scripts/linux/build_in_container.py \
-  --compiler gcc --library shared --packages \
-  --out build/linux-gcc-shared
-
-# Build and install the static SDK.
-python3 scripts/linux/build_in_container.py \
-  --compiler gcc --library static --packages \
-  --out build/linux-gcc-static
+  --compiler gcc --packages --out build/linux-gcc
 ```
 
-Each installed CMake package is written to its output's `install` directory;
-verified DEB, RPM, and raw artifacts are written to `packages`. Select `clang`
-with `--compiler clang` when testing that toolchain.
+This builds, tests and installs both libraries into `build/linux-gcc/install`;
+verified DEB, RPM, and raw artifacts are written to `build/linux-gcc/packages`.
+Select `clang` with `--compiler clang`. `--library shared` or `--library static`
+builds a single flavor instead.
 
-Run the extended static-library sanitizer qualification with the same image:
+Run the extended sanitizer qualification with the same image:
 
 ```bash
 python3 scripts/linux/build_in_container.py \
@@ -183,7 +167,8 @@ python3 scripts/linux/build_in_container.py \
 ```
 
 This instruments production GGPO objects, all registered tests, and the
-installed C11/C++98 consumers with ASan and UBSan.
+installed C11/C++98 consumers with ASan and UBSan. Sanitizer runs use the static
+library only.
 
 ### Option 3: build Windows from source
 
@@ -191,29 +176,34 @@ Install Visual Studio 2022 with the Desktop development with C++ workload,
 CMake, and Python 3. From a Developer PowerShell prompt in the source checkout:
 
 ```powershell
-# Build and install the shared SDK.
-cmake -S . -B build/shared -G "Visual Studio 17 2022" -A x64 `
-  -DBUILD_SHARED_LIBS=ON `
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
   -DGGPO_BUILD_SDK=ON `
   -DGGPO_BUILD_VECTORWAR=ON
-cmake --build build/shared --config Release --parallel
-cmake --install build/shared --config Release --prefix C:/ggpo-sdk-shared
-
-# Build and install the static SDK.
-cmake -S . -B build/static -G "Visual Studio 17 2022" -A x64 `
-  -DBUILD_SHARED_LIBS=OFF `
-  -DGGPO_BUILD_SDK=ON `
-  -DGGPO_BUILD_VECTORWAR=ON
-cmake --build build/static --config Release --parallel
-cmake --install build/static --config Release --prefix C:/ggpo-sdk-static
+cmake --build build --config Release --parallel
+cmake --install build --config Release --prefix C:/ggpo-sdk
 ```
 
-Change `-A x64` to `-A Win32` for a 32-bit SDK. The normal build runs every
-registered core, API, protocol, platform, native, and compatibility test. Use
-`-DGGPO_RUN_TESTS_ON_BUILD=OFF` only when test execution must be explicit, or
-`-DBUILD_TESTING=OFF` for a consumer/packaging-only build.
+Change `-A x64` to `-A Win32` for a 32-bit SDK. The install contains both
+`GGPO.dll` (with its `GGPO.lib` import library) and `libGGPO.lib`.
 
-### Use the installed SDK from an application
+To build only one flavor, add `-DBUILD_SHARED_LIBS=ON` (shared only) or
+`-DBUILD_SHARED_LIBS=OFF` (static only), or set `GGPO_BUILD_SHARED` /
+`GGPO_BUILD_STATIC` individually. The normal build runs every registered test.
+Use `-DGGPO_RUN_TESTS_ON_BUILD=OFF` only when test execution must be explicit,
+or `-DBUILD_TESTING=OFF` for a consumer/packaging-only build.
+
+### Link GGPO into an application
+
+Every SDK installs two libraries. The application chooses one per target:
+
+| | Dynamic (shared) | Static |
+| --- | --- | --- |
+| Windows | `GGPO.dll` + import library `GGPO.lib` | `libGGPO.lib` |
+| Linux | `libGGPO.so.0` | `libGGPO.a` |
+| What you ship | The application **and** the GGPO runtime library | The application only |
+| Updating GGPO | Replace the runtime library (same major version) | Relink the application |
+
+The public header and API are identical for both.
 
 For an application named `application_x`, include the public header in source:
 
@@ -228,7 +218,7 @@ int main()
 }
 ```
 
-Then consume the installed CMake package in the application's `CMakeLists.txt`:
+#### With CMake
 
 ```cmake
 cmake_minimum_required(VERSION 3.10)
@@ -239,40 +229,86 @@ add_executable(application_x main.cpp)
 target_link_libraries(application_x PRIVATE GGPO::GGPO)
 ```
 
-For a DEB or RPM installation, configure normally because GGPO is under `/usr`:
+`GGPO::GGPO` links the **shared** library by default. To link statically, set
+`GGPO_USE_STATIC` when configuring; the application's `CMakeLists.txt` does not
+change:
 
 ```bash
-cmake -S . -B build
-cmake --build build --parallel
+# Dynamic (default)
+cmake -S . -B build-shared -DCMAKE_PREFIX_PATH=/path/to/ggpo-sdk
+# Static
+cmake -S . -B build-static -DCMAKE_PREFIX_PATH=/path/to/ggpo-sdk \
+  -DGGPO_USE_STATIC=ON
 ```
 
-For an extracted tarball or a source-built SDK, identify its install prefix:
+Omit `CMAKE_PREFIX_PATH` for a DEB or RPM installation. A project can also name
+a flavor directly, or require one when finding the package:
 
-```bash
-# Compile the application against the extracted shared SDK.
-cmake -S . -B build-shared \
-  -DCMAKE_PREFIX_PATH=/path/to/ggpo-0.3.0-linux-x86_64-shared
-cmake --build build-shared --parallel
-
-# Compile the same application against the extracted static SDK.
-cmake -S . -B build-static \
-  -DCMAKE_PREFIX_PATH=/path/to/ggpo-0.3.0-linux-x86_64-static
-cmake --build build-static --parallel
+```cmake
+find_package(GGPO CONFIG REQUIRED COMPONENTS static)
+target_link_libraries(application_x PRIVATE GGPO::static)   # or GGPO::shared
 ```
 
-The application source and CMake target do not change. The selected prefix makes
-`GGPO::GGPO` resolve to `libGGPO.so` or `libGGPO.a` and supplies required system
-link dependencies. With the raw shared SDK during development, expose its
-runtime library when launching:
+The CMake targets carry everything else: the include directory, the Windows
+system libraries (`ws2_32`, `winmm`), and on Windows the `GGPO_SHARED_LIB`
+definition that the shared library needs (see below). Link one flavor per
+executable, not both.
 
-```bash
-LD_LIBRARY_PATH=/path/to/ggpo-0.3.0-linux-x86_64-shared/lib \
-  ./build-shared/application_x
-```
+#### Deploy a dynamically linked application
 
-For distribution, ship `libGGPO.so.0` with a shared application and configure
-an application-relative RPATH, or use the static SDK so GGPO is incorporated
-into `application_x` and no GGPO runtime library is required.
+- **Windows:** copy `bin/GGPO.dll` next to `application_x.exe`. For
+  development, adding the SDK's `bin` directory to `PATH` is enough.
+- **Linux:** ship `libGGPO.so.0` with the application and set an
+  application-relative RPATH, for example:
+
+  ```cmake
+  set_target_properties(application_x PROPERTIES
+      INSTALL_RPATH "$ORIGIN/../lib")
+  ```
+
+  During development, `LD_LIBRARY_PATH=/path/to/ggpo-sdk/lib ./application_x`
+  also works. DEB and RPM installations need neither.
+
+A statically linked application needs no GGPO file at run time.
+
+#### Without CMake
+
+Pass the include directory and the library directly. On Windows, the shared
+library requires `GGPO_SHARED_LIB` so the header imports its functions from
+`GGPO.dll`; the static library must **not** define it.
+
+| | Dynamic | Static |
+| --- | --- | --- |
+| MSVC | `cl /I C:\ggpo-sdk\include /DGGPO_SHARED_LIB main.cpp /link /LIBPATH:C:\ggpo-sdk\lib GGPO.lib` | `cl /MD /I C:\ggpo-sdk\include main.cpp /link /LIBPATH:C:\ggpo-sdk\lib libGGPO.lib ws2_32.lib winmm.lib` |
+| GCC/Clang (Linux) | `g++ -I/path/to/ggpo-sdk/include main.cpp -L/path/to/ggpo-sdk/lib -lGGPO -Wl,-rpath,'$ORIGIN'` | `g++ -I/path/to/ggpo-sdk/include main.cpp /path/to/ggpo-sdk/lib/libGGPO.a` |
+
+GGPO is written in C++. A C application that links `libGGPO.a` statically must
+use the C++ compiler driver (`g++`/`clang++`) for its final link step, or add
+`-lstdc++`. CMake does this automatically.
+
+#### Choosing a flavor
+
+- **Dynamic** keeps the executable smaller and lets several programs, or a
+  GGPO update, share one library. You must ship and locate the runtime file.
+- **Static** produces one self-contained executable with nothing to deploy and
+  no version mismatch at run time. Updating GGPO means relinking.
+
+GGPO is MIT licensed, so either flavor may be distributed in closed-source
+applications; include the license text from `share/GGPO/LICENSE` either way.
+
+#### Upgrading from 0.3.0
+
+| 0.3.0 download | 0.4.0 download |
+| --- | --- |
+| `windows-x64-shared.zip` / `windows-x64-static.zip` | `windows-x64.zip` |
+| `windows-x86-shared.zip` / `windows-x86-static.zip` | `windows-x86.zip` |
+| `linux-x86_64-shared.{deb,rpm,tar.gz}` / `linux-x86_64-static.{deb,rpm,tar.gz}` | `linux-x86_64.{deb,rpm,tar.gz}` |
+
+Projects that linked `GGPO::GGPO` against a **static** 0.3.0 SDK should add
+`-DGGPO_USE_STATIC=ON`, because the combined SDK defaults to shared.
+`GGPOTargets.cmake` is now split into `GGPOSharedTargets.cmake` and
+`GGPOStaticTargets.cmake`; include `GGPOConfig.cmake` (via `find_package`)
+rather than either file directly.
 
 See the [build architecture](architecture/Build.md#install-layout) for the
 canonical layout and the [release workflow](architecture/Build.md#release-packages)

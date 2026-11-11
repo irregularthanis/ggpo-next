@@ -31,8 +31,10 @@ if ($baselineRunners.Count -ne 1) {
     -EvidenceDirectory $baselineEvidence
 if ($LASTEXITCODE -ne 0) { throw "Frozen Windows baseline qualification failed" }
 
+# The candidate is the dual build; its DLL exports and layouts must still
+# match the shared-only frozen baseline.
 & (Join-Path $PSScriptRoot "windows_compatibility_baseline.ps1") `
-    -Architecture x64 -Shared ON -Configuration Release `
+    -Architecture x64 -Shared BOTH -Configuration Release `
     -Generator $Generator -BuildDirectory $candidateBuild `
     -EvidenceDirectory $candidateEvidence
 if ($LASTEXITCODE -ne 0) { throw "Candidate qualification failed" }

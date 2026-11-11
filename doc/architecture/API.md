@@ -20,14 +20,18 @@
 The complete public declaration is [`src/include/ggponet.h`](../../src/include/ggponet.h),
 implemented by [`src/lib/ggpo/main.cpp`](../../src/lib/ggpo/main.cpp). Include it
 from C11 or C++98 and link `GGPO::GGPO` from the installed CMake package. Both
-language paths resolve the same C-linkage exports.
+language paths resolve the same C-linkage exports, and the same API is
+available from the shared and the static library; see
+[Link GGPO into an application](../DeveloperGuide.md#link-ggpo-into-an-application).
 
 This page reflects the source; the older [Developer Guide](../DeveloperGuide.md)
 contains useful integration guidance but some example names differ from the header.
 
 ## Language and ABI contract
 
-`GGPO_API` controls DLL import/export visibility. `GGPO_CALL` expands to
+`GGPO_API` controls DLL import/export visibility. On Windows, consumers of
+`GGPO.dll` must define `GGPO_SHARED_LIB` (the `GGPO::shared` CMake target does
+this); consumers of `libGGPO.lib` must not. `GGPO_CALL` expands to
 `__cdecl` on Windows and to the platform's default C convention elsewhere; it
 decorates both exported functions and application callback slots. C includes
 `<stdbool.h>`, while C++ continues to use its built-in `bool`.

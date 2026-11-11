@@ -1,3 +1,50 @@
 @PACKAGE_INIT@
 
-include("${CMAKE_CURRENT_LIST_DIR}/GGPOTargets.cmake")
+# An install may contain the shared library, the static library, or both.
+#
+#   GGPO::shared  shared library (GGPO.dll + GGPO.lib, or libGGPO.so)
+#   GGPO::static  static library (libGGPO.lib, or libGGPO.a)
+#   GGPO::GGPO    default: shared when installed, otherwise static.
+#                 Set GGPO_USE_STATIC=ON to select static, OFF to require shared.
+#
+# find_package(GGPO COMPONENTS shared static) fails if a requested flavor is
+# not installed.
+
+set(GGPO_shared_FOUND FALSE)
+set(GGPO_static_FOUND FALSE)
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/GGPOSharedTargets.cmake")
+	include("${CMAKE_CURRENT_LIST_DIR}/GGPOSharedTargets.cmake")
+	set(GGPO_shared_FOUND TRUE)
+endif()
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/GGPOStaticTargets.cmake")
+	include("${CMAKE_CURRENT_LIST_DIR}/GGPOStaticTargets.cmake")
+	set(GGPO_static_FOUND TRUE)
+endif()
+
+if(NOT TARGET GGPO::GGPO)
+	if(DEFINED GGPO_USE_STATIC)
+		if(GGPO_USE_STATIC)
+			set(_ggpo_flavor static)
+		else()
+			set(_ggpo_flavor shared)
+		endif()
+		if(NOT GGPO_${_ggpo_flavor}_FOUND)
+			set(GGPO_FOUND FALSE)
+			set(GGPO_NOT_FOUND_MESSAGE
+				"GGPO_USE_STATIC=${GGPO_USE_STATIC} requested the ${_ggpo_flavor} library, which is not installed in ${PACKAGE_PREFIX_DIR}")
+			unset(_ggpo_flavor)
+			return()
+		endif()
+	elseif(GGPO_shared_FOUND)
+		set(_ggpo_flavor shared)
+	else()
+		set(_ggpo_flavor static)
+	endif()
+	add_library(GGPO::GGPO INTERFACE IMPORTED)
+	set_target_properties(GGPO::GGPO PROPERTIES
+		INTERFACE_LINK_LIBRARIES GGPO::${_ggpo_flavor})
+	set(GGPO_LINKAGE ${_ggpo_flavor})
+	unset(_ggpo_flavor)
+endif()
+
+check_required_components(GGPO)

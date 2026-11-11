@@ -37,3 +37,44 @@ jobs:
           name: linux-clang-asan-ubsan
           path: build/linux-sanitizers/build/Testing
           if-no-files-found: error
+
+  windows-asan:
+    # Replaces the memory checking the dropped Windows Debug lanes provided.
+    name: Windows MSVC AddressSanitizer (x64)
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instrument production GGPO and run all tests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          # Static GGPO (no DLL boundary) built Release with /fsanitize=address.
+          # CMAKE_*_FLAGS replace CMake's MSVC defaults, so restate them.
+          $flags = "/DWIN32 /D_WINDOWS /EHsc /GR /fsanitize=address /Zi"
+          cmake -S . -B build/windows-asan -G "Visual Studio 17 2022" -A x64 `
+            -DBUILD_SHARED_LIBS=OFF `
+            -DGGPO_BUILD_VECTORWAR=ON `
+            -DGGPO_RUN_TESTS_ON_BUILD=OFF `
+            -DBUILD_TESTING=ON `
+            "-DCMAKE_C_FLAGS=$flags" `
+            "-DCMAKE_CXX_FLAGS=$flags"
+          cmake --build build/windows-asan --config Release --parallel
+
+          # /MD binaries load the ASan runtime DLL from the MSVC toolset.
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio/Installer/vswhere.exe"
+          $runtime = & $vswhere -latest -products * `
+            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -find "VC\Tools\MSVC\**\bin\Hostx64\x64\clang_rt.asan_dynamic-x86_64.dll" |
+            Select-Object -Last 1
+          if (!$runtime) { throw "MSVC AddressSanitizer runtime not found" }
+          $env:PATH = "$(Split-Path $runtime);$env:PATH"
+          $env:ASAN_OPTIONS = "halt_on_error=1:detect_stack_use_after_return=1"
+          ctest --test-dir build/windows-asan -C Release --output-on-failure
+      - name: Upload sanitizer test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-msvc-asan
+          path: build/windows-asan/Testing
+          if-no-files-found: warn

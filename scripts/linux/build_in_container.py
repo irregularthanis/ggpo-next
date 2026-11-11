@@ -19,7 +19,9 @@ def run(command, **kwargs):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--compiler", choices=("gcc", "clang"), default="gcc")
-    parser.add_argument("--library", choices=("static", "shared"), default="shared")
+    parser.add_argument("--library", choices=("both", "static", "shared"),
+                        default="both",
+                        help="both installs libGGPO.so and libGGPO.a together")
     parser.add_argument("--out", type=Path)
     parser.add_argument("--image", default="ggpo-linux-ci:local")
     parser.add_argument("--skip-image-build", action="store_true")
@@ -29,6 +31,11 @@ def main():
                         help="instrument GGPO and tests with ASan and UBSan")
     parser.add_argument("--jobs", type=int, default=max(1, os.cpu_count() or 1))
     args = parser.parse_args()
+
+    # An instrumented libGGPO.so needs the sanitizers' C++ runtime in every
+    # C consumer link; the qualification target is the static library.
+    if args.sanitizers and args.library != "static":
+        parser.error("--sanitizers requires --library static")
 
     if shutil.which("docker") is None:
         parser.error("Docker is required but was not found in PATH")
@@ -53,10 +60,14 @@ def main():
 
     cc, cxx = (("gcc", "g++") if args.compiler == "gcc"
                else ("clang", "clang++"))
-    shared = "ON" if args.library == "shared" else "OFF"
+    linkage_flag = {
+        "both": "",
+        "shared": "-DBUILD_SHARED_LIBS=ON ",
+        "static": "-DBUILD_SHARED_LIBS=OFF ",
+    }[args.library]
     sanitizer_flags = ""
+    flags = "-fsanitize=address,undefined -fno-omit-frame-pointer"
     if args.sanitizers:
-        flags = "-fsanitize=address,undefined -fno-omit-frame-pointer"
         sanitizer_flags = (
             f"-DCMAKE_C_FLAGS='{flags}' -DCMAKE_CXX_FLAGS='{flags}' "
             f"-DCMAKE_EXE_LINKER_FLAGS='{flags}' "
@@ -65,7 +76,7 @@ def main():
     commands = [
         f"cmake -S /src -B /out/build -G Ninja "
         f"-DCMAKE_C_COMPILER={cc} -DCMAKE_CXX_COMPILER={cxx} "
-        f"-DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS={shared} "
+        f"-DCMAKE_BUILD_TYPE=Release {linkage_flag}"
         f"{sanitizer_flags}"
         "-DGGPO_BUILD_SDK=ON -DGGPO_BUILD_VECTORWAR=OFF "
         "-DGGPO_RUN_TESTS_ON_BUILD=ON -DBUILD_TESTING=ON "
@@ -73,13 +84,15 @@ def main():
         f"cmake --build /out/build --parallel {args.jobs}",
         "ctest --test-dir /out/build --output-on-failure",
         "cmake --install /out/build",
-        f"cmake -S /src/tests/consumer -B /out/consumer -G Ninja "
-        f"-DCMAKE_C_COMPILER={cc} -DCMAKE_CXX_COMPILER={cxx} "
-        f"{sanitizer_flags}"
-        "-DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/out/install",
-        f"cmake --build /out/consumer --parallel {args.jobs}",
-        "LD_LIBRARY_PATH=/out/install/lib /out/consumer/ggpo_installed_c11",
-        "LD_LIBRARY_PATH=/out/install/lib /out/consumer/ggpo_installed_cpp98",
+        # Every installed linkage: default, GGPO_USE_STATIC=ON, GGPO::shared.
+        f"python3 /src/tests/consumer/verify_consumers.py "
+        f"--prefix /out/install --work /out/consumer "
+        f"--generator Ninja --cc {cc} --cxx {cxx} --jobs {args.jobs} "
+        f"--report /out/consumer/consumers.json"
+        + (f" --cmake-arg=-DCMAKE_C_FLAGS='{flags}' "
+           f"--cmake-arg=-DCMAKE_CXX_FLAGS='{flags}' "
+           f"--cmake-arg=-DCMAKE_EXE_LINKER_FLAGS='{flags}'"
+           if args.sanitizers else ""),
     ]
     if not args.sanitizers:
         commands.append("python3 /src/scripts/ci/audit_linux_sdk.py /out/install")

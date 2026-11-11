@@ -50,14 +50,16 @@ Apple and other unsupported SDK targets fail configuration explicitly.
 Choose either:
 
 - **Release SDK:** download a tested Windows ZIP or Linux x86-64 DEB, RPM, or
-  raw tar.gz package, with shared or static linkage, from
+  raw tar.gz package from
   [Releases](https://github.com/irregularthanis/ggpo-next/releases). This is the
   shortest path for application developers.
 - **Source build:** use CMake directly on Windows or the repository's Ubuntu
   24.04 Docker image on Linux when changing GGPO or running its tests.
 
-Both options provide `ggponet.h` and the `GGPO::GGPO` CMake target. Selection,
-installation, shared-library deployment, and source-build commands are in the
+Every SDK contains both the shared and the static library. Applications link
+`GGPO::GGPO` (shared by default) and choose static with `-DGGPO_USE_STATIC=ON`.
+Installation, linking each flavor with or without CMake, runtime deployment,
+and source-build commands are in the
 [Developer Guide](doc/DeveloperGuide.md#install-the-sdk).
 
 ## Sample Application
