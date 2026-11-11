@@ -19,6 +19,13 @@ if(MINGW AND CMAKE_SIZEOF_VOID_P EQUAL 4)
 	add_compile_options(-msse2 -mfpmath=sse)
 endif()
 
+# Android (ARM in particular) contracts a*b+c into fused multiply-add, which
+# rounds differently from x86 and broke Vector War's frozen checksum on arm64.
+# Apply to every target: library, tests, and samples.
+if(ANDROID)
+	add_compile_options(-ffp-contract=off)
+endif()
+
 if(WIN32)
 	## Prevent the CMake trying to install GGPO in Program Files on Windows
 	if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)

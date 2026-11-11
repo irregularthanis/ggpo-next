@@ -1,0 +1,77 @@
+name: Android compatibility
+
+# The NDK runs only on x86_64 hosts, so each ABI is built on ubuntu-24.04 and
+# its full CTest suite runs on a runner that executes that ABI natively:
+# arm64-v8a on ubuntu-24.04-arm, x86_64 on ubuntu-24.04. Test executables are
+# linked statically (bionic included), so they run on the runner's Linux
+# kernel without an emulator. GitHub checks out to the same path on every
+# runner, so the build tree's absolute paths stay valid for ctest.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Android build (${{ matrix.abi }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a, x86_64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cross-compile GGPO and its tests
+        run: |
+          cat "$ANDROID_NDK_LATEST_HOME/source.properties"
+          cmake -S . -B build/android -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=${{ matrix.abi }} -DANDROID_PLATFORM=21 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DGGPO_BUILD_VECTORWAR=OFF \
+            -DBUILD_TESTING=ON \
+            -DCMAKE_EXE_LINKER_FLAGS=-static
+          cmake --build build/android --parallel 4
+          file build/android/bin/*/Release/ggpo_android_peer_smoke
+      - name: Package the build tree for the test runner
+        run: tar -czf android-build.tar.gz build/android
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-build-${{ matrix.abi }}
+          path: android-build.tar.gz
+          if-no-files-found: error
+
+  test:
+    name: Android tests (${{ matrix.abi }})
+    needs: build
+    runs-on: ${{ matrix.runner }}
+    # armeabi-v7a: whether the arm64 runner executes 32-bit ARM is unknown;
+    # experimental until proven.
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {abi: arm64-v8a, runner: ubuntu-24.04-arm, experimental: false}
+          - {abi: x86_64, runner: ubuntu-24.04, experimental: false}
+          - {abi: armeabi-v7a, runner: ubuntu-24.04-arm, experimental: true}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-build-${{ matrix.abi }}
+      - name: Run the full CTest suite natively
+        run: |
+          uname -m
+          tar -xzf android-build.tar.gz
+          ctest --test-dir build/android --output-on-failure --timeout 180
+      - name: Upload test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-tests-${{ matrix.abi }}
+          path: build/android/Testing
+          if-no-files-found: warn
