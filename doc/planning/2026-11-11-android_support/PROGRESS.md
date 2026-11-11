@@ -39,9 +39,9 @@ Status: In progress
 
 Parallel with M2.
 
-- [ ] M3-T01: SDL2 frontend on Android with touch controls.
-- [ ] M3-T02: Gradle APK using the same CMake.
-- [ ] M3-T03: APK smoke run on the emulator in CI.
+- [x] M3-T01: SDL2 frontend on Android with touch controls.
+- [x] M3-T02: Gradle APK using the same CMake.
+- [x] M3-T03: APK smoke run on the emulator in CI.
 
 ### M4: E2E (depends: M2)
 
@@ -78,6 +78,8 @@ Parallel with M2.
 | M2-T04 | Same run, emulator jobs (API 21, 35) | Installed consumers built with the NDK and **run on the device** for default, `GGPO_USE_STATIC=ON` and `GGPO::shared`; static programs load without `libGGPO.so` |
 | M2-T07 | Same run: "Android tests (arm64-v8a, Debug)"; [sanitizers 42969253326](https://github.com/irregularthanis/ggpo-next/actions/runs/42969253326) | arm64 Debug full suite passes natively; Android ASan+UBSan (x86_64 emulator, runtime pushed with each test) 22/22 with no reports, alongside the Linux and MSVC sanitizer jobs |
 | M1-T05 (partial) | Same commit | Linux, MinGW, E2E and owner checks pass; Windows baseline pending at record time |
+| M3-T01–T03 | [Android compatibility 42970482329](https://github.com/irregularthanis/ggpo-next/actions/runs/42970482329) (`209def9`) | Shared SDL2 frontend built as `libmain.so` with touch controls; Gradle APK (launcher + SDLActivity, root CMake, SDL 2.30.9 from source) packs `libGGPO.so`, `libSDL2.so`, `libmain.so` for arm64-v8a, armeabi-v7a, x86_64; installed and smoke-launched on API 21 and API 35 emulators ("frontend smoke: OK" in logcat). 16/16 Android jobs pass |
+| Vector War headless | Same run | `VectorWarHeadless` builds for Android; `vectorwar_headless_loopback` and negative contracts pass natively on all ABIs, arm64 Debug, and both emulators |
 
 ## Decisions
 
