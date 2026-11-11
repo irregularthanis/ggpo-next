@@ -44,8 +44,8 @@ Parallel with M2.
 
 ### M4: Interoperability (depends: M2)
 
-- [ ] M4-T01: MinGW x64 peer build in the E2E workflow.
-- [ ] M4-T02: MinGW↔MSVC and MinGW↔Linux scenarios converge.
+- [x] M4-T01: MinGW x64 peer build in the E2E workflow.
+- [x] M4-T02: MinGW↔MSVC and MinGW↔Linux scenarios converge.
 
 ### M5: Release and docs (depends: M3, M4)
 
@@ -66,6 +66,7 @@ Parallel with M2.
 | M3-T02 | Same run | Default, `GGPO_USE_STATIC=ON` and `GGPO::shared` consumers build and run on both architectures; static consumers run without the SDK `bin` on `PATH` |
 | x86 FP | [MinGW run at `8a8e0b6`](https://github.com/irregularthanis/ggpo-next/actions/runs/42956989680) vs `3db4014` | x87 default diverged `vectorwar_state_contract` at frame 30 (2768577444 vs 3703441302); `-msse2 -mfpmath=sse` restores the frozen checksum |
 | M1-T07 | MSVC Windows, Linux and E2E runs at `8a8e0b6` and `3db4014` | All pass, including the frozen Windows baseline |
+| M4-T01, M4-T02 | [E2E run 42959262218](https://github.com/irregularthanis/ggpo-next/actions/runs/42959262218) (`d601f16`) | Static MinGW x64 peer built; `mingw-windows` and `mingw-linux` converge at 180 frames over the tailnet; final manifest passes with 10 scenarios; 24/24 jobs pass |
 | M1-T06, M3-T03, M3-T04 | [MinGW run 42958727700](https://github.com/irregularthanis/ggpo-next/actions/runs/42958727700) (`eb7c24c`), job "MinGW toolchain isolation" | MinGW project rejects the MSVC SDK and MSVC project rejects the MinGW SDK, both with the toolchain message; MinGW C program linked directly to the MSVC `GGPO.dll` imports it and runs |
 
 ## Decisions
