@@ -279,23 +279,18 @@ run, so pass `-DBUILD_TESTING=OFF` when only producing the SDK.
 
 Vector War is not built with MinGW. 32-bit MinGW builds compile with
 `-msse2 -mfpmath=sse`: GCC's x87 default rounds floating point differently from
-MSVC, x64 and Linux, which desynchronizes deterministic simulations. Compile a
-32-bit MinGW **game** with the same flags if it uses floating point in its
-simulation and plays against other platforms.
+MSVC, x64 and Linux, which desynchronizes deterministic simulations. See the
+[linkage matrix](#linkage-matrix) for what this means for a 32-bit game.
 
 ### Link GGPO into an application
 
-Every SDK installs two libraries. The application chooses one per target:
+Every SDK installs both a shared and a static library. The public header and
+API are identical; the application picks one flavor per executable.
 
 | | Dynamic (shared) | Static |
 | --- | --- | --- |
-| Windows (MSVC) | `GGPO.dll` + import library `GGPO.lib` | `libGGPO.lib` |
-| Windows (MinGW) | `libGGPO.dll` + import library `libGGPO.dll.a` | `libGGPO.a` |
-| Linux | `libGGPO.so.0` | `libGGPO.a` |
-| What you ship | The application **and** the GGPO runtime library | The application only |
+| What you ship | The application **and** the GGPO runtime library | The application (plus its own compiler runtime, see below) |
 | Updating GGPO | Replace the runtime library (same major version) | Relink the application |
-
-The public header and API are identical for both.
 
 For an application named `application_x`, include the public header in source:
 
@@ -310,7 +305,37 @@ int main()
 }
 ```
 
+#### Linkage matrix
+
+Find the row for your platform and toolchain. Each row lists the files you
+link, the compile definition, and what must be next to the executable at run
+time.
+
+| Platform / toolchain | SDK | Linkage | Link against | `GGPO_SHARED_LIB` | Runtime files to ship |
+| --- | --- | --- | --- | --- | --- |
+| Windows, MSVC / clang-cl | `windows-x64.zip`, `windows-x86.zip` | Dynamic | `lib/GGPO.lib` | Defined | `bin/GGPO.dll` |
+| | | Static | `lib/libGGPO.lib` + `ws2_32.lib winmm.lib` | **Not** defined | None. Application must use `/MD` (Release, RelWithDebInfo) |
+| Windows, MinGW-w64 GCC (MSYS2 `MINGW64` / `MINGW32` or a compatible toolchain) | `windows-x64-mingw.zip`, `windows-x86-mingw.zip` | Dynamic | `lib/libGGPO.dll.a` | Defined | `bin/libGGPO.dll` (embeds its MinGW runtime) |
+| | | Static | `lib/libGGPO.a` + `-lws2_32 -lwinmm` | **Not** defined | The application's MinGW runtime DLLs, unless linked with `-static` ([below](#mingw-fully-static-executables)) |
+| Windows, other MinGW (MSYS2 `UCRT64`, `CLANG64`, llvm-mingw) | `windows-*-mingw.zip` | Dynamic | `lib/libGGPO.dll.a` | Defined | `bin/libGGPO.dll` |
+| | | Static | Not supported with the release SDK; [build from source](#option-4-build-with-mingw-w64) with your toolchain | | |
+| Windows, any MinGW, without CMake | `windows-x64.zip`, `windows-x86.zip` (MSVC) | Dynamic | `bin/GGPO.dll` directly | Defined | `bin/GGPO.dll` |
+| Linux, GCC / Clang | `.deb`, `.rpm`, `linux-x86_64.tar.gz` | Dynamic | `lib/libGGPO.so` | Not used | `libGGPO.so.0` (packages install it system-wide) |
+| | | Static | `lib/libGGPO.a` | Not used | None besides the usual `libstdc++` |
+
+Combinations not listed fail, for example an MSVC static library in a MinGW
+application or a MinGW SDK in an MSVC project. CMake rejects a mismatched
+Windows SDK in `find_package(GGPO)` with a message naming the right download.
+MinGW static compatibility (C runtime, exception model, GCC version) is detailed
+in [MinGW static library compatibility](#mingw-static-library-compatibility).
+
+**32-bit MinGW:** GGPO builds with `-msse2 -mfpmath=sse`. Compile the game's
+simulation code with the same flags if it uses floating point and plays against
+MSVC, x64 or Linux peers; GCC's x87 default rounds differently and desyncs.
+
 #### With CMake
+
+The application's `CMakeLists.txt` is the same for every row of the matrix:
 
 ```cmake
 cmake_minimum_required(VERSION 3.10)
@@ -321,78 +346,127 @@ add_executable(application_x main.cpp)
 target_link_libraries(application_x PRIVATE GGPO::GGPO)
 ```
 
-`GGPO::GGPO` links the **shared** library by default. To link statically, set
-`GGPO_USE_STATIC` when configuring; the application's `CMakeLists.txt` does not
-change:
-
-```bash
-# Dynamic (default)
-cmake -S . -B build-shared -DCMAKE_PREFIX_PATH=/path/to/ggpo-sdk
-# Static
-cmake -S . -B build-static -DCMAKE_PREFIX_PATH=/path/to/ggpo-sdk \
-  -DGGPO_USE_STATIC=ON
-```
-
-Omit `CMAKE_PREFIX_PATH` for a DEB or RPM installation. A project can also name
-a flavor directly, or require one when finding the package:
+The targets carry the include directory, the Windows system libraries
+(`ws2_32`, `winmm`) and `GGPO_SHARED_LIB` when it is needed. `GGPO::GGPO` is
+the **shared** library by default; `-DGGPO_USE_STATIC=ON` selects static at
+configure time. A project can also name the flavor itself:
 
 ```cmake
 find_package(GGPO CONFIG REQUIRED COMPONENTS static)
 target_link_libraries(application_x PRIVATE GGPO::static)   # or GGPO::shared
 ```
 
-The CMake targets carry everything else: the include directory, the Windows
-system libraries (`ws2_32`, `winmm`), and on Windows the `GGPO_SHARED_LIB`
-definition that the shared library needs (see below). Link one flavor per
-executable, not both.
+Link one flavor per executable, not both. Configure commands per toolchain:
 
-#### Deploy a dynamically linked application
+| Toolchain | Dynamic | Static |
+| --- | --- | --- |
+| MSVC (Developer PowerShell) | `cmake -S . -B build -DCMAKE_PREFIX_PATH=C:/ggpo-sdk` | add `-DGGPO_USE_STATIC=ON` |
+| MinGW (MSYS2 shell) | `cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/c/ggpo-sdk-mingw` | add `-DGGPO_USE_STATIC=ON` |
+| MinGW cross-compile from Linux | `cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=mingw-w64-x86_64.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$HOME/ggpo-sdk-mingw` | add `-DGGPO_USE_STATIC=ON` |
+| Linux, `.deb` / `.rpm` | `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release` | add `-DGGPO_USE_STATIC=ON` |
+| Linux, `tar.gz` | `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$HOME/ggpo-sdk` | add `-DGGPO_USE_STATIC=ON` |
 
-- **Windows:** copy `bin/GGPO.dll` (MSVC) or `bin/libGGPO.dll` (MinGW) next
-  to `application_x.exe`. For
-  development, adding the SDK's `bin` directory to `PATH` is enough.
-- **Linux:** ship `libGGPO.so.0` with the application and set an
-  application-relative RPATH, for example:
+Then build with `cmake --build build --config Release --parallel`.
 
-  ```cmake
-  set_target_properties(application_x PROPERTIES
-      INSTALL_RPATH "$ORIGIN/../lib")
-  ```
+##### Cross-compiling for Windows from Linux
 
-  During development, `LD_LIBRARY_PATH=/path/to/ggpo-sdk/lib ./application_x`
-  also works. DEB and RPM installations need neither.
+Extract the MinGW SDK on the Linux host and use a toolchain file such as:
 
-A statically linked application needs no GGPO file at run time.
+```cmake
+# mingw-w64-x86_64.cmake  (use i686-w64-mingw32 for 32-bit)
+set(CMAKE_SYSTEM_NAME Windows)
+set(CMAKE_SYSTEM_PROCESSOR x86_64)
+set(CMAKE_C_COMPILER   x86_64-w64-mingw32-gcc)
+set(CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++)
+set(CMAKE_RC_COMPILER  x86_64-w64-mingw32-windres)
+set(CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32 $ENV{HOME}/ggpo-sdk-mingw)
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+```
+
+With `CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY`, which most cross toolchain files
+set, `find_package` searches only below `CMAKE_FIND_ROOT_PATH`. Add the SDK
+directory there, as above, or `find_package(GGPO)` will not find it.
+
+Distribution cross compilers (Debian/Ubuntu `g++-mingw-w64`, Fedora
+`mingw64-gcc-c++`) use MSVCRT and are fine for the **dynamic** SDK. For the
+**static** SDK they must also match its exception model and be at least as new
+as the GCC in `share/GGPO/TOOLCHAIN.txt`. Check with
+`x86_64-w64-mingw32-g++ -v` (look for `--enable-sjlj-exceptions` or
+`--disable-dw2-exceptions` on i686, which rule it out). When in doubt,
+[build GGPO from source](#option-4-build-with-mingw-w64) with the same cross
+compiler.
+
+#### MinGW: fully static executables
+
+Linking `libGGPO.a` puts GGPO inside the executable, but GCC still links its
+own runtime dynamically by default. The resulting `.exe` then needs
+`libstdc++-6.dll`, `libgcc_s_seh-1.dll` (x64) or `libgcc_s_dw2-1.dll` (x86),
+and `libwinpthread-1.dll` at run time, exactly like any other MinGW C++
+program. To produce a single self-contained `.exe`, link the runtime
+statically too:
+
+```cmake
+if(MINGW)
+    target_link_options(application_x PRIVATE -static)
+endif()
+```
+
+or pass `-static` on the `g++` command line. `-static-libgcc -static-libstdc++`
+alone is not enough when `libwinpthread` is a DLL in your toolchain. Check the
+result with `objdump -p application_x.exe | grep "DLL Name"`: only Windows
+system DLLs (`KERNEL32.dll`, `msvcrt.dll`, `WS2_32.dll`, `WINMM.dll`, ...)
+should remain.
+
+The dynamic MinGW SDK does not need this for GGPO itself: `libGGPO.dll`
+already embeds its runtime. Your application's own runtime is still your
+choice.
 
 #### Without CMake
 
-Pass the include directory and the library directly. On Windows, the shared
-library requires `GGPO_SHARED_LIB` so the header imports its functions from
-`GGPO.dll`; the static library must **not** define it.
+Pass the include directory and the library directly. On Windows, define
+`GGPO_SHARED_LIB` for the shared library only, so the header imports functions
+from the DLL; the static library must **not** define it.
 
-| | Dynamic | Static |
+| Toolchain | Dynamic | Static |
 | --- | --- | --- |
-| MSVC | `cl /I C:\ggpo-sdk\include /DGGPO_SHARED_LIB main.cpp /link /LIBPATH:C:\ggpo-sdk\lib GGPO.lib` | `cl /MD /I C:\ggpo-sdk\include main.cpp /link /LIBPATH:C:\ggpo-sdk\lib libGGPO.lib ws2_32.lib winmm.lib` |
-| GCC/Clang (Linux) | `g++ -I/path/to/ggpo-sdk/include main.cpp -L/path/to/ggpo-sdk/lib -lGGPO -Wl,-rpath,'$ORIGIN'` | `g++ -I/path/to/ggpo-sdk/include main.cpp /path/to/ggpo-sdk/lib/libGGPO.a` |
-| MinGW-w64 | `g++ -DGGPO_SHARED_LIB -I/c/ggpo-sdk-mingw/include main.cpp -L/c/ggpo-sdk-mingw/lib -lGGPO` | `g++ -I/c/ggpo-sdk-mingw/include main.cpp /c/ggpo-sdk-mingw/lib/libGGPO.a -lws2_32 -lwinmm` |
+| MSVC | `cl /MD /I C:\ggpo-sdk\include /DGGPO_SHARED_LIB main.cpp /link /LIBPATH:C:\ggpo-sdk\lib GGPO.lib` | `cl /MD /I C:\ggpo-sdk\include main.cpp /link /LIBPATH:C:\ggpo-sdk\lib libGGPO.lib ws2_32.lib winmm.lib` |
+| MinGW (MSYS2) | `g++ -DGGPO_SHARED_LIB -I/c/ggpo-sdk-mingw/include main.cpp -L/c/ggpo-sdk-mingw/lib -lGGPO` | `g++ -I/c/ggpo-sdk-mingw/include main.cpp /c/ggpo-sdk-mingw/lib/libGGPO.a -lws2_32 -lwinmm` (add `-static` for a self-contained `.exe`) |
+| MinGW cross from Linux | `x86_64-w64-mingw32-g++ -DGGPO_SHARED_LIB -I$HOME/ggpo-sdk-mingw/include main.cpp -L$HOME/ggpo-sdk-mingw/lib -lGGPO` | `x86_64-w64-mingw32-g++ -I$HOME/ggpo-sdk-mingw/include main.cpp $HOME/ggpo-sdk-mingw/lib/libGGPO.a -lws2_32 -lwinmm -static` |
+| MinGW + MSVC `GGPO.dll` | `gcc -DGGPO_SHARED_LIB -I/c/ggpo-sdk/include main.c /c/ggpo-sdk/bin/GGPO.dll` | Not supported |
+| GCC/Clang (Linux) | `g++ -I$HOME/ggpo-sdk/include main.cpp -L$HOME/ggpo-sdk/lib -lGGPO -Wl,-rpath,'$ORIGIN'` | `g++ -I$HOME/ggpo-sdk/include main.cpp $HOME/ggpo-sdk/lib/libGGPO.a` |
 
-A MinGW program can also use the **MSVC** `GGPO.dll` by linking the DLL file
-directly, because GGPO's interface is plain C:
+Libraries go **after** the sources: GNU linkers resolve left to right. GGPO is
+written in C++, so a C application that links `libGGPO.a` must do its final
+link with `g++`/`clang++` or add `-lstdc++`. CMake does this automatically.
 
-```bash
-gcc -DGGPO_SHARED_LIB -I/c/ggpo-sdk/include main.c /c/ggpo-sdk/bin/GGPO.dll
+#### Deploy the application
+
+| Linkage | Windows | Linux |
+| --- | --- | --- |
+| Dynamic | Copy `bin/GGPO.dll` (MSVC) or `bin/libGGPO.dll` (MinGW) next to `application_x.exe`. For development, adding the SDK's `bin` directory to `PATH` is enough. | Ship `libGGPO.so.0` and set an application-relative RPATH (below). `.deb`/`.rpm` installs need neither. |
+| Static | No GGPO file. MSVC: the usual VC++ redistributable for `/MD`. MinGW: the toolchain runtime DLLs unless linked with `-static`. | No GGPO file. |
+
+Linux RPATH example:
+
+```cmake
+set_target_properties(application_x PROPERTIES
+    INSTALL_RPATH "$ORIGIN/../lib")
 ```
 
-GGPO is written in C++. A C application that links `libGGPO.a` statically must
-use the C++ compiler driver (`g++`/`clang++`) for its final link step, or add
-`-lstdc++`. CMake does this automatically.
+During development, `LD_LIBRARY_PATH=$HOME/ggpo-sdk/lib ./application_x` also
+works.
 
 #### Choosing a flavor
 
 - **Dynamic** keeps the executable smaller and lets several programs, or a
-  GGPO update, share one library. You must ship and locate the runtime file.
-- **Static** produces one self-contained executable with nothing to deploy and
-  no version mismatch at run time. Updating GGPO means relinking.
+  GGPO update, share one library. It also works with any MinGW environment of
+  the same architecture. You must ship and locate the runtime file.
+- **Static** produces one executable with no GGPO file to deploy and no
+  version mismatch at run time. Updating GGPO means relinking, and on MinGW
+  the toolchain must match the SDK's.
 
 GGPO is MIT licensed, so either flavor may be distributed in closed-source
 applications; include the license text from `share/GGPO/LICENSE` either way.
