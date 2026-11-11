@@ -22,7 +22,9 @@ Depends on [PR #9](https://github.com/irregularthanis/ggpo-next/pull/9)
 - [ ] M1-T04: Undecorated x86 exports; link libgcc/libstdc++ statically and
   verify `libGGPO.dll` imports no MinGW runtime DLLs.
 - [ ] M1-T05: Disable Vector War under MinGW with a clear message.
-- [ ] M1-T06: MSVC and Linux CI unchanged.
+- [ ] M1-T06: Record the toolchain in `GGPOConfig.cmake`; reject a mismatched
+  consumer toolchain on Windows.
+- [ ] M1-T07: MSVC and Linux CI unchanged.
 
 ### M2: Tests and CI (depends: M1)
 
@@ -37,6 +39,8 @@ Parallel with M2.
 - [ ] M3-T01: `verify_consumers.py` MinGW runtime checks.
 - [ ] M3-T02: Default, static, and shared cases on both architectures.
 - [ ] M3-T03: MinGW program against the MSVC `GGPO.dll`.
+- [ ] M3-T04: Negative tests: MinGW consumer vs MSVC SDK and MSVC consumer vs
+  MinGW SDK fail at configure time.
 
 ### M4: Interoperability (depends: M2)
 
@@ -45,8 +49,10 @@ Parallel with M2.
 
 ### M5: Release and docs (depends: M3, M4)
 
-- [ ] M5-T01: MinGW x64/x86 SDK release jobs; dry run validates both zips.
-- [ ] M5-T02: Developer Guide: install, build, link, deploy, compatibility table.
+- [ ] M5-T01: MinGW x64/x86 SDK release jobs; dry run validates both zips,
+  including no `*.lib` in MinGW zips and no `*.a` in MSVC zips.
+- [ ] M5-T02: Developer Guide: install, build, link, deploy, compatibility
+  table, and separate install folders per toolchain.
 - [ ] M5-T03: Build.md and Testing.md.
 - [ ] M5-T04: Add `MinGW x64` and `MinGW x86` to the ruleset's required checks.
 
@@ -65,3 +71,4 @@ Parallel with M2.
 | x64 uses UCRT (UCRT64); x86 uses MSVCRT (MINGW32) | Proposed |
 | Statically link libgcc/libstdc++ into `libGGPO.dll` | Accepted (2026-11-11) |
 | Release-only MinGW lanes, no Debug lane | Proposed |
+| Separate prefixes per toolchain; `GGPOConfig.cmake` rejects a mismatched consumer toolchain | Accepted (2026-11-11) |

@@ -69,7 +69,33 @@ flowchart TD
 - `platform_windows.cpp`: replace `_snprintf_s` with portable `snprintf` and
   explicit termination, keeping the MSVC behavior identical.
 
-## Tests
+## Toolchain isolation
+
+Library file names never collide:
+
+| | MSVC | MinGW |
+|---|---|---|
+| Shared runtime | `bin/GGPO.dll` | `bin/libGGPO.dll` |
+| Shared link | `lib/GGPO.lib` | `lib/libGGPO.dll.a` |
+| Static | `lib/libGGPO.lib` | `lib/libGGPO.a` |
+
+Two conflicts remain, handled as follows:
+
+1. **Same CMake package files.** Both SDKs install `lib/cmake/GGPO/GGPOConfig.cmake`
+   and the two target exports. The SDKs must be installed to separate
+   prefixes; the Developer Guide and both zip READMEs say so.
+2. **GNU ld search order.** For `-lGGPO`, ld also tries `GGPO.lib` and
+   `libGGPO.lib`, so a MinGW link could pick up MSVC files sharing a directory.
+   The MinGW zip must contain no `.lib` files (checked in CI).
+
+**Toolchain check in `GGPOConfig.cmake`.** Each install records its toolchain
+at configure time (`GGPO_TOOLCHAIN` = `msvc`, `mingw`, or `gnu` for Linux).
+On Windows, `find_package(GGPO)` compares it with the consuming project
+(`MSVC` vs `MINGW`) and, on mismatch, sets `GGPO_FOUND` to false with a
+message naming the SDK's toolchain and the expected download. The supported
+cross-toolchain case, a MinGW program using the MSVC `GGPO.dll`, links the DLL
+directly without CMake and is unaffected.
+
 
 | Area | MinGW behavior |
 |---|---|
@@ -83,6 +109,14 @@ flowchart TD
 `verify_consumers.py` learns MinGW: shared consumers must import
 `libGGPO.dll` (`objdump -p` DLL Name), static consumers must not, and
 programs run with the SDK `bin` on or off `PATH` as today.
+
+### Toolchain isolation checks
+
+- Negative consumer test: configure `tests/consumer` with MinGW against an
+  MSVC install, and with MSVC against a MinGW install; both must fail at
+  configure time with the toolchain message.
+- Package check: the MinGW zip contains no `*.lib`; the MSVC zip contains no
+  `*.a`.
 
 ### Cross-toolchain check
 
@@ -119,6 +153,7 @@ ggpo-V-windows-x64-mingw/
 - Developer Guide: MinGW download rows, MSYS2 and Linux cross-compile build
   commands, linking with and without CMake (`-lGGPO` vs `libGGPO.a` +
   `-lws2_32 -lwinmm`), and deploying `libGGPO.dll`.
+- Install MSVC and MinGW SDKs to separate folders; never merge them.
 - A compatibility table: MSVC app + MSVC SDK (both flavors), MinGW app +
   MinGW SDK (both flavors), MinGW app + MSVC `GGPO.dll` (supported, C API
   only), anything else unsupported.
@@ -128,6 +163,7 @@ ggpo-V-windows-x64-mingw/
 
 1. CMake split by `MSVC`, naming, and the `snprintf` change; MSVC/Linux CI unchanged.
 2. MinGW CI for x64 and x86 with tests and the export manifest.
+   Toolchain recorded in `GGPOConfig.cmake` with the mismatch check.
 3. Consumer driver support and the cross-toolchain check.
 4. E2E scenarios.
 5. Release jobs, dry run, documentation, ruleset update.

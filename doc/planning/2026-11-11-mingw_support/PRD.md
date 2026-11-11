@@ -55,6 +55,9 @@ and packaging.
   are documented per download.
 - MinGW static libraries are never mixed with MSVC applications, and vice
   versa. Only the DLL's C interface is expected to cross toolchains.
+- MSVC and MinGW SDKs install to separate prefixes. Their library files have
+  distinct names, but both install the same `lib/cmake/GGPO/` files, and GNU
+  ld also searches `GGPO.lib`/`libGGPO.lib` for `-lGGPO`.
 - Vector War is not built or shipped for MinGW.
 
 ## Users and stories
@@ -73,5 +76,6 @@ and packaging.
 | `WIN32` checks silently apply MSVC flags to MinGW | Audit every `WIN32`/`MSVC` branch; MinGW CI fails on unknown flags |
 | Different C runtime per architecture confuses users | One runtime per download, named in the guide and the zip README |
 | x86 exports get decorated names (`_ggpo_idle`, `@N`) | Export manifest check on both architectures |
-| Users mix MinGW static libraries with MSVC apps | Separate downloads and an explicit compatibility table |
+| Users mix MinGW static libraries with MSVC apps | Separate downloads, an explicit compatibility table, and a CMake toolchain check |
+| Both SDKs extracted into one prefix overwrite each other's CMake files, or GNU ld picks an MSVC `.lib` | Documented separate prefixes; MinGW zip contains no `.lib`; `find_package` rejects a mismatched toolchain |
 | CI cost grows | Two Release-only jobs, no Debug lane; E2E adds two scenarios only |
