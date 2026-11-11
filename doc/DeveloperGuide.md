@@ -265,6 +265,10 @@ cmake --build build --config Release --parallel
 cmake --install build --config Release --prefix C:/ggpo-sdk
 ```
 
+For an SDL-free build of only the portable Vector War core and headless
+fixture, keep `GGPO_BUILD_VECTORWAR=ON` and add
+`-DGGPO_BUILD_VECTORWAR_GUI=OFF`.
+
 Change `-A x64` to `-A Win32` for a 32-bit SDK. The install contains both
 `GGPO.dll` (with its `GGPO.lib` import library) and `libGGPO.lib`.
 

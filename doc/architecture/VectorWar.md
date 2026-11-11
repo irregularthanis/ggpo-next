@@ -78,7 +78,9 @@ flowchart TD
 
 [`src/apps/vectorwar/CMakeLists.txt`](../../src/apps/vectorwar/CMakeLists.txt)
 builds portable `VectorWarCore` and the `VectorWarHeadless` fixture whenever
-`GGPO_BUILD_VECTORWAR` is enabled. The `VectorWar` GUI executable is built from
+`GGPO_BUILD_VECTORWAR` is enabled. `GGPO_BUILD_VECTORWAR_GUI=OFF` keeps those
+portable targets while skipping SDL2 discovery and the interactive frontend.
+The `VectorWar` GUI executable is built from
 the same core with the Win32 host on Windows and with the SDL2 host on Linux
 (SDL2 development files are required). Android's Gradle project calls the same
 CMake graph and packages the SDL frontend for all supported ABIs. The SDK's Windows platform layer carries

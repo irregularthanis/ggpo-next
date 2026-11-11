@@ -84,7 +84,8 @@ Declared in the [root build file](../../CMakeLists.txt):
 | Option | Default | Effect |
 | --- | ---: | --- |
 | `GGPO_BUILD_SDK` | `ON` | Adds the GGPO library targets |
-| `GGPO_BUILD_VECTORWAR` | `ON` | Adds Vector War only when `WIN32` is true |
+| `GGPO_BUILD_VECTORWAR` | `ON` (except MinGW) | Adds the portable Vector War core and headless fixture |
+| `GGPO_BUILD_VECTORWAR_GUI` | `ON` | Adds the Win32, Linux SDL2, or Android SDL2 interactive frontend; disable for SDL-free headless builds |
 | `BUILD_SHARED_LIBS` | unset | Unset builds both libraries; `ON` builds only shared, `OFF` only static |
 | `GGPO_BUILD_SHARED` | both / from `BUILD_SHARED_LIBS` | Builds `GGPO_shared` (`GGPO.dll` + `GGPO.lib`, `libGGPO.so`) |
 | `GGPO_BUILD_STATIC` | both / from `BUILD_SHARED_LIBS` | Builds `GGPO_static` (`libGGPO.lib`, `libGGPO.a`) |

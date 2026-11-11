@@ -22,12 +22,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Install the Vector War GUI build dependency
-        run: sudo apt-get update && sudo apt-get install -y libsdl2-dev
       - name: Build the Release x64 static fixtures
         run: |
           cmake -S . -B build/e2e -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+            -DGGPO_BUILD_VECTORWAR_GUI=OFF
           cmake --build build/e2e \
             --target ggpo_linux_peer_smoke VectorWarHeadless --parallel 2
           install -D -m 0755 build/e2e/bin/x64/Release/ggpo_linux_peer_smoke \

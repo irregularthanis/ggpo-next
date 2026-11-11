@@ -27,7 +27,7 @@ else()
 	target_compile_options(VectorWarHeadless PRIVATE -Wall -Wextra)
 endif()
 
-if(WIN32)
+if(GGPO_BUILD_VECTORWAR_GUI AND WIN32)
 	add_executable(VectorWar WIN32
 		${GGPO_EXAMPLES_VECTORWAR_WIN32_INC}
 		${GGPO_EXAMPLES_VECTORWAR_WIN32_SRC}
@@ -38,7 +38,7 @@ if(WIN32)
 	target_compile_definitions(VectorWar PRIVATE _UNICODE UNICODE)
 	target_link_libraries(VectorWar PRIVATE VectorWarCore)
 	target_compile_options(VectorWar PRIVATE "/W4" "/WX")
-elseif(ANDROID)
+elseif(GGPO_BUILD_VECTORWAR_GUI AND ANDROID)
 	# VectorWarHeadless (above) always builds. The interactive APK frontend is
 	# the same SDL2 frontend, built as the libmain.so that SDLActivity loads,
 	# when the Gradle project supplies an SDL2 source tree.
@@ -56,7 +56,7 @@ elseif(ANDROID)
 		target_link_libraries(VectorWarAndroid PRIVATE VectorWarCore SDL2::SDL2 log android)
 		target_compile_options(VectorWarAndroid PRIVATE -Wall -Wextra)
 	endif()
-else()
+elseif(GGPO_BUILD_VECTORWAR_GUI)
 	find_package(SDL2 REQUIRED)
 	add_executable(VectorWar ${GGPO_EXAMPLES_VECTORWAR_SDL_SRC})
 	add_common_flags(VectorWar)
