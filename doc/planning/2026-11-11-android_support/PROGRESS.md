@@ -10,7 +10,7 @@ Status: In progress
 
 - [x] M0-T01: arm64 Android emulator on `ubuntu-24.04-arm`: KVM availability,
   boot time, `adb shell` executable run.
-- [ ] M0-T02: x86_64 emulator on `ubuntu-24.04` with KVM as fallback.
+- [x] M0-T02: x86_64 emulator on `ubuntu-24.04` with KVM as fallback.
 - [x] M0-T03: NDK build of the unmodified tree; record every failure.
 - [x] M0-T04: Inventory of Android-specific differences in the platform layer.
 
@@ -24,15 +24,15 @@ Status: In progress
 
 ### M2: Tests (depends: M1)
 
-- [ ] M2-T01: `adb` wrapper as `CMAKE_CROSSCOMPILING_EMULATOR`.
-- [ ] M2-T02: Full CTest suite passes on Android (arm64 preferred).
-- [ ] M2-T03: Frozen Vector War checksum matches on arm64.
+- [x] M2-T01: `adb` wrapper as `CMAKE_CROSSCOMPILING_EMULATOR`.
+- [x] M2-T02: Full CTest suite passes on Android (arm64 preferred).
+- [x] M2-T03: Frozen Vector War checksum matches on arm64.
 - [ ] M2-T04: Installed consumers (default, static, shared) on Android.
 - [ ] M2-T05: Layout and export manifest tests on every ABI; SDK audit
   (SONAME, API-level ceiling).
 - [ ] M2-T06: Toolchain isolation and portable-header checks for Android.
 - [ ] M2-T07: Android Debug lane and scheduled sanitizer job.
-- [ ] M2-T08: Tests on the oldest supported API (21) and a current API.
+- [x] M2-T08: Tests on the oldest supported API (21) and a current API.
 - [ ] M2-T09: 16 KB page alignment check on every `libGGPO.so`.
 
 ### M3: Vector War (depends: M1)
@@ -72,6 +72,8 @@ Parallel with M2.
 | M0-T04 | Source inventory | No Android-specific source change needed so far; only build selection, unversioned `libGGPO.so`, and the FP flag |
 | M1-T01, M1-T02 | `8f4fd11`; [Linux](https://github.com/irregularthanis/ggpo-next/actions/runs/42966143288), [MinGW](https://github.com/irregularthanis/ggpo-next/actions/runs/42966143117), [E2E](https://github.com/irregularthanis/ggpo-next/actions/runs/42966143136) | `platform_linux.cpp` → `platform_posix.cpp` shared by Linux and Android; existing platforms' CI passes, including the frozen Windows baseline |
 | M2 (partial) | [Android compatibility 42966850489](https://github.com/irregularthanis/ggpo-next/actions/runs/42966850489) (`562f1e2`) | Full CTest 22/22 on arm64-v8a and **armeabi-v7a (32-bit EABI5, executed natively on the arm64 runner)** and x86_64; Vector War frozen checksum matches on all three |
+| M0-T02, M2-T01, M2-T02, M2-T08 | [Android compatibility 42967759434](https://github.com/irregularthanis/ggpo-next/actions/runs/42967759434) (`89ebc6f`) | x86_64 emulator with KVM on API **21** and **35**: full CTest 25/25 each against the shared `libGGPO.so` through `tests/android/run_on_device.py` (including `android_exports`, schema-2 loopback with the live completion barrier, negative contracts, static runtime smokes); LastTest.log confirms on-device execution. Native arm64-v8a, armeabi-v7a and x86_64 jobs 22/22 |
+| Launcher fix | `89ebc6f` | API 21 exposed that device-written ready files were pulled once; they are now pulled every cycle and host-written files pushed on change |
 
 ## Decisions
 
