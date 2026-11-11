@@ -1,8 +1,8 @@
-# Linux owns every native source, definition, and system-library input used by
-# the otherwise platform-neutral GGPO target.
+# Linux uses the POSIX adapter shared with Android; this file owns the
+# Linux-specific build settings for the otherwise platform-neutral target.
 function(ggpo_configure_platform target)
 	target_sources(${target} PRIVATE
-		${PROJECT_SOURCE_DIR}/src/lib/ggpo/platform_linux.cpp
+		${PROJECT_SOURCE_DIR}/src/lib/ggpo/platform_posix.cpp
 	)
 	target_compile_options(${target} PRIVATE -Wall -Wextra)
 	target_compile_definitions(${target} PRIVATE GGPO_PLATFORM_LINUX)

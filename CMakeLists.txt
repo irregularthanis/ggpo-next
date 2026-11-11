@@ -40,7 +40,13 @@ if(MINGW AND GGPO_BUILD_VECTORWAR)
 endif()
 # Linkage: leave BUILD_SHARED_LIBS unset to build both shared and static GGPO,
 # or pass -DBUILD_SHARED_LIBS=ON/OFF for one flavor (see src/CMakeLists.txt).
-option(GGPO_RUN_TESTS_ON_BUILD "Run self-contained GGPO tests during the default build" ON)
+# Cross-compiled tests (Android) cannot run on the build host.
+if(CMAKE_CROSSCOMPILING)
+	set(GGPO_RUN_TESTS_ON_BUILD_DEFAULT OFF)
+else()
+	set(GGPO_RUN_TESTS_ON_BUILD_DEFAULT ON)
+endif()
+option(GGPO_RUN_TESTS_ON_BUILD "Run self-contained GGPO tests during the default build" ${GGPO_RUN_TESTS_ON_BUILD_DEFAULT})
 
 if(GGPO_BUILD_SDK)
 	add_subdirectory(src)
@@ -56,6 +62,11 @@ endif()
 if(BUILD_TESTING AND GGPO_BUILD_SDK)
 	add_subdirectory(tests)
 	if(GGPO_RUN_TESTS_ON_BUILD)
+		if(ANDROID)
+			set(GGPO_POSIX_TEST_PREFIX android)
+		else()
+			set(GGPO_POSIX_TEST_PREFIX linux)
+		endif()
 		if(WIN32)
 			set(GGPO_PLATFORM_TEST_TARGETS
 				ggpo_windows_public_layout
@@ -64,10 +75,10 @@ if(BUILD_TESTING AND GGPO_BUILD_SDK)
 				ggpo_windows_peer_smoke)
 		else()
 			set(GGPO_PLATFORM_TEST_TARGETS
-				ggpo_linux_public_layout
-				ggpo_linux_packet_layout
-				ggpo_linux_synctest_smoke
-				ggpo_linux_peer_smoke)
+				ggpo_${GGPO_POSIX_TEST_PREFIX}_public_layout
+				ggpo_${GGPO_POSIX_TEST_PREFIX}_packet_layout
+				ggpo_${GGPO_POSIX_TEST_PREFIX}_synctest_smoke
+				ggpo_${GGPO_POSIX_TEST_PREFIX}_peer_smoke)
 		endif()
 		# The registered frontend lifecycle test must not race its executable link.
 		if(TARGET VectorWar)

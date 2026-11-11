@@ -1,0 +1,105 @@
+name: Android arm64 spike
+
+# M0 feasibility for Android test runners (arm64 preferred). Not a required
+# check. The NDK only runs on x86_64 hosts, so binaries are built on
+# ubuntu-24.04 and executed on ubuntu-24.04-arm.
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Android arm64 smoke binaries
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cross-compile GGPO and the smoke tests (static executables)
+        run: |
+          echo "NDK: $ANDROID_NDK_LATEST_HOME"
+          cat "$ANDROID_NDK_LATEST_HOME/source.properties"
+          # -static: bionic linked into each executable, so the binaries run
+          # on a plain arm64 Linux kernel as well as on Android.
+          cmake -S . -B build/android -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=24 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DGGPO_BUILD_VECTORWAR=OFF \
+            -DBUILD_TESTING=ON \
+            -DCMAKE_EXE_LINKER_FLAGS=-static
+          cmake --build build/android --parallel 4
+          mkdir -p out
+          cp build/android/bin/*/Release/*_smoke build/android/bin/*/Release/*_contract \
+             build/android/bin/*/Release/*_layout build/android/bin/*/Release/*_conformance \
+             build/android/bin/*/Release/ggpo_fake_core_synctest out/ 2>/dev/null || true
+          ls -la out
+          file out/* | head -30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-arm64-smoke
+          path: out
+          if-no-files-found: error
+
+  run-static:
+    name: Run Android arm64 binaries on arm64 Linux
+    needs: build
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-arm64-smoke
+          path: out
+      - name: Run smoke and contract tests
+        run: |
+          set -u
+          uname -a
+          chmod +x out/*
+          mkdir -p work && cd work
+          failed=0
+          for t in ../out/*; do
+            name=$(basename "$t")
+            case "$name" in *peer_smoke) continue ;; esac
+            if "$t" > "$name.log" 2>&1; then
+              echo "PASS $name"
+            else
+              echo "FAIL $name (exit $?)"; tail -20 "$name.log"; failed=1
+            fi
+          done
+          cd ..
+          for t in out/*peer_smoke; do
+            if python3 tests/smoke/run_peer_smoke.py "$t" --frames 180; then
+              echo "PASS $(basename "$t") loopback"
+            else
+              echo "FAIL $(basename "$t") loopback"; failed=1
+            fi
+          done
+          exit $failed
+
+  probe-emulator:
+    name: Probe arm64 Android emulator support
+    runs-on: ubuntu-24.04-arm
+    continue-on-error: true
+    steps:
+      - name: Check virtualization and SDK tools
+        run: |
+          uname -m
+          ls -l /dev/kvm || echo "no /dev/kvm"
+          grep -c -E 'svm|vmx' /proc/cpuinfo || true
+          echo "ANDROID_HOME=${ANDROID_HOME:-unset}"
+          ls "${ANDROID_HOME:-/nonexistent}" 2>/dev/null || echo "no Android SDK preinstalled"
+          command -v sdkmanager || echo "no sdkmanager on PATH"
+      - name: Try installing an arm64 emulator and system image
+        run: |
+          set -x
+          mkdir -p "$HOME/android-sdk/cmdline-tools"
+          cd "$HOME/android-sdk/cmdline-tools"
+          curl -sSLo tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q tools.zip && mv cmdline-tools latest
+          export ANDROID_HOME="$HOME/android-sdk"
+          yes | latest/bin/sdkmanager --licenses > /dev/null || true
+          latest/bin/sdkmanager --list 2>/dev/null | grep -E '^ *emulator|system-images;android-3[0-5];.*arm64' | head -20
+          latest/bin/sdkmanager "emulator" "platform-tools" || true
+          ls "$ANDROID_HOME/emulator" 2>/dev/null | head
+          file "$ANDROID_HOME/emulator/emulator" 2>/dev/null || echo "no emulator binary installed"

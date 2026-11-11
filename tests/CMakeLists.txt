@@ -76,39 +76,44 @@ if(WIN32)
     set_tests_properties(windows_packet_layout PROPERTIES LABELS "native;abi;protocol")
     set(GGPO_SMOKE_PREFIX windows)
 else()
-    # Linux counterparts reuse the same frozen assertions: the public layout
+    # POSIX platforms (Linux, Android) name native tests by platform.
+    if(ANDROID)
+        set(GGPO_SMOKE_PREFIX android)
+    else()
+        set(GGPO_SMOKE_PREFIX linux)
+    endif()
+    # Linux and Android counterparts reuse the same frozen assertions: the public layout
     # matches on LP64, and the packed wire layout must be byte-identical for
     # Linux<->Windows peers to interoperate.
-    add_executable(ggpo_linux_public_layout
+    add_executable(ggpo_${GGPO_SMOKE_PREFIX}_public_layout
         baseline/windows/public_layout.cpp
     )
-    ggpo_configure_test(ggpo_linux_public_layout)
-    add_test(NAME linux_public_layout COMMAND ggpo_linux_public_layout)
-    set_tests_properties(linux_public_layout PROPERTIES LABELS "native;abi")
+    ggpo_configure_test(ggpo_${GGPO_SMOKE_PREFIX}_public_layout)
+    add_test(NAME ${GGPO_SMOKE_PREFIX}_public_layout COMMAND ggpo_${GGPO_SMOKE_PREFIX}_public_layout)
+    set_tests_properties(${GGPO_SMOKE_PREFIX}_public_layout PROPERTIES LABELS "native;abi")
 
-    add_executable(ggpo_linux_packet_layout
+    add_executable(ggpo_${GGPO_SMOKE_PREFIX}_packet_layout
         baseline/windows/packet_layout.cpp
         platform/fake/platform_fake.cpp
         platform/fake/platform_fake.h
     )
-    ggpo_configure_test(ggpo_linux_packet_layout)
-    target_include_directories(ggpo_linux_packet_layout PRIVATE
+    ggpo_configure_test(ggpo_${GGPO_SMOKE_PREFIX}_packet_layout)
+    target_include_directories(ggpo_${GGPO_SMOKE_PREFIX}_packet_layout PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/platform/fake
     )
-    add_test(NAME linux_packet_layout COMMAND ggpo_linux_packet_layout)
-    set_tests_properties(linux_packet_layout PROPERTIES LABELS "native;abi;protocol")
+    add_test(NAME ${GGPO_SMOKE_PREFIX}_packet_layout COMMAND ggpo_${GGPO_SMOKE_PREFIX}_packet_layout)
+    set_tests_properties(${GGPO_SMOKE_PREFIX}_packet_layout PROPERTIES LABELS "native;abi;protocol")
 
     # Shared builds freeze the dynamic ggpo_* export set like the DLL manifest.
     if(TARGET GGPO_shared)
-        add_test(NAME linux_exports
+        add_test(NAME ${GGPO_SMOKE_PREFIX}_exports
             COMMAND ${PYTHON_EXECUTABLE}
                     ${CMAKE_CURRENT_SOURCE_DIR}/baseline/linux/check_exports.py
                     $<TARGET_FILE:GGPO_shared>
                     ${CMAKE_CURRENT_SOURCE_DIR}/baseline/linux/exports.txt
         )
-        set_tests_properties(linux_exports PROPERTIES LABELS "native;abi")
+        set_tests_properties(${GGPO_SMOKE_PREFIX}_exports PROPERTIES LABELS "native;abi")
     endif()
-    set(GGPO_SMOKE_PREFIX linux)
 endif()
 
 # Runtime contracts: SyncTest isolates rollback, while peer loopback exercises
@@ -215,7 +220,7 @@ include(${PROJECT_SOURCE_DIR}/src/CMakeSources.cmake)
 set(GGPO_FAKE_CORE_RELATIVE_SOURCES ${GGPO_LIB_SRC})
 list(REMOVE_ITEM GGPO_FAKE_CORE_RELATIVE_SOURCES
     "lib/ggpo/platform_windows.cpp"
-    "lib/ggpo/platform_linux.cpp"
+    "lib/ggpo/platform_posix.cpp"
 )
 set(GGPO_FAKE_CORE_SOURCES)
 foreach(source ${GGPO_FAKE_CORE_RELATIVE_SOURCES})
