@@ -2,64 +2,589 @@
 
 The GGPO Network Library Developer Guide is for developers who are integrating the GGPO Network Library into their applications.
 
-## Game State and Inputs
+## Contents
 
-Your game probably has many moving parts.  GGPO only depends on these two: 
+- [Platform overview](#platform-overview)
+- [Install the SDK](#install-the-sdk)
+  - [Windows with MSVC](#windows-with-msvc)
+    - [MSVC: release SDK](#msvc-release-sdk)
+    - [MSVC: build from source](#msvc-build-from-source)
+    - [MSVC: dynamic linking](#msvc-dynamic-linking)
+    - [MSVC: static linking](#msvc-static-linking)
+    - [MSVC: deploy](#msvc-deploy)
+  - [Windows with MinGW-w64](#windows-with-mingw-w64)
+    - [MinGW: release SDK](#mingw-release-sdk)
+    - [MinGW: build from source](#mingw-build-from-source)
+    - [MinGW: dynamic linking](#mingw-dynamic-linking)
+    - [MinGW: static linking](#mingw-static-linking)
+    - [MinGW: cross-compile from Linux](#mingw-cross-compile-from-linux)
+    - [MinGW: deploy](#mingw-deploy)
+  - [Linux](#linux)
+    - [Linux: DEB or RPM package](#linux-deb-or-rpm-package)
+    - [Linux: raw SDK (`tar.gz`)](#linux-raw-sdk-targz)
+    - [Linux: build from source](#linux-build-from-source)
+    - [Linux: dynamic linking](#linux-dynamic-linking)
+    - [Linux: static linking](#linux-static-linking)
+    - [Linux: deploy](#linux-deploy)
+  - [Android](#android)
+    - [Android: release SDK](#android-release-sdk)
+    - [Android: build from source](#android-build-from-source)
+    - [Android: dynamic linking](#android-dynamic-linking)
+    - [Android: static linking](#android-static-linking)
+    - [Android: deploy](#android-deploy)
+- [Common to all platforms](#common-to-all-platforms)
+  - [SDK contents](#sdk-contents)
+  - [Link GGPO into an application](#link-ggpo-into-an-application)
+  - [Linking without CMake](#linking-without-cmake)
+  - [Build options](#build-options)
+  - [Floating-point determinism](#floating-point-determinism)
+  - [Deployment and license](#deployment-and-license)
+  - [Run the standalone Vector War sample](#run-the-standalone-vector-war-sample)
+  - [Upgrading from 0.3.0](#upgrading-from-030)
+- [Game State and Inputs](#game-state-and-inputs)
+- [Using State and Inputs for Synchronization](#using-state-and-inputs-for-synchronization)
+- [Programming guide](#programming-guide)
+  - [Create a session](#create-a-session)
+  - [Register players](#register-players)
+  - [Implement state callbacks](#implement-state-callbacks)
+  - [Run one frame](#run-one-frame)
+- [Tuning Your Application: Frame Delay vs. Speculative Execution](#tuning-your-application-frame-delay-vs-speculative-execution)
+- [Sample Application](#sample-application)
+- [Best Practices and Troubleshooting](#best-practices-and-troubleshooting)
+  - [Isolate Game State from Non-Game State](#isolate-game-state-from-non-game-state)
+  - [Define a Fixed Time Quanta for Advancing Your Game State](#define-a-fixed-time-quanta-for-advancing-your-game-state)
+  - [Separate Updating Game State from Rendering in Your Game Loop](#separate-updating-game-state-from-rendering-in-your-game-loop)
+  - [Make Sure Your Game State Advances Deterministically](#make-sure-your-game-state-advances-deterministically)
+  - [Beware of Dangling References](#beware-of-dangling-references)
+  - [Beware of Static Variables or Other Hidden State](#beware-of-static-variables-or-other-hidden-state)
+  - [Use the GGPO SyncTest Feature.  A Lot.](#use-the-ggpo-synctest-feature--a-lot)
+- [Where to Go from Here](#where-to-go-from-here)
 
-- **Game State** describes the current state of everything in your game.  In a shooter, this would include the position of the ship and all the enemies on the screen, the location of all the bullets, how much health each opponent has, the current score, etc. etc. 
+## Platform overview
 
-- **Game Inputs** are the set of things which modify the game state.  These obviously include the joystick and button presses done by the player, but can include other non-obvious inputs as well.  For example, if your game uses the current time of day to calculate something in the game, the current time of day at the beginning of a frame is also an input.
+Everything above the platform layer is the same code, API and wire format on
+every platform. Only the small OS adapter behind `platform.h`, the toolchain,
+and the packaged files differ. Peers on any two platforms can play each other.
 
-There are many other things in your game engine that are neither game state nor inputs.  For example, your audio and video renderers are not game state since they don't have an effect on the outcome of the game.  If you have a special effects engine that's generating effects that do not have an impact on the game, they can be excluded from the game state as well.
+```mermaid
+flowchart TB
+    subgraph COMMON["Common to all platforms"]
+        direction TB
+        APP["Your game: deterministic simulation,<br/>save / load / advance callbacks"]
+        API["Public C API: ggponet.h<br/>(same header, API and ABI everywhere)"]
+        CORE["GGPO core (portable C++)<br/>P2P, spectator and SyncTest backends<br/>sync and rollback, input queues, time sync"]
+        NET["UDP protocol<br/>(same wire format everywhere)"]
+        PKG["CMake package: GGPO::GGPO, GGPO::shared, GGPO::static<br/>build options, determinism flags"]
+        APP --> API --> CORE --> NET
+        PKG -.-> APP
+    end
 
-## Using State and Inputs for Synchronization
+    PLAT["platform.h: OS adapter interface<br/>(time and waits, UDP sockets, config, logging paths)"]
+    NET --> PLAT
+    CORE --> PLAT
 
-Each player in a GGPO networked game has a complete copy of your game running.  GGPO needs to keep both copies of the game state in sync to ensure that both players are experiencing the same game.  It would be much too expensive to send an entire copy of the game state between players every frame.  Instead GGPO sends the players' inputs to each other and has each player step the game forward.  In order for this to work, your game engine must meet three criteria:
+    subgraph WIN["Windows: platform_windows.cpp (Winsock)"]
+        direction TB
+        MSVC["Windows with MSVC<br/>GGPO.dll + GGPO.lib, libGGPO.lib<br/>/MD runtime"]
+        MINGW["Windows with MinGW-w64<br/>libGGPO.dll + libGGPO.dll.a, libGGPO.a<br/>MSVCRT; static needs a matching GCC"]
+    end
 
-- The game simulation must be fully deterministic.  That is, for any given game state and inputs, advancing the game state by exactly 1 frame must result in identical game states for all players.
-- The game state must be fully encapsulated and serializable.  
-- Your game engine must be able to load, save, and execute a single simulation frame without rendering the result of that frame.  This will be used to implement rollbacks.
+    subgraph POSIX["POSIX: platform_posix.cpp (BSD sockets)"]
+        direction TB
+        LINUX["Linux x86_64<br/>libGGPO.so.0, libGGPO.a<br/>DEB, RPM, tar.gz"]
+        ANDROID["Android NDK, API 21+<br/>libGGPO.so, libGGPO.a per ABI<br/>arm64-v8a, armeabi-v7a, x86_64"]
+    end
+
+    PLAT --> WIN
+    PLAT --> POSIX
+```
+
+The [platform sections](#install-the-sdk) cover each box at the bottom; the
+[common sections](#common-to-all-platforms) cover the box at the top. Internal
+structure is described in the [architecture docs](architecture/README.md).
 
 ## Install the SDK
 
-The SDK supports Windows (MSVC and MinGW-w64), Linux, and Android. This section
-starts with what every platform shares, then has one self-contained section per
-platform: download, build from source, link (dynamic or static), and deploy.
+GGPO supports four platforms. Each has its own section below, with one
+subsection per option: use a release SDK, build from source, link dynamically,
+link statically, and deploy. What applies to every platform (CMake usage, build
+options, floating point, Vector War) follows in
+[Common to all platforms](#common-to-all-platforms).
 
-| Platform | Release download | Go to |
-| --- | --- | --- |
-| Windows, Visual Studio (MSVC, clang-cl) | `ggpo-0.5.0-windows-x64.zip`, `ggpo-0.5.0-windows-x86.zip` | [Windows with MSVC](#windows-with-msvc) |
-| Windows, MinGW-w64 GCC (MSYS2, cross compilers) | `ggpo-0.5.0-windows-x64-mingw.zip`, `ggpo-0.5.0-windows-x86-mingw.zip` | [Windows with MinGW-w64](#windows-with-mingw-w64) |
-| Linux x86_64 | `ggpo-0.5.0-linux-x86_64.deb` / `.rpm` / `.tar.gz` | [Linux](#linux) |
-| Android (arm64-v8a, armeabi-v7a, x86_64) | `ggpo-0.5.0-android.tar.gz` | [Android](#android) |
+| Platform | Release download |
+| --- | --- |
+| [Windows with MSVC](#windows-with-msvc) (Visual Studio, clang-cl) | `ggpo-0.5.0-windows-x64.zip`, `ggpo-0.5.0-windows-x86.zip` |
+| [Windows with MinGW-w64](#windows-with-mingw-w64) (MSYS2, cross compilers) | `ggpo-0.5.0-windows-x64-mingw.zip`, `ggpo-0.5.0-windows-x86-mingw.zip` |
+| [Linux](#linux) (x86_64, GCC or Clang) | `ggpo-0.5.0-linux-x86_64.deb` / `.rpm` / `.tar.gz` |
+| [Android](#android) (arm64-v8a, armeabi-v7a, x86_64; API 21+) | `ggpo-0.5.0-android.tar.gz` |
 
 Downloads are on [GGPO Next Releases](https://github.com/irregularthanis/ggpo-next/releases).
 
-### Common to all platforms
+### Windows with MSVC
 
-Everything in this section applies to every platform. The platform sections
-only add what differs.
+For Visual Studio and clang-cl applications.
 
-#### SDK contents
+#### MSVC: release SDK
+
+Download `windows-x64.zip` (64-bit) or `windows-x86.zip` (32-bit), verify it
+with `Get-FileHash -Algorithm SHA256` against `SHA256SUMS`, and extract it to
+its own folder such as `C:/ggpo-sdk`:
+
+```text
+C:/ggpo-sdk/
+├── include/ggponet.h
+├── bin/GGPO.dll                  # shared library (runtime)
+├── lib/GGPO.lib                  # import library for GGPO.dll
+├── lib/libGGPO.lib               # static library
+├── lib/*.pdb                     # debug symbols
+├── lib/cmake/GGPO/
+└── share/GGPO/
+```
+
+Release SDKs are Release builds using the dynamic C runtime (`/MD`). Never
+extract one into the same folder as a MinGW SDK: both contain
+`lib/cmake/GGPO/`. `find_package(GGPO)` rejects a MinGW SDK in an MSVC project
+with a message naming the right download.
+
+#### MSVC: build from source
+
+Install Visual Studio 2022 with the Desktop development with C++ workload,
+CMake, and Python 3. From a Developer PowerShell prompt in the source checkout:
+
+```powershell
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+  -DGGPO_BUILD_SDK=ON `
+  -DGGPO_BUILD_VECTORWAR=ON
+cmake --build build --config Release --parallel
+cmake --install build --config Release --prefix C:/ggpo-sdk
+```
+
+Change `-A x64` to `-A Win32` for a 32-bit SDK. The install contains both
+`GGPO.dll` (with its `GGPO.lib` import library) and `libGGPO.lib`. Use
+`--config Debug` for a Debug SDK. See [build options](#build-options) for
+single-flavor and test-free builds.
+
+#### MSVC: dynamic linking
+
+Link `lib/GGPO.lib` and define `GGPO_SHARED_LIB`. `GGPO.dll` works with Debug
+and Release applications alike.
+
+```powershell
+# CMake
+cmake -S . -B build -DCMAKE_PREFIX_PATH=C:/ggpo-sdk
+cmake --build build --config Release --parallel
+```
+
+```bat
+:: Without CMake
+cl /MD /I C:\ggpo-sdk\include /DGGPO_SHARED_LIB main.cpp /link /LIBPATH:C:\ggpo-sdk\lib GGPO.lib
+```
+
+#### MSVC: static linking
+
+Link `lib/libGGPO.lib` plus `ws2_32.lib` and `winmm.lib`, and do **not** define
+`GGPO_SHARED_LIB`.
+
+```powershell
+# CMake
+cmake -S . -B build -DCMAKE_PREFIX_PATH=C:/ggpo-sdk -DGGPO_USE_STATIC=ON
+cmake --build build --config Release --parallel
+```
+
+```bat
+:: Without CMake
+cl /MD /I C:\ggpo-sdk\include main.cpp /link /LIBPATH:C:\ggpo-sdk\lib libGGPO.lib ws2_32.lib winmm.lib
+```
+
+The release `libGGPO.lib` links only into `/MD` applications (Release,
+RelWithDebInfo). MSVC rejects it in a Debug (`/MDd`) or `/MT` build with a
+runtime-library mismatch (`LNK2038`). For a Debug static build, link the DLL in
+Debug configurations or [build GGPO from source](#msvc-build-from-source) with
+`--config Debug`.
+
+#### MSVC: deploy
+
+- **Dynamic:** copy `bin/GGPO.dll` next to `application_x.exe`. For
+  development, adding the SDK's `bin` directory to `PATH` is enough.
+- **Static:** no GGPO file. Ship the usual VC++ redistributable for `/MD`.
+
+### Windows with MinGW-w64
+
+For GCC-based MinGW-w64 applications: MSYS2 shells, standalone toolchains, and
+`x86_64-w64-mingw32` / `i686-w64-mingw32` cross compilers on Linux.
+
+#### MinGW: release SDK
+
+Download `windows-x64-mingw.zip` (64-bit) or `windows-x86-mingw.zip` (32-bit)
+and extract it to its own folder, such as `C:/ggpo-sdk-mingw`
+(`/c/ggpo-sdk-mingw` in MSYS2). It contains `bin/libGGPO.dll`, the import
+library `lib/libGGPO.dll.a`, the static `lib/libGGPO.a`, and
+`share/GGPO/TOOLCHAIN.txt`, which names the toolchain that built it. Never
+merge it with an MSVC SDK: MinGW's linker also searches `.lib` names, and
+`find_package(GGPO)` rejects an MSVC SDK in a MinGW project.
+
+Both SDKs use the MSVCRT C runtime: x64 is built in MSYS2 `MINGW64` and x86 in
+`MINGW32`, matching existing MinGW projects such as FBNeo. Whether your
+toolchain can use them:
+
+| Toolchain | Dynamic `libGGPO.dll` | Static x64 `libGGPO.a` | Static x86 `libGGPO.a` |
+| --- | --- | --- | --- |
+| MSYS2 `MINGW64` / `MINGW32`, current GCC | Yes | **Tested** | **Tested** |
+| Other GCC builds with the same runtime and exception model (matching WinLibs or MinGW-builds flavors, distribution cross compilers), same or newer GCC | Yes | Expected to work, untested | Expected to work, untested |
+| x86 toolchains using SJLJ exceptions (some older MinGW-builds) | Yes | — | **Not supported:** link errors |
+| UCRT toolchains (MSYS2 `UCRT64`, llvm-mingw `*-ucrt`) | Yes | **Not supported** | **Not supported** |
+| Clang-based MinGW (llvm-mingw, MSYS2 `CLANG64`), libc++ | Yes | **Not supported** | **Not supported** |
+| GCC older than the SDK's | Yes | May fail to link | May fail to link |
+
+The reasons are under [static linking](#mingw-static-linking). If your
+toolchain cannot use the static library, link the DLL or
+[build from source](#mingw-build-from-source).
+
+#### MinGW: build from source
+
+From an MSYS2 `MINGW64` shell (x64) or `MINGW32` shell (x86), matching the
+release SDKs. Any MSYS2 environment, including `UCRT64`, works for a build that
+your own project then links; the static library then matches by construction.
+
+```bash
+pacman -S --needed mingw-w64-x86_64-{gcc,cmake,ninja,python}   # MINGW32: mingw-w64-i686-*, UCRT64: mingw-w64-ucrt-x86_64-*
+cmake -S . -B build/mingw -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX="$PWD/build/ggpo-sdk-mingw"
+cmake --build build/mingw --parallel
+cmake --install build/mingw
+```
+
+To build from Linux, add `-DCMAKE_TOOLCHAIN_FILE=mingw-w64-x86_64.cmake` from
+[cross-compiling](#mingw-cross-compile-from-linux). Tests need Windows (or
+Wine) to run, so add `-DBUILD_TESTING=OFF` when only producing the SDK. Vector
+War is not built with MinGW.
+
+#### MinGW: dynamic linking
+
+Link `lib/libGGPO.dll.a` and define `GGPO_SHARED_LIB`. `libGGPO.dll` works with
+**every** MinGW toolchain of the same architecture, including `UCRT64`,
+`CLANG64` and llvm-mingw: it embeds the MinGW C/C++ runtime and exposes only C.
+
+```bash
+# CMake (MSYS2)
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/c/ggpo-sdk-mingw
+cmake --build build --parallel
+
+# Without CMake
+g++ -DGGPO_SHARED_LIB -I/c/ggpo-sdk-mingw/include main.cpp -L/c/ggpo-sdk-mingw/lib -lGGPO
+```
+
+A MinGW program can also use the **MSVC** SDK's `GGPO.dll`, linked directly
+without CMake, because GGPO's interface is plain C:
+
+```bash
+gcc -DGGPO_SHARED_LIB -I/c/ggpo-sdk/include main.c /c/ggpo-sdk/bin/GGPO.dll
+```
+
+#### MinGW: static linking
+
+Link `lib/libGGPO.a` plus `-lws2_32 -lwinmm`, and do **not** define
+`GGPO_SHARED_LIB`.
+
+```bash
+# CMake (MSYS2)
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/c/ggpo-sdk-mingw \
+  -DGGPO_USE_STATIC=ON
+cmake --build build --parallel
+
+# Without CMake
+g++ -I/c/ggpo-sdk-mingw/include main.cpp /c/ggpo-sdk-mingw/lib/libGGPO.a -lws2_32 -lwinmm -static
+```
+
+`libGGPO.a` is C++ code linked against the application's own runtime, so the
+application's toolchain must match the SDK's in three ways
+([compatibility table](#mingw-release-sdk)):
+
+1. **C runtime:** MSVCRT.
+2. **Exception model:** SEH for x64, DWARF-2 for x86 (MSYS2's defaults). Check
+   with `g++ -v`: `--enable-sjlj-exceptions`, or `--disable-dw2-exceptions` on
+   i686, rules it out.
+3. **GCC version:** the same or newer than the GCC in `TOOLCHAIN.txt`; an older
+   GCC can fail with missing `libstdc++` symbols.
+
+The MSVC SDK's static `libGGPO.lib` cannot be used from MinGW.
+
+**Fully static executables.** Linking `libGGPO.a` puts GGPO inside the
+executable, but GCC still links its own runtime dynamically by default. The
+`.exe` then needs `libstdc++-6.dll`, `libgcc_s_seh-1.dll` (x64) or
+`libgcc_s_dw2-1.dll` (x86), and `libwinpthread-1.dll` at run time. The `-static`
+flag in the command above links them in too; with CMake add:
+
+```cmake
+if(MINGW)
+    target_link_options(application_x PRIVATE -static)
+endif()
+```
+
+`-static-libgcc -static-libstdc++` alone is not enough when `libwinpthread` is
+a DLL in your toolchain. Check the result with
+`objdump -p application_x.exe | grep "DLL Name"`: only Windows system DLLs
+(`KERNEL32.dll`, `msvcrt.dll`, `WS2_32.dll`, `WINMM.dll`, ...) should remain.
+
+#### MinGW: cross-compile from Linux
+
+Extract the MinGW SDK on the Linux host and use a toolchain file such as:
+
+```cmake
+# mingw-w64-x86_64.cmake  (use i686-w64-mingw32 for 32-bit)
+set(CMAKE_SYSTEM_NAME Windows)
+set(CMAKE_SYSTEM_PROCESSOR x86_64)
+set(CMAKE_C_COMPILER   x86_64-w64-mingw32-gcc)
+set(CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++)
+set(CMAKE_RC_COMPILER  x86_64-w64-mingw32-windres)
+set(CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32 $ENV{HOME}/ggpo-sdk-mingw)
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+```
+
+```bash
+# Dynamic; add -DGGPO_USE_STATIC=ON for static
+cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=mingw-w64-x86_64.cmake \
+  -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$HOME/ggpo-sdk-mingw
+
+# Without CMake: dynamic, then static
+x86_64-w64-mingw32-g++ -DGGPO_SHARED_LIB -I$HOME/ggpo-sdk-mingw/include main.cpp -L$HOME/ggpo-sdk-mingw/lib -lGGPO
+x86_64-w64-mingw32-g++ -I$HOME/ggpo-sdk-mingw/include main.cpp $HOME/ggpo-sdk-mingw/lib/libGGPO.a -lws2_32 -lwinmm -static
+```
+
+With `CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY`, which most cross toolchain files
+set, `find_package` searches only below `CMAKE_FIND_ROOT_PATH`. Add the SDK
+directory there, as above, or `find_package(GGPO)` will not find it.
+
+Distribution cross compilers (Debian/Ubuntu `g++-mingw-w64`, Fedora
+`mingw64-gcc-c++`) use MSVCRT and work with the dynamic SDK. For the static
+SDK, check them as described under [static linking](#mingw-static-linking) or
+build GGPO from source with the same cross compiler.
+
+#### MinGW: deploy
+
+- **Dynamic:** copy `bin/libGGPO.dll` next to `application_x.exe` (or
+  `GGPO.dll` when using the MSVC DLL). It needs no MinGW runtime DLLs.
+- **Static:** no GGPO file. Ship your toolchain's runtime DLLs unless the
+  executable is fully static (see [static linking](#mingw-static-linking)).
+
+### Linux
+
+For x86_64 applications built with GCC or Clang. `GGPO_SHARED_LIB` is not used.
+
+#### Linux: DEB or RPM package
+
+```bash
+# Debian or Ubuntu
+sudo apt install ./ggpo-0.5.0-linux-x86_64.deb
+# Fedora or another RPM-family system
+sudo dnf install ./ggpo-0.5.0-linux-x86_64.rpm
+```
+
+The package is named `ggpo-sdk` and installs under `/usr`: the public header in
+`/usr/include`, `libGGPO.so*`, `libGGPO.a` and the CMake metadata in `/usr/lib`,
+and license/readme files in `/usr/share/GGPO`. Ordinary
+`find_package(GGPO CONFIG REQUIRED)` finds it without an additional prefix.
+Upgrading from 0.3.0 replaces whichever of `ggpo-sdk-shared` or
+`ggpo-sdk-static` is installed.
+
+#### Linux: raw SDK (`tar.gz`)
+
+Use the raw archive for an unprivileged, application-local, or CI installation:
+
+```bash
+sha256sum --check SHA256SUMS --ignore-missing
+tar -xzf ggpo-0.5.0-linux-x86_64.tar.gz
+```
+
+```text
+ggpo-0.5.0-linux-x86_64/
+├── include/ggponet.h
+├── lib/libGGPO.so -> libGGPO.so.0
+├── lib/libGGPO.so.0 -> libGGPO.so.0.5.0
+├── lib/libGGPO.so.0.5.0
+├── lib/libGGPO.a
+├── lib/cmake/GGPO/
+└── share/GGPO/
+    ├── LICENSE
+    └── README.md
+```
+
+All Linux formats contain the same files; the format only controls how the SDK
+is installed.
+
+#### Linux: build from source
+
+Install Docker, then run the same Ubuntu 24.04 image used by Linux CI:
+
+```bash
+python3 scripts/linux/build_in_container.py \
+  --compiler gcc --packages --out build/linux-gcc
+```
+
+This builds, tests and installs both libraries into `build/linux-gcc/install`;
+verified DEB, RPM, and raw artifacts are written to `build/linux-gcc/packages`.
+Select `clang` with `--compiler clang`. `--library shared` or `--library static`
+builds a single flavor instead.
+
+Run the extended sanitizer qualification with the same image:
+
+```bash
+python3 scripts/linux/build_in_container.py \
+  --compiler clang --library static --sanitizers \
+  --out build/linux-sanitizers
+```
+
+This instruments production GGPO objects, all registered tests, and the
+installed C11/C++98 consumers with ASan and UBSan. Sanitizer runs use the static
+library only.
+
+#### Linux: dynamic linking
+
+Link `lib/libGGPO.so`. For a DEB/RPM install, omit `CMAKE_PREFIX_PATH` and the
+`-I`/`-L` paths.
+
+```bash
+# CMake
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$HOME/ggpo-0.5.0-linux-x86_64
+cmake --build build --parallel
+
+# Without CMake
+g++ -I$HOME/ggpo-0.5.0-linux-x86_64/include main.cpp \
+  -L$HOME/ggpo-0.5.0-linux-x86_64/lib -lGGPO -Wl,-rpath,'$ORIGIN'
+```
+
+#### Linux: static linking
+
+Link `lib/libGGPO.a`.
+
+```bash
+# CMake
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$HOME/ggpo-0.5.0-linux-x86_64 \
+  -DGGPO_USE_STATIC=ON
+cmake --build build --parallel
+
+# Without CMake
+g++ -I$HOME/ggpo-0.5.0-linux-x86_64/include main.cpp $HOME/ggpo-0.5.0-linux-x86_64/lib/libGGPO.a
+```
+
+#### Linux: deploy
+
+- **Dynamic:** DEB and RPM installs need nothing extra. Otherwise ship
+  `libGGPO.so.0` with the application and set an application-relative RPATH:
+
+  ```cmake
+  set_target_properties(application_x PROPERTIES
+      INSTALL_RPATH "$ORIGIN/../lib")
+  ```
+
+  During development, `LD_LIBRARY_PATH=$HOME/ggpo-0.5.0-linux-x86_64/lib ./application_x`
+  also works.
+- **Static:** no GGPO file.
+
+### Android
+
+For NDK applications on arm64-v8a, armeabi-v7a, and x86_64, API 21 or newer.
+`GGPO_SHARED_LIB` is not used.
+
+#### Android: release SDK
+
+`ggpo-0.5.0-android.tar.gz` contains one complete CMake prefix per ABI:
+
+```text
+ggpo-0.5.0-android/
+├── arm64-v8a/{include,lib,share}/
+├── armeabi-v7a/{include,lib,share}/
+└── x86_64/{include,lib,share}/
+```
+
+Always select the directory matching the application's `ANDROID_ABI`. In a
+Gradle `externalNativeBuild`, pass
+`-DCMAKE_PREFIX_PATH=/path/to/ggpo-0.5.0-android/${ANDROID_ABI}` so each ABI
+finds its own prefix.
+
+#### Android: build from source
+
+Install Android Studio or the command-line SDK with the NDK, CMake, and Ninja.
+Build one ABI at a time; API 21 is the supported floor:
+
+```bash
+cmake -S . -B build/android -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
+  -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=21 \
+  -DCMAKE_BUILD_TYPE=Release -DGGPO_BUILD_VECTORWAR=OFF \
+  -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX="$PWD/build/android-install"
+cmake --build build/android --parallel
+cmake --install build/android
+```
+
+Use `armeabi-v7a` or `x86_64` for the other release ABIs. Normal repository CI
+also builds and runs the Android test suite; `BUILD_TESTING=OFF` above is only
+for an application SDK build without a connected device.
+
+#### Android: dynamic linking
+
+Link `lib/libGGPO.so` from the ABI's prefix.
+
+```bash
+# CMake
+cmake -S . -B build -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+  -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=21 \
+  -DCMAKE_PREFIX_PATH=$HOME/ggpo-0.5.0-android/arm64-v8a
+
+# Without CMake ($triple = aarch64-linux-android21, etc.; $abi = arm64-v8a, etc.)
+$triple-clang++ -I$HOME/ggpo-0.5.0-android/$abi/include main.cpp \
+  -L$HOME/ggpo-0.5.0-android/$abi/lib -lGGPO
+```
+
+#### Android: static linking
+
+Link `lib/libGGPO.a` from the ABI's prefix.
+
+```bash
+# CMake: the dynamic command plus
+  -DGGPO_USE_STATIC=ON
+
+# Without CMake
+$triple-clang++ -I$HOME/ggpo-0.5.0-android/$abi/include main.cpp \
+  $HOME/ggpo-0.5.0-android/$abi/lib/libGGPO.a
+```
+
+#### Android: deploy
+
+- **Dynamic:** package the matching ABI's unversioned `libGGPO.so` under the
+  APK's `lib/<abi>/` directory; Gradle does this for linked native libraries.
+- **Static:** no separate GGPO file; GGPO is linked into the application's
+  native library.
+
+## Common to all platforms
+
+Everything in this section applies to every platform above.
+
+### SDK contents
 
 - Every SDK is an installed CMake package: `include/ggponet.h`,
   `lib/cmake/GGPO/`, `share/GGPO/` (license and readme), and **both** a shared
   and a static library.
 - The public header, API, ABI and wire format are the same on every platform,
   so peers on different platforms can play each other as long as the game
-  itself is deterministic across them ([floating point](#floating-point-determinism)).
+  itself is deterministic across them (see
+  [floating-point determinism](#floating-point-determinism)).
 - Every release lists checksums in `SHA256SUMS`; verify a download before
   extracting it.
 - Install each SDK in its own directory. Never merge two SDKs (for example MSVC
   and MinGW, or two Android ABIs) into one prefix.
 
-#### Link GGPO into an application
+### Link GGPO into an application
 
 The application picks one flavor per executable and links only that one:
 
 | | Dynamic (shared) | Static |
 | --- | --- | --- |
-| What you ship | The application **and** the GGPO runtime library | The application only (on MinGW, see [fully static executables](#mingw-fully-static-executables)) |
+| What you ship | The application **and** the GGPO runtime library | The application only (MinGW: see [static linking](#mingw-static-linking)) |
 | Updating GGPO | Replace the runtime library (same major version) | Relink the application |
 | Good for | Several programs sharing one GGPO; any MinGW environment | One self-contained binary; no runtime version mismatch |
 
@@ -101,10 +626,9 @@ target_link_libraries(application_x PRIVATE GGPO::GGPO)
 - The targets carry the include directory, any system libraries, and
   `GGPO_SHARED_LIB` when it is needed. Link one flavor per executable, not both.
 
-#### Linking without CMake
+### Linking without CMake
 
-Each platform section gives exact compiler commands. They follow the same
-rules:
+The platform sections give exact compiler commands. They follow the same rules:
 
 - Add `<sdk>/include` to the include path and link either the shared library
   or the static library file, never both.
@@ -116,7 +640,7 @@ rules:
   link with the C++ driver (`g++`, `clang++`) or add `-lstdc++`. CMake does
   this automatically.
 
-#### Build options
+### Build options
 
 These apply to every source build, whatever the platform:
 
@@ -130,7 +654,7 @@ These apply to every source build, whatever the platform:
 | `-DGGPO_RUN_TESTS_ON_BUILD=OFF` | Build tests but run them explicitly with `ctest` |
 | `-DBUILD_TESTING=OFF` | Consumer or packaging-only build, no tests |
 
-#### Floating-point determinism
+### Floating-point determinism
 
 GGPO only keeps peers in sync if every peer's game simulation computes
 bit-identical results. GGPO's own builds force consistent floating point where
@@ -142,385 +666,13 @@ the same flags for its simulation code:
 | 32-bit MinGW | `-msse2 -mfpmath=sse` | GCC's x87 default rounds differently from MSVC, x64 and Linux |
 | Android | `-ffp-contract=off` | Clang fuses multiply-add (FMA) on ARM, changing results |
 
-#### Deployment and license
+### Deployment and license
 
 - **Dynamic:** ship GGPO's runtime library where the platform loader finds it
-  (details per platform below).
+  (see each platform's deploy subsection).
 - **Static:** no GGPO file at run time.
 - GGPO is MIT licensed, so either flavor may be distributed in closed-source
   applications; include the license text from `share/GGPO/LICENSE` either way.
-
-### Windows with MSVC
-
-For Visual Studio and clang-cl applications.
-
-#### Install the MSVC SDK
-
-Download `windows-x64.zip` (64-bit) or `windows-x86.zip` (32-bit), verify it
-with `Get-FileHash -Algorithm SHA256`, and extract it to its own folder such as
-`C:/ggpo-sdk`:
-
-```text
-C:/ggpo-sdk/
-├── include/ggponet.h
-├── bin/GGPO.dll                  # shared library (runtime)
-├── lib/GGPO.lib                  # import library for GGPO.dll
-├── lib/libGGPO.lib               # static library
-├── lib/*.pdb                     # debug symbols
-├── lib/cmake/GGPO/
-└── share/GGPO/
-```
-
-Never extract it into the same folder as a MinGW SDK: both contain
-`lib/cmake/GGPO/`. `find_package(GGPO)` rejects a MinGW SDK in an MSVC project
-with a message naming the right download.
-
-#### Build the MSVC SDK from source
-
-Install Visual Studio 2022 with the Desktop development with C++ workload,
-CMake, and Python 3. From a Developer PowerShell prompt in the source checkout:
-
-```powershell
-cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
-  -DGGPO_BUILD_SDK=ON `
-  -DGGPO_BUILD_VECTORWAR=ON
-cmake --build build --config Release --parallel
-cmake --install build --config Release --prefix C:/ggpo-sdk
-```
-
-Change `-A x64` to `-A Win32` for a 32-bit SDK. The install contains both
-`GGPO.dll` (with its `GGPO.lib` import library) and `libGGPO.lib`. For an
-SDL-free build of only the portable Vector War core and headless fixture, keep
-`GGPO_BUILD_VECTORWAR=ON` and add `-DGGPO_BUILD_VECTORWAR_GUI=OFF`.
-
-The [common build options](#build-options) apply.
-
-#### Link with MSVC
-
-Release SDKs are Release builds that use the dynamic C runtime (`/MD`):
-
-| | Dynamic | Static |
-| --- | --- | --- |
-| Link against | `lib/GGPO.lib` | `lib/libGGPO.lib` + `ws2_32.lib winmm.lib` |
-| `GGPO_SHARED_LIB` | Defined | **Not** defined |
-| Application configurations | Debug and Release alike | `/MD` only (Release, RelWithDebInfo) |
-| CMake configure | `cmake -S . -B build -DCMAKE_PREFIX_PATH=C:/ggpo-sdk` | add `-DGGPO_USE_STATIC=ON` |
-| Without CMake | `cl /MD /I C:\ggpo-sdk\include /DGGPO_SHARED_LIB main.cpp /link /LIBPATH:C:\ggpo-sdk\lib GGPO.lib` | `cl /MD /I C:\ggpo-sdk\include main.cpp /link /LIBPATH:C:\ggpo-sdk\lib libGGPO.lib ws2_32.lib winmm.lib` |
-
-Build with `cmake --build build --config Release --parallel`.
-
-MSVC rejects `libGGPO.lib` in a Debug (`/MDd`) or `/MT` build with a
-runtime-library mismatch (`LNK2038`). For a Debug static build, either link the
-DLL in Debug configurations or [build GGPO from source](#build-the-msvc-sdk-from-source)
-with `--config Debug`.
-
-#### Deploy with MSVC
-
-- **Dynamic:** copy `bin/GGPO.dll` next to `application_x.exe`. For
-  development, adding the SDK's `bin` directory to `PATH` is enough.
-- **Static:** no GGPO file. Ship the usual VC++ redistributable for `/MD`.
-
-### Windows with MinGW-w64
-
-For GCC-based MinGW-w64 applications: MSYS2 shells, standalone toolchains, and
-`x86_64-w64-mingw32` / `i686-w64-mingw32` cross compilers on Linux.
-
-#### Choose a MinGW SDK
-
-Download `windows-x64-mingw.zip` (64-bit) or `windows-x86-mingw.zip` (32-bit)
-and extract it to its own folder, such as `C:/ggpo-sdk-mingw` (`/c/ggpo-sdk-mingw`
-in MSYS2). It contains `bin/libGGPO.dll`, the import library
-`lib/libGGPO.dll.a`, the static `lib/libGGPO.a`, and
-`share/GGPO/TOOLCHAIN.txt`, which names the toolchain that built it. Never
-merge it with an MSVC SDK: MinGW's linker also searches `.lib` names, and
-`find_package(GGPO)` rejects an MSVC SDK in a MinGW project.
-
-Both SDKs use the MSVCRT C runtime: x64 is built in MSYS2 `MINGW64` and x86 in
-`MINGW32`, matching existing MinGW projects such as FBNeo.
-
-- **`libGGPO.dll` works with any MinGW toolchain** of the same architecture,
-  including MSYS2 `UCRT64`, `CLANG64` and llvm-mingw. It embeds the MinGW C/C++
-  runtime and exposes only C, so applications need not ship `libgcc`,
-  `libstdc++` or `libwinpthread` DLLs for GGPO.
-- **`libGGPO.a` must match your toolchain.** It is C++ code linked against the
-  application's own runtime, so three things must agree with the SDK:
-  1. **C runtime:** MSVCRT.
-  2. **Exception model:** SEH for x64, DWARF-2 for x86 (MSYS2's defaults).
-  3. **GCC version:** the same or newer than the GCC in `TOOLCHAIN.txt`; an
-     older GCC can fail with missing `libstdc++` symbols.
-
-| Toolchain | Dynamic `libGGPO.dll` | Static x64 `libGGPO.a` | Static x86 `libGGPO.a` |
-| --- | --- | --- | --- |
-| MSYS2 `MINGW64` / `MINGW32`, current GCC | Yes | **Tested** | **Tested** |
-| Other GCC builds with the same runtime and exception model (matching WinLibs or MinGW-builds flavors, distribution cross compilers), same or newer GCC | Yes | Expected to work, untested | Expected to work, untested |
-| x86 toolchains using SJLJ exceptions (some older MinGW-builds) | Yes | — | **Not supported:** link errors |
-| UCRT toolchains (MSYS2 `UCRT64`, llvm-mingw `*-ucrt`) | Yes | **Not supported** | **Not supported** |
-| Clang-based MinGW (llvm-mingw, MSYS2 `CLANG64`), libc++ | Yes | **Not supported** | **Not supported** |
-| GCC older than the SDK's | Yes | May fail to link | May fail to link |
-
-Check a toolchain with `g++ -v` (look for `--enable-sjlj-exceptions`, or
-`--disable-dw2-exceptions` on i686, which rule it out). If static linking is
-not supported for your toolchain, use the DLL or
-[build GGPO from source](#build-the-mingw-sdk-from-source) with that toolchain;
-the static library then matches by construction.
-
-A MinGW program can also use the **MSVC** SDK's `GGPO.dll`, linked directly
-without CMake, because GGPO's interface is plain C:
-
-```bash
-gcc -DGGPO_SHARED_LIB -I/c/ggpo-sdk/include main.c /c/ggpo-sdk/bin/GGPO.dll
-```
-
-The MSVC SDK's static `libGGPO.lib` cannot be used from MinGW.
-
-#### Build the MinGW SDK from source
-
-From an MSYS2 `MINGW64` shell (x64) or `MINGW32` shell (x86), matching the
-release SDKs. Any MSYS2 environment, including `UCRT64`, works for a build that
-your own project then links:
-
-```bash
-pacman -S --needed mingw-w64-x86_64-{gcc,cmake,ninja,python}   # MINGW32: mingw-w64-i686-*, UCRT64: mingw-w64-ucrt-x86_64-*
-cmake -S . -B build/mingw -G Ninja -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_INSTALL_PREFIX="$PWD/build/ggpo-sdk-mingw"
-cmake --build build/mingw --parallel
-cmake --install build/mingw
-```
-
-To cross-compile from Linux, pass the
-[toolchain file below](#cross-compile-for-windows-from-linux) with
-`-DCMAKE_TOOLCHAIN_FILE`; the commands are otherwise the same. Tests need
-Windows (or Wine) to run, so add `-DBUILD_TESTING=OFF` when only producing the
-SDK. Vector War is not built with MinGW.
-
-#### Link with MinGW-w64
-
-| | Dynamic | Static |
-| --- | --- | --- |
-| Link against | `lib/libGGPO.dll.a` | `lib/libGGPO.a` + `-lws2_32 -lwinmm` |
-| `GGPO_SHARED_LIB` | Defined | **Not** defined |
-| Toolchains | Any MinGW of the same architecture | [Matching toolchains](#choose-a-mingw-sdk) only |
-| CMake configure (MSYS2) | `cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/c/ggpo-sdk-mingw` | add `-DGGPO_USE_STATIC=ON` |
-| CMake configure (cross from Linux) | `cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=mingw-w64-x86_64.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$HOME/ggpo-sdk-mingw` | add `-DGGPO_USE_STATIC=ON` |
-| Without CMake (MSYS2) | `g++ -DGGPO_SHARED_LIB -I/c/ggpo-sdk-mingw/include main.cpp -L/c/ggpo-sdk-mingw/lib -lGGPO` | `g++ -I/c/ggpo-sdk-mingw/include main.cpp /c/ggpo-sdk-mingw/lib/libGGPO.a -lws2_32 -lwinmm -static` |
-| Without CMake (cross from Linux) | `x86_64-w64-mingw32-g++ -DGGPO_SHARED_LIB -I$HOME/ggpo-sdk-mingw/include main.cpp -L$HOME/ggpo-sdk-mingw/lib -lGGPO` | `x86_64-w64-mingw32-g++ -I$HOME/ggpo-sdk-mingw/include main.cpp $HOME/ggpo-sdk-mingw/lib/libGGPO.a -lws2_32 -lwinmm -static` |
-
-Libraries go **after** the sources: GNU linkers resolve left to right.
-
-**32-bit:** GGPO's x86 MinGW build compiles with `-msse2 -mfpmath=sse`. GCC's
-x87 default rounds floating point differently from MSVC, x64 and Linux, which
-desynchronizes deterministic simulations. Compile the game's simulation code
-with the same flags if it uses floating point and plays against other
-platforms.
-
-#### Cross-compile for Windows from Linux
-
-Extract the MinGW SDK on the Linux host and use a toolchain file such as:
-
-```cmake
-# mingw-w64-x86_64.cmake  (use i686-w64-mingw32 for 32-bit)
-set(CMAKE_SYSTEM_NAME Windows)
-set(CMAKE_SYSTEM_PROCESSOR x86_64)
-set(CMAKE_C_COMPILER   x86_64-w64-mingw32-gcc)
-set(CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++)
-set(CMAKE_RC_COMPILER  x86_64-w64-mingw32-windres)
-set(CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32 $ENV{HOME}/ggpo-sdk-mingw)
-set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
-set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
-set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
-set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
-```
-
-With `CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY`, which most cross toolchain files
-set, `find_package` searches only below `CMAKE_FIND_ROOT_PATH`. Add the SDK
-directory there, as above, or `find_package(GGPO)` will not find it.
-
-Distribution cross compilers (Debian/Ubuntu `g++-mingw-w64`, Fedora
-`mingw64-gcc-c++`) use MSVCRT and work with the dynamic SDK. For the static
-SDK, check them against the [compatibility table](#choose-a-mingw-sdk) or build
-GGPO from source with the same cross compiler.
-
-#### MinGW: fully static executables
-
-Linking `libGGPO.a` puts GGPO inside the executable, but GCC still links its
-own runtime dynamically by default. The resulting `.exe` then needs
-`libstdc++-6.dll`, `libgcc_s_seh-1.dll` (x64) or `libgcc_s_dw2-1.dll` (x86),
-and `libwinpthread-1.dll` at run time, like any other MinGW C++ program. To
-produce a single self-contained `.exe`, link the runtime statically too:
-
-```cmake
-if(MINGW)
-    target_link_options(application_x PRIVATE -static)
-endif()
-```
-
-or pass `-static` on the `g++` command line, as in the table above.
-`-static-libgcc -static-libstdc++` alone is not enough when `libwinpthread` is a
-DLL in your toolchain. Check the result with
-`objdump -p application_x.exe | grep "DLL Name"`: only Windows system DLLs
-(`KERNEL32.dll`, `msvcrt.dll`, `WS2_32.dll`, `WINMM.dll`, ...) should remain.
-
-#### Deploy with MinGW-w64
-
-- **Dynamic:** copy `bin/libGGPO.dll` next to `application_x.exe` (or
-  `GGPO.dll` when using the MSVC DLL). It needs no MinGW runtime DLLs; your
-  application's own runtime is still your choice.
-- **Static:** no GGPO file. Ship your toolchain's runtime DLLs unless the
-  executable is [fully static](#mingw-fully-static-executables).
-
-### Linux
-
-For x86_64 applications built with GCC or Clang.
-
-#### Install with DEB or RPM
-
-```bash
-# Debian or Ubuntu
-sudo apt install ./ggpo-0.5.0-linux-x86_64.deb
-# Fedora or another RPM-family system
-sudo dnf install ./ggpo-0.5.0-linux-x86_64.rpm
-```
-
-The package is named `ggpo-sdk` and installs under `/usr`: the public header in
-`/usr/include`, `libGGPO.so*`, `libGGPO.a` and the CMake metadata in `/usr/lib`,
-and license/readme files in `/usr/share/GGPO`. Ordinary
-`find_package(GGPO CONFIG REQUIRED)` finds it without an additional prefix.
-
-Upgrading from 0.3.0 replaces whichever of `ggpo-sdk-shared` or
-`ggpo-sdk-static` is installed.
-
-#### Install the raw SDK (`tar.gz`)
-
-Use the raw archive for an unprivileged, application-local, or CI installation:
-
-```bash
-sha256sum --check SHA256SUMS --ignore-missing
-tar -xzf ggpo-0.5.0-linux-x86_64.tar.gz
-```
-
-```text
-ggpo-0.5.0-linux-x86_64/
-├── include/ggponet.h
-├── lib/libGGPO.so -> libGGPO.so.0
-├── lib/libGGPO.so.0 -> libGGPO.so.0.5.0
-├── lib/libGGPO.so.0.5.0
-├── lib/libGGPO.a
-├── lib/cmake/GGPO/
-└── share/GGPO/
-    ├── LICENSE
-    └── README.md
-```
-
-All Linux formats contain the same files. The package format only controls how
-the SDK is installed.
-
-#### Build the Linux SDK from source
-
-Install Docker, then run the same Ubuntu 24.04 image used by Linux CI:
-
-```bash
-python3 scripts/linux/build_in_container.py \
-  --compiler gcc --packages --out build/linux-gcc
-```
-
-This builds, tests and installs both libraries into `build/linux-gcc/install`;
-verified DEB, RPM, and raw artifacts are written to `build/linux-gcc/packages`.
-Select `clang` with `--compiler clang`. `--library shared` or `--library static`
-builds a single flavor instead.
-
-Run the extended sanitizer qualification with the same image:
-
-```bash
-python3 scripts/linux/build_in_container.py \
-  --compiler clang --library static --sanitizers \
-  --out build/linux-sanitizers
-```
-
-This instruments production GGPO objects, all registered tests, and the
-installed C11/C++98 consumers with ASan and UBSan. Sanitizer runs use the static
-library only.
-
-#### Link on Linux
-
-| | Dynamic | Static |
-| --- | --- | --- |
-| Link against | `lib/libGGPO.so` | `lib/libGGPO.a` |
-| CMake configure (DEB/RPM) | `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release` | add `-DGGPO_USE_STATIC=ON` |
-| CMake configure (`tar.gz`) | `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$HOME/ggpo-0.5.0-linux-x86_64` | add `-DGGPO_USE_STATIC=ON` |
-| Without CMake | `g++ -I$HOME/ggpo-0.5.0-linux-x86_64/include main.cpp -L$HOME/ggpo-0.5.0-linux-x86_64/lib -lGGPO -Wl,-rpath,'$ORIGIN'` | `g++ -I$HOME/ggpo-0.5.0-linux-x86_64/include main.cpp $HOME/ggpo-0.5.0-linux-x86_64/lib/libGGPO.a` |
-
-`GGPO_SHARED_LIB` is not used on Linux. Build with
-`cmake --build build --parallel`.
-
-#### Deploy on Linux
-
-- **Dynamic:** DEB and RPM installs need nothing extra. Otherwise ship
-  `libGGPO.so.0` with the application and set an application-relative RPATH:
-
-  ```cmake
-  set_target_properties(application_x PROPERTIES
-      INSTALL_RPATH "$ORIGIN/../lib")
-  ```
-
-  During development, `LD_LIBRARY_PATH=$HOME/ggpo-0.5.0-linux-x86_64/lib ./application_x`
-  also works.
-- **Static:** no GGPO file.
-
-### Android
-
-For NDK applications on arm64-v8a, armeabi-v7a, and x86_64, API 21 or newer.
-
-#### Install the Android SDK
-
-`ggpo-0.5.0-android.tar.gz` contains one complete CMake prefix per ABI:
-
-```text
-ggpo-0.5.0-android/
-├── arm64-v8a/{include,lib,share}/
-├── armeabi-v7a/{include,lib,share}/
-└── x86_64/{include,lib,share}/
-```
-
-Always select the directory matching the application's `ANDROID_ABI`. In a
-Gradle `externalNativeBuild`, pass
-`-DCMAKE_PREFIX_PATH=/path/to/ggpo-0.5.0-android/${ANDROID_ABI}` so each ABI
-finds its own prefix.
-
-#### Build the Android SDK from source
-
-Install Android Studio or the command-line SDK with the NDK, CMake, and Ninja.
-Build one ABI at a time; API 21 is the supported floor:
-
-```bash
-cmake -S . -B build/android -G Ninja \
-  -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
-  -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=21 \
-  -DCMAKE_BUILD_TYPE=Release -DGGPO_BUILD_VECTORWAR=OFF \
-  -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX="$PWD/build/android-install"
-cmake --build build/android --parallel
-cmake --install build/android
-```
-
-Use `armeabi-v7a` or `x86_64` for the other release ABIs. Normal repository CI
-also builds and runs the Android test suite; `BUILD_TESTING=OFF` above is only
-for an application SDK build without a connected device.
-
-#### Link on Android
-
-| | Dynamic | Static |
-| --- | --- | --- |
-| Link against | `lib/libGGPO.so` | `lib/libGGPO.a` |
-| CMake configure | `cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=21 -DCMAKE_PREFIX_PATH=$HOME/ggpo-0.5.0-android/arm64-v8a` | add `-DGGPO_USE_STATIC=ON` |
-| Without CMake (`$triple` = `aarch64-linux-android21`, etc.) | `$triple-clang++ -I$HOME/ggpo-0.5.0-android/$abi/include main.cpp -L$HOME/ggpo-0.5.0-android/$abi/lib -lGGPO` | `$triple-clang++ -I$HOME/ggpo-0.5.0-android/$abi/include main.cpp $HOME/ggpo-0.5.0-android/$abi/lib/libGGPO.a` |
-
-`GGPO_SHARED_LIB` is not used on Android.
-
-#### Deploy on Android
-
-- **Dynamic:** package the matching ABI's unversioned `libGGPO.so` under the
-  APK's `lib/<abi>/` directory; Gradle does this for linked native libraries.
-- **Static:** no separate GGPO file; GGPO is linked into the application's
-  native library.
 
 ### Run the standalone Vector War sample
 
@@ -564,6 +716,24 @@ rather than either file directly.
 See the [build architecture](architecture/Build.md#install-layout) for the
 canonical layout and the [release workflow](architecture/Build.md#release-packages)
 for its validation and publication contract.
+
+## Game State and Inputs
+
+Your game probably has many moving parts.  GGPO only depends on these two: 
+
+- **Game State** describes the current state of everything in your game.  In a shooter, this would include the position of the ship and all the enemies on the screen, the location of all the bullets, how much health each opponent has, the current score, etc. etc. 
+
+- **Game Inputs** are the set of things which modify the game state.  These obviously include the joystick and button presses done by the player, but can include other non-obvious inputs as well.  For example, if your game uses the current time of day to calculate something in the game, the current time of day at the beginning of a frame is also an input.
+
+There are many other things in your game engine that are neither game state nor inputs.  For example, your audio and video renderers are not game state since they don't have an effect on the outcome of the game.  If you have a special effects engine that's generating effects that do not have an impact on the game, they can be excluded from the game state as well.
+
+## Using State and Inputs for Synchronization
+
+Each player in a GGPO networked game has a complete copy of your game running.  GGPO needs to keep both copies of the game state in sync to ensure that both players are experiencing the same game.  It would be much too expensive to send an entire copy of the game state between players every frame.  Instead GGPO sends the players' inputs to each other and has each player step the game forward.  In order for this to work, your game engine must meet three criteria:
+
+- The game simulation must be fully deterministic.  That is, for any given game state and inputs, advancing the game state by exactly 1 frame must result in identical game states for all players.
+- The game state must be fully encapsulated and serializable.  
+- Your game engine must be able to load, save, and execute a single simulation frame without rendering the result of that frame.  This will be used to implement rollbacks.
 
 ## Programming guide
 
