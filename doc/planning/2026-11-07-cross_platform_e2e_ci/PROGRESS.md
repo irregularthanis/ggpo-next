@@ -8,7 +8,7 @@ Status: Clean native matrix qualified; M5 deferred to follow-up work
 
 ### M0: Freeze E2E contracts
 
-Architecture: [native cross-host smoke](../../architecture/Testing.md#native-cross-host-smoke).
+Architecture: [native cross-host smoke](../../architecture/Testing.md#cross-platform-e2e).
 
 - [x] M0-T01: Freeze schema 2, canonical byte order, independent oracle vectors, and schema 1 compatibility.
 - [x] M0-T02: Freeze run identity, HMAC message, Deployment rendezvous, permissions, trigger, port, timeout, and cleanup contracts.

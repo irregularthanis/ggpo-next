@@ -347,7 +347,7 @@ Required setup:
 
 For ordinary local validation, use CTest instead; the cross-host workflow
 depends on GitHub Deployments, native hosted runners, and ephemeral Tailscale
-nodes. See [Build and CI integration](Testing.md#build-and-ci-integration).
+nodes. See [Build and CI integration](Testing.md#ci-gating-and-labels).
 
 ## Adding another platform
 
