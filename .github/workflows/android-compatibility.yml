@@ -200,6 +200,9 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         env:
           GGPO_TEST_LAUNCHER: ${{ github.workspace }}/tests/android/run_on_device.py
+          # API 21 serializes concurrent adb-backed peers more slowly than
+          # current releases. The native default remains 15 seconds.
+          GGPO_SMOKE_DEADLINE_MS: 60000
         with:
           api-level: ${{ matrix.api }}
           target: ${{ matrix.target }}

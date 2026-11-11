@@ -47,6 +47,25 @@ TestTimeMs()
 #endif
 }
 
+// Keep native tests strict by default while allowing slow device launchers to
+// supply a larger, still-bounded handshake and coordinator deadline.
+static uint32
+TestDeadlineMs()
+{
+   const char *value = getenv("GGPO_SMOKE_DEADLINE_MS");
+   char *end = NULL;
+   unsigned long parsed;
+   if (!value || !*value) {
+      return 15000;
+   }
+   parsed = strtoul(value, &end, 10);
+   if (!end || *end || parsed < 1000 || parsed > 300000) {
+      fprintf(stderr, "invalid GGPO_SMOKE_DEADLINE_MS\n");
+      return 15000;
+   }
+   return (uint32)parsed;
+}
+
 // Yield briefly while peers exchange packets, retrying interrupted POSIX waits.
 static void
 TestWaitMs(int timeout_ms)
@@ -279,7 +298,7 @@ main(int argc, char **argv)
    while (g_smoke_metrics.running_events == 0) {
       ggpo_idle(g_smoke_session, 1);
       TestWaitMs(1);
-      if (TestTimeMs() - start_time > 15000) {
+      if (TestTimeMs() - start_time > TestDeadlineMs()) {
          fprintf(stderr, "timed out waiting for GGPO running event\n");
          return 1;
       }
@@ -318,7 +337,7 @@ main(int argc, char **argv)
          return 1;
       }
       ggpo_idle(g_smoke_session, 0);
-      if (TestTimeMs() - start_time > 30000) {
+      if (TestTimeMs() - start_time > TestDeadlineMs() * 2) {
          fprintf(stderr, "timed out advancing peer session\n");
          return 1;
       }
@@ -341,7 +360,7 @@ main(int argc, char **argv)
             return 1;
          }
          TestWaitMs(1);
-         if (TestTimeMs() - start_time > 15000) {
+         if (TestTimeMs() - start_time > TestDeadlineMs()) {
             fprintf(stderr, "timed out waiting for completion barrier\n");
             return 1;
          }

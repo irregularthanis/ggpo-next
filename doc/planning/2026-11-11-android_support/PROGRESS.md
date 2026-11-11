@@ -55,7 +55,7 @@ Parallel with M2.
 - [ ] M5-T00: Every row of the [parity matrix](TECH_PLAN.md#parity-matrix)
   is done or has a written "not applicable" reason.
 
-- [ ] M5-T01: Android SDK archive and Vector War APK implemented; release dry run pending.
+- [x] M5-T01: Android SDK archive and Vector War APK; release dry run passed.
 - [x] M5-T02: Developer Guide parity: install, build from source, use with
   CMake, Gradle and without CMake, shared vs static, deployment, platform notes,
   and running Vector War; VectorWar.md.
@@ -82,6 +82,7 @@ Parallel with M2.
 | M1-T05 (partial) | Same commit | Linux, MinGW, E2E and owner checks pass; Windows baseline pending at record time |
 | M3-T01–T03 | [Android compatibility 42970482329](https://github.com/irregularthanis/ggpo-next/actions/runs/42970482329) (`209def9`) | Shared SDL2 frontend built as `libmain.so` with touch controls; Gradle APK (launcher + SDLActivity, root CMake, SDL 2.30.9 from source) packs `libGGPO.so`, `libSDL2.so`, `libmain.so` for arm64-v8a, armeabi-v7a, x86_64; installed and smoke-launched on API 21 and API 35 emulators ("frontend smoke: OK" in logcat). 16/16 Android jobs pass |
 | Vector War headless | Same run | `VectorWarHeadless` builds for Android; `vectorwar_headless_loopback` and negative contracts pass natively on all ABIs, arm64 Debug, and both emulators |
+| M5-T01 | [Release dry run 43037303201](https://github.com/irregularthanis/ggpo-next/actions/runs/43037303201) (`c45c0e4`) | Multi-ABI Android SDK archive and Vector War APK packaged successfully alongside every existing release artifact |
 
 ## Decisions
 
