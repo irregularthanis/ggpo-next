@@ -20,7 +20,7 @@ jobs:
         include:
           - {architecture: x64, shared: BOTH, label: both, configuration: Release}
           - {architecture: Win32, shared: BOTH, label: both, configuration: Release}
-          - {architecture: x64, shared: "OFF", label: static, configuration: Debug}
+          - {architecture: x64, shared: BOTH, label: both, configuration: Debug}
 
     steps:
       - uses: actions/checkout@v4

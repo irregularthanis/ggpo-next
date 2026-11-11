@@ -85,4 +85,4 @@ CMake SDKs work, and CI should test each distinct way of using it once.
 | Existing scripts depend on per-flavor package names | 0.4.0 migration table; `Provides`/`Replaces` on the old Linux package names |
 | A Windows consumer links the DLL without `dllimport` | `GGPO::shared` carries `GGPO_SHARED_LIB` as an interface definition; consumer test fails without it |
 | Both flavors are linked into one binary | Config refuses `GGPO_USE_STATIC` with an invalid value and documents one flavor per target |
-| Debug-only regressions are missed | Keep x64 static Debug; add scheduled MSVC ASan |
+| Debug-only regressions are missed | Keep one x64 Debug lane (both libraries); add scheduled MSVC ASan |

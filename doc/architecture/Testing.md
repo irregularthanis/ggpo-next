@@ -52,7 +52,7 @@ behavior-changing refactor pass.
 | Rollback behavior | Save, restore, synchronized input, replay, and deterministic final state | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | SyncTest backend without sockets |
 | Native transport | Handshake, events, prediction, rollback, UDP delivery, and shutdown | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Two Windows or Linux GGPO processes over localhost |
 | Negative peer contracts | Startup, timeout, checksum mismatch, and shutdown failures are rejected | [`peer_runner_negative.py`](../../tests/smoke/peer_runner_negative.py) | Fault-injected real peer processes |
-| Build compatibility | x64/Win32 Release with both libraries, plus x64 static Debug | [`windows-compatibility.yml`](../../.github/workflows/windows-compatibility.yml) | Three Windows lanes |
+| Build compatibility | x64/Win32 Release and x64 Debug, each with both libraries | [`windows-compatibility.yml`](../../.github/workflows/windows-compatibility.yml) | Three Windows lanes |
 | Linux transport | The same peer contract through POSIX UDP | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`platform_linux.cpp`](../../src/lib/ggpo/platform_linux.cpp) | Two native Linux processes |
 | Linux package | GCC/Clang with both libraries, installed consumers and ABI ceiling | [`linux-compatibility.yml`](../../.github/workflows/linux-compatibility.yml) | Shared Ubuntu 24.04 image |
 | Cross-host | Native Windows and Linux peers converge | [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml), [`tests/e2e`](../../tests/e2e) | Native GitHub-hosted Windows↔Ubuntu matrix over ephemeral Tailscale nodes |
@@ -425,7 +425,7 @@ Actions runs it across this matrix:
 | --- | --- | --- | --- |
 | x64 | Shared and static | Release | Shipped configuration, 64-bit |
 | Win32 | Shared and static | Release | Shipped configuration, 32-bit |
-| x64 | Static only | Debug | MSVC debug runtime checks: `/RTC1`, debug heap, checked iterators |
+| x64 | Shared and static | Debug | MSVC debug runtime checks: `/RTC1`, debug heap, checked iterators |
 
 GGPO's `ASSERT` is unconditional, so additional Debug variants compile the same
 checks as Release; the scheduled MSVC AddressSanitizer lane below covers memory

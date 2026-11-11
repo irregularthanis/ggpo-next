@@ -45,7 +45,7 @@ Parallel with M3.
 
 ### M5: CI consolidation (depends: M3)
 
-- [ ] M5-T01: Windows lanes reduced to x64 Release, Win32 Release, x64 static Debug.
+- [ ] M5-T01: Windows lanes reduced to x64 Release, Win32 Release, x64 Debug (all both libraries).
 - [ ] M5-T02: Linux lanes reduced to gcc and clang, each testing both flavors.
 - [ ] M5-T03: Add the scheduled/manual MSVC AddressSanitizer lane.
 - [ ] M5-T04: Frozen Windows baseline reads the dual build unchanged.
@@ -75,7 +75,7 @@ Parallel with M3.
 |---|---|
 | `GGPO::GGPO` defaults to shared when both are installed | Proposed |
 | Windows static library named `libGGPO.lib` | Accepted (2026-11-10) |
-| Keep exactly one Debug lane (x64 static) | Proposed |
+| Keep exactly one Debug lane (x64, both libraries) | Accepted |
 | MSVC ASan runs on a schedule, not on every PR | Proposed |
 | Compile each flavor separately instead of a shared object library | Accepted (M1) |
 | `--sanitizers` requires `--library static`; an instrumented `libGGPO.so` needs the C++ sanitizer runtime in every C consumer | Accepted (M3) |

@@ -109,7 +109,7 @@ time:
 
 | Workflow | Before | After |
 |---|---|---|
-| Windows compatibility | x64/Win32 × shared/static × Debug/Release = 8 | x64 Release, Win32 Release (both linkages each), x64 static Debug = 3 |
+| Windows compatibility | x64/Win32 × shared/static × Debug/Release = 8 | x64 Release, Win32 Release, x64 Debug, each with both linkages = 3 |
 | Linux compatibility | gcc/clang × shared/static = 4 | gcc, clang (both linkages each) = 2 |
 | Frozen Windows baseline | Compares candidate with frozen evidence | Unchanged; reads the shared DLL from the dual build |
 | Sanitizers | Weekly Linux ASan+UBSan | Add weekly/manual MSVC `/fsanitize=address` x64 lane |
