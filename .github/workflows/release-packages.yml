@@ -139,6 +139,7 @@ jobs:
           foreach ($file in @("bin/GGPO.dll", "lib/GGPO.lib", "lib/libGGPO.lib")) {
             if (!(Test-Path (Join-Path $extract $file))) { throw "SDK archive is missing $file" }
           }
+          if (Get-ChildItem $extract -Recurse -Filter *.a) { throw "MSVC SDK must not contain MinGW .a files" }
           # Default, GGPO_USE_STATIC=ON and GGPO::shared consumers, each run;
           # static consumers run without the SDK's bin directory on PATH.
           python tests/consumer/verify_consumers.py `
@@ -153,6 +154,93 @@ jobs:
         with:
           name: release-package-windows-${{ matrix.platform }}
           path: build/ggpo-*.zip
+          if-no-files-found: error
+
+  package-windows-mingw:
+    # libGGPO.dll + libGGPO.dll.a and libGGPO.a, MinGW runtime embedded.
+    name: Windows ${{ matrix.label }} MinGW SDK
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {label: x64, platform: x64, msystem: UCRT64, env: ucrt-x86_64, runtime: UCRT}
+          - {label: x86, platform: x86, msystem: MINGW32, env: i686, runtime: MSVCRT}
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Check out the tagged source
+        uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+          update: false
+          install: >-
+            mingw-w64-${{ matrix.env }}-gcc
+            mingw-w64-${{ matrix.env }}-cmake
+            mingw-w64-${{ matrix.env }}-ninja
+            mingw-w64-${{ matrix.env }}-python
+            zip
+
+      - name: Verify tag and project versions agree
+        if: github.event_name == 'push'
+        run: |
+          version=$(sed -n 's/^project(GGPO VERSION \([0-9][0-9.]*\)).*/\1/p' CMakeLists.txt)
+          expected="v${version}"
+          rc_prefix="${expected}-rc."
+          rc_number="${GITHUB_REF_NAME#"${rc_prefix}"}"
+          if [[ "${GITHUB_REF_NAME}" != "${expected}" &&
+                !( "${GITHUB_REF_NAME}" == "${rc_prefix}"* && "${rc_number}" =~ ^[0-9]+$ ) ]]; then
+            echo "Release tag ${GITHUB_REF_NAME} does not match ${expected} or ${expected}-rc.N" >&2
+            exit 1
+          fi
+
+      - name: Build, test, install and archive the SDK
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = push ]; then version="${GITHUB_REF_NAME#v}"; else version=dev; fi
+          name="ggpo-${version}-windows-${{ matrix.platform }}-mingw"
+          stage="$PWD/build/stage/$name"
+          cmake -S . -B build/package -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON -DGGPO_RUN_TESTS_ON_BUILD=OFF \
+            -DCMAKE_INSTALL_PREFIX="$stage"
+          cmake --build build/package --parallel
+          ctest --test-dir build/package --output-on-failure
+          cmake --install build/package
+          printf '%s\n' \
+            "GGPO ${version} SDK for MinGW-w64 (${{ matrix.platform }}, ${{ matrix.runtime }} C runtime)." \
+            "Built with: $(gcc --version | head -n 1)" \
+            "" \
+            "Use it only with MinGW-w64 projects. MSVC projects need the" \
+            "ggpo-${version}-windows-${{ matrix.platform }}.zip SDK instead." \
+            "Install each SDK in its own folder; never merge them." \
+            > "$stage/share/GGPO/TOOLCHAIN.txt"
+          (cd build/stage && zip -qr "../$name.zip" "$name")
+          echo "SDK_NAME=$name" >> "$GITHUB_ENV"
+
+      - name: Validate the extracted release archive
+        run: |
+          set -euo pipefail
+          extract="$PWD/build/extracted"
+          mkdir -p "$extract" && unzip -q "build/$SDK_NAME.zip" -d "$extract"
+          prefix="$extract/$SDK_NAME"
+          for file in bin/libGGPO.dll lib/libGGPO.dll.a lib/libGGPO.a share/GGPO/TOOLCHAIN.txt; do
+            test -f "$prefix/$file" || { echo "SDK archive is missing $file" >&2; exit 1; }
+          done
+          if find "$prefix" -name '*.lib' | grep -q .; then
+            echo "MinGW SDK must not contain MSVC .lib files" >&2; exit 1
+          fi
+          python tests/consumer/verify_consumers.py \
+            --prefix "$prefix" --work build/release-consumer \
+            --generator Ninja --config Release
+
+      - name: Upload packaged SDK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-package-windows-${{ matrix.platform }}-mingw
+          path: build/ggpo-*-mingw.zip
           if-no-files-found: error
 
   package-vectorwar-linux:
@@ -235,7 +323,7 @@ jobs:
   publish-release:
     name: Publish release assets
     if: github.event_name == 'push'
-    needs: [package-windows, package-linux, package-vectorwar-linux, package-vectorwar-windows]
+    needs: [package-windows, package-windows-mingw, package-linux, package-vectorwar-linux, package-vectorwar-windows]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
