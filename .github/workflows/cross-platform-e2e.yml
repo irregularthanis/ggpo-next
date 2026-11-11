@@ -308,7 +308,7 @@ jobs:
   final-report:
     name: Complete native E2E matrix
     if: >-
-      always() && needs.changes.outputs.code == 'true' &&
+      always() &&
       (github.event_name != 'pull_request' ||
       (github.event.pull_request.head.repo.full_name == github.repository &&
       github.actor == github.repository_owner))
@@ -317,10 +317,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
+        if: needs.changes.outputs.code == 'true'
         with:
           pattern: e2e-*-role2
           path: evidence
       - name: Reject failed jobs or incomplete scenarios
+        if: needs.changes.outputs.code == 'true'
         env:
           BUILD_LINUX: ${{ needs.build-linux.result }}
           BUILD_WINDOWS: ${{ needs.build-windows.result }}
@@ -335,7 +337,7 @@ jobs:
           test "$EXECUTE" = success
           python3 tests/e2e/validate_manifest.py evidence --out manifest.json
       - name: Upload the complete manifest
-        if: always()
+        if: always() && needs.changes.outputs.code == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: e2e-complete-manifest

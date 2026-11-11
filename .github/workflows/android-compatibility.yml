@@ -293,3 +293,30 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot
           script: sh tests/android/apk_smoke.sh app-debug.apk
+
+  final-report:
+    name: Complete Android compatibility
+    if: always()
+    needs: [changes, build, test, sdk, emulator, vectorwar-apk, vectorwar-apk-smoke]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every Android qualification lane
+        env:
+          CODE_CHANGED: ${{ needs.changes.outputs.code }}
+          BUILD: ${{ needs.build.result }}
+          TEST: ${{ needs.test.result }}
+          SDK: ${{ needs.sdk.result }}
+          EMULATOR: ${{ needs.emulator.result }}
+          VECTORWAR_APK: ${{ needs.vectorwar-apk.result }}
+          VECTORWAR_APK_SMOKE: ${{ needs.vectorwar-apk-smoke.result }}
+        run: |
+          if test "$CODE_CHANGED" != true; then
+            echo "Documentation-only change: Android qualification is not required."
+            exit 0
+          fi
+          test "$BUILD" = success
+          test "$TEST" = success
+          test "$SDK" = success
+          test "$EMULATOR" = success
+          test "$VECTORWAR_APK" = success
+          test "$VECTORWAR_APK_SMOKE" = success

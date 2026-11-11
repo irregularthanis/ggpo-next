@@ -399,6 +399,14 @@ lightweight path. Compatibility workflows still report their check state, but
 skip build, emulator, and E2E matrices. Manual dispatch always runs the full
 suite.
 
+Branch protection requires two stable aggregate checks for the new platform
+coverage. `Complete Android compatibility` covers every Android build, native
+test, emulator, SDK, sanitizer, Vector War APK, and APK-smoke lane. `Complete
+native E2E matrix` covers the trusted Linux, Windows, MinGW, and Android peer
+matrix. The aggregates pass without running their expensive matrices for a
+documentation-only change; for a code change, any missing or failed required
+lane makes its aggregate fail.
+
 [`tests/CMakeLists.txt`](../../tests/CMakeLists.txt) registers native layout
 checks plus shared smoke families on each platform. Linux registers:
 
