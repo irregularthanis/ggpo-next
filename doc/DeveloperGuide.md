@@ -64,8 +64,15 @@ cmake --build build --config Release --parallel
 The release page also provides `SHA256SUMS`. Compare the archive's
 `Get-FileHash -Algorithm SHA256` result before extracting it.
 
-Windows SDKs are Release builds that use the dynamic C runtime (`/MD`). Debug
-application builds link against them normally.
+Windows SDKs are Release builds that use the dynamic C runtime (`/MD`):
+
+- **Dynamic:** `GGPO.dll` works with Debug and Release applications alike.
+- **Static:** `libGGPO.lib` links only into applications that also use `/MD`
+  (Release or RelWithDebInfo). MSVC rejects it in a Debug (`/MDd`) or `/MT`
+  build with a runtime-library mismatch (`LNK2038`). For a Debug static build,
+  either link the DLL in Debug configurations or
+  [build GGPO from source](#option-3-build-windows-from-source) with
+  `--config Debug`.
 
 ### Run the standalone Vector War sample
 
