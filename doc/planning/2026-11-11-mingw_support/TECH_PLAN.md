@@ -43,8 +43,8 @@ Both use the Ninja generator, Release configuration, and
 flowchart TD
     Win{"WIN32?"}
     Msvc{"MSVC?"}
-    MsvcCfg["MSVC: /W4 /WX, winmm.lib ws2_32.lib<br/>GGPO.dll + GGPO.lib, libGGPO.lib, PDBs"]
-    MingwCfg["MinGW: -Wall -Wextra, winmm ws2_32<br/>libGGPO.dll + libGGPO.dll.a, libGGPO.a"]
+    MsvcCfg["MSVC<br/>/W4 /WX<br/>winmm.lib ws2_32.lib<br/>GGPO.dll + GGPO.lib<br/>libGGPO.lib, PDBs"]
+    MingwCfg["MinGW<br/>-Wall -Wextra<br/>winmm ws2_32<br/>libGGPO.dll + libGGPO.dll.a<br/>libGGPO.a"]
     Linux["Linux platform"]
 
     Win -->|"yes"| Msvc

@@ -70,29 +70,29 @@ and the packaged files differ. Peers on any two platforms can play each other.
 flowchart TB
     subgraph COMMON["Common to all platforms"]
         direction TB
-        APP["Your game: deterministic simulation,<br/>save / load / advance callbacks"]
-        API["Public C API: ggponet.h<br/>(same header, API and ABI everywhere)"]
-        CORE["GGPO core (portable C++)<br/>P2P, spectator and SyncTest backends<br/>sync and rollback, input queues, time sync"]
-        NET["UDP protocol<br/>(same wire format everywhere)"]
-        PKG["CMake package: GGPO::GGPO, GGPO::shared, GGPO::static<br/>build options, determinism flags"]
+        APP["Your game<br/>deterministic simulation<br/>save / load / advance<br/>callbacks"]
+        API["Public C API<br/>ggponet.h<br/>same header, API and ABI"]
+        CORE["GGPO core, portable C++<br/>P2P, spectator, SyncTest<br/>sync and rollback<br/>input queues, time sync"]
+        NET["UDP protocol<br/>same wire format"]
+        PKG["CMake package<br/>GGPO::GGPO<br/>GGPO::shared<br/>GGPO::static"]
         APP --> API --> CORE --> NET
         PKG -.-> APP
     end
 
-    PLAT["platform.h: OS adapter interface<br/>(time and waits, UDP sockets, config, logging paths)"]
+    PLAT["platform.h<br/>OS adapter interface<br/>time, waits, UDP sockets,<br/>config, log paths"]
     NET --> PLAT
     CORE --> PLAT
 
-    subgraph WIN["Windows: platform_windows.cpp (Winsock)"]
+    subgraph WIN["Windows adapter<br/>platform_windows.cpp"]
         direction TB
-        MSVC["Windows with MSVC<br/>GGPO.dll + GGPO.lib, libGGPO.lib<br/>/MD runtime"]
-        MINGW["Windows with MinGW-w64<br/>libGGPO.dll + libGGPO.dll.a, libGGPO.a<br/>MSVCRT; static needs a matching GCC"]
+        MSVC["MSVC<br/>GGPO.dll, GGPO.lib<br/>libGGPO.lib<br/>/MD runtime"]
+        MINGW["MinGW-w64<br/>libGGPO.dll<br/>libGGPO.dll.a<br/>libGGPO.a<br/>MSVCRT runtime"]
     end
 
-    subgraph POSIX["POSIX: platform_posix.cpp (BSD sockets)"]
+    subgraph POSIX["POSIX adapter<br/>platform_posix.cpp"]
         direction TB
-        LINUX["Linux x86_64<br/>libGGPO.so.0, libGGPO.a<br/>DEB, RPM, tar.gz"]
-        ANDROID["Android NDK, API 21+<br/>libGGPO.so, libGGPO.a per ABI<br/>arm64-v8a, armeabi-v7a, x86_64"]
+        LINUX["Linux x86_64<br/>libGGPO.so.0<br/>libGGPO.a<br/>DEB, RPM, tar.gz"]
+        ANDROID["Android NDK<br/>API 21+<br/>libGGPO.so, libGGPO.a<br/>arm64-v8a<br/>armeabi-v7a<br/>x86_64"]
     end
 
     PLAT --> WIN
