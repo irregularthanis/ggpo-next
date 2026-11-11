@@ -626,6 +626,23 @@ target_link_libraries(application_x PRIVATE GGPO::GGPO)
 - The targets carry the include directory, any system libraries, and
   `GGPO_SHARED_LIB` when it is needed. Link one flavor per executable, not both.
 
+#### Static versus dynamic on each platform
+
+One example per supported platform, building `main.cpp` without CMake. With
+CMake, the static column is the dynamic configure command plus
+`-DGGPO_USE_STATIC=ON`; each platform's linking subsections have both.
+
+| Platform | Dynamic | Static |
+| --- | --- | --- |
+| [Windows, MSVC](#msvc-dynamic-linking) | `cl /MD /I C:\ggpo-sdk\include /DGGPO_SHARED_LIB main.cpp /link /LIBPATH:C:\ggpo-sdk\lib GGPO.lib` | `cl /MD /I C:\ggpo-sdk\include main.cpp /link /LIBPATH:C:\ggpo-sdk\lib libGGPO.lib ws2_32.lib winmm.lib` |
+| [Windows, MinGW-w64](#mingw-dynamic-linking) | `g++ -DGGPO_SHARED_LIB -I/c/ggpo-sdk-mingw/include main.cpp -L/c/ggpo-sdk-mingw/lib -lGGPO` | `g++ -I/c/ggpo-sdk-mingw/include main.cpp /c/ggpo-sdk-mingw/lib/libGGPO.a -lws2_32 -lwinmm -static` |
+| [Linux](#linux-dynamic-linking) | `g++ -I$SDK/include main.cpp -L$SDK/lib -lGGPO -Wl,-rpath,'$ORIGIN'` | `g++ -I$SDK/include main.cpp $SDK/lib/libGGPO.a` |
+| [Android](#android-dynamic-linking) (arm64-v8a) | `aarch64-linux-android21-clang++ -I$SDK/arm64-v8a/include main.cpp -L$SDK/arm64-v8a/lib -lGGPO` | `aarch64-linux-android21-clang++ -I$SDK/arm64-v8a/include main.cpp $SDK/arm64-v8a/lib/libGGPO.a` |
+
+`$SDK` is the extracted SDK directory. What changes between the columns is the
+same everywhere: the library file, and on Windows `GGPO_SHARED_LIB` plus the
+system libraries (`ws2_32`, `winmm`) that the static library needs.
+
 ### Linking without CMake
 
 The platform sections give exact compiler commands. They follow the same rules:
@@ -980,4 +997,13 @@ By running synctest on developer systems continuously when writing game code, yo
 
 ## Where to Go from Here
 
-This document describes the most basic features of GGPO.  To learn more, I recommend starting with reading the comments in the `ggponet.h` header and just diving into the code.  Good luck!
+This document describes the most basic features of GGPO. To learn more:
+
+- [Public API reference](architecture/API.md): every type, callback, function,
+  event and error code in [`ggponet.h`](../src/include/ggponet.h), with a
+  [minimal frame-loop example](architecture/API.md#minimal-frame-loop-example).
+- [Architecture documentation](architecture/README.md): how the core, backends,
+  networking and platform adapters fit together.
+- [Vector War](architecture/VectorWar.md): the complete reference integration.
+
+Good luck!
