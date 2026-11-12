@@ -18,6 +18,7 @@ switch and fallback counters.
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -145,13 +146,16 @@ def play(scenario, headless, services):
              "--host", "0.0.0.0", "--port", str(LOBBY_PORT), "--relay-ports", RELAY_PORTS],
             cwd=services, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         time.sleep(1.0)
+        # Timed events need a real-time match: 1200 frames at 16 ms is ~19 s.
+        paced_env = dict(os.environ, VW_HEADLESS_FRAME_MS="16")
         with tempfile.TemporaryDirectory(prefix="vw-nat-") as directory:
             results = [Path(directory) / f"{i}.json" for i in range(len(players))]
             processes = [subprocess.Popen(
                 ["ip", "netns", "exec", player, str(headless), "--matchmaking",
                  f"{SERVER_IP}:{LOBBY_PORT}", str(len(players)), scenario["lobby"],
                  str(scenario["frames"]), str(result)],
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                env=paced_env if scenario.get("event") else None)
                 for (player, _), result in zip(players, results)]
             event = scenario.get("event")
             if event:

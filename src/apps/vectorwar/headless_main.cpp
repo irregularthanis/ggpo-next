@@ -118,10 +118,14 @@ RunSession(HeadlessVectorWarHost *host, int local_player, unsigned short local_p
    if (local_player == 2) {
       host->SleepMs(50);
    }
+   /* VW_HEADLESS_FRAME_MS paces the loop (e.g. 16 for real time) so timed
+    * network events land mid-match; unset keeps the unpaced default. */
+   const char *pace = getenv("VW_HEADLESS_FRAME_MS");
+   const int frame_ms = (pace && atoi(pace) > 0 && atoi(pace) <= 100) ? atoi(pace) : 1;
    while (VectorWar_FrameNumber() < target_frames && host->NowMs() - start < 45000) {
       VectorWar_RunFrame();
       VectorWar_Idle(1);
-      host->SleepMs(1);
+      host->SleepMs(frame_ms);
    }
    if (VectorWar_FrameNumber() != target_frames ||
        VectorWar_RunningEventCount() != 1) {
