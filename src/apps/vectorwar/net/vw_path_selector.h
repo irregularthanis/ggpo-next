@@ -6,11 +6,14 @@
  * Candidate 0 is the relay; candidates 1..n are direct addresses (public and
  * LAN). Every session starts on the relay. A direct candidate is validated
  * once our probe is acknowledged *and* the peer's own probe has arrived from
- * it, i.e. both NAT directions are open. The selector sends on a validated
- * direct candidate once its smoothed round-trip time beats the relay's by
- * switch_margin_ms for switch_confirmations consecutive acknowledgements, and
- * falls back to the relay after silence_fallback_ms without any traffic from
- * it or after the same number of consecutive worse measurements. After a
+ * it, i.e. both NAT directions are open. A healthy direct path is preferred
+ * even at equal latency (it takes the server off the data path): the selector
+ * sends on a validated candidate once its smoothed round-trip time is no more
+ * than switch_margin_ms above the relay's for switch_confirmations
+ * consecutive acknowledgements. It falls back to the relay after
+ * silence_fallback_ms without traffic from it, or when it is more than
+ * fallback_margin_ms slower than the relay for the same number of consecutive
+ * acknowledgements; the wider fallback margin prevents flapping. After a
  * fallback, direct probing backs off (doubling up to max_backoff_ms).
  *
  * All times are milliseconds from a caller-supplied clock, so tests drive it
@@ -24,6 +27,7 @@ struct PathConfig {
    uint32_t probe_interval_ms;
    uint32_t relay_probe_interval_ms;
    uint32_t switch_margin_ms;
+   uint32_t fallback_margin_ms;
    int switch_confirmations;
    uint32_t silence_fallback_ms;
    uint32_t max_backoff_ms;

@@ -399,6 +399,37 @@ add_test(NAME vectorwar_net_contract COMMAND ggpo_vectorwar_net_contract)
 set_tests_properties(vectorwar_net_contract PROPERTIES
     LABELS "portable;sample;matchmaking")
 
+# Hole punching with relay fallback end to end on loopback: the real server
+# and one path proxy per player with a stand-in for GGPO. Native builds only:
+# a cross-compiled tool cannot reach the host's loopback server.
+if(NOT CMAKE_CROSSCOMPILING)
+    set(GGPO_VECTORWAR_NET_IO_SOURCES)
+    foreach(source ${GGPO_EXAMPLES_VECTORWAR_NET_IO_SRC})
+        list(APPEND GGPO_VECTORWAR_NET_IO_SOURCES "${PROJECT_SOURCE_DIR}/src/apps/vectorwar/${source}")
+    endforeach()
+    add_executable(ggpo_vectorwar_net_proxy_tool
+        vectorwar/net_proxy_tool.cpp
+        ${GGPO_VECTORWAR_NET_SOURCES}
+        ${GGPO_VECTORWAR_NET_IO_SOURCES}
+    )
+    ggpo_configure_static_test(ggpo_vectorwar_net_proxy_tool)
+    target_include_directories(ggpo_vectorwar_net_proxy_tool PRIVATE
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/net)
+    if(WIN32)
+        target_link_libraries(ggpo_vectorwar_net_proxy_tool PRIVATE ws2_32)
+    else()
+        find_package(Threads REQUIRED)
+        target_link_libraries(ggpo_vectorwar_net_proxy_tool PRIVATE Threads::Threads)
+    endif()
+    add_test(NAME vectorwar_net_proxy_loopback
+        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/vectorwar/run_proxy_loopback.py
+                $<TARGET_FILE:ggpo_vectorwar_net_proxy_tool>
+                ${PROJECT_SOURCE_DIR}/services/matchmaking)
+    set_tests_properties(vectorwar_net_proxy_loopback PROPERTIES
+        TIMEOUT 120
+        LABELS "native;network;sample;matchmaking")
+endif()
+
 add_executable(ggpo_vectorwar_gameplay_contract
     vectorwar/gameplay_determinism_test.cpp
     ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/gamestate.cpp
@@ -538,6 +569,9 @@ if(TARGET ggpo_vectorwar_win32_host_contract)
 endif()
 if(GGPO_STATIC_RUNTIME_TEST_TARGETS)
     list(APPEND GGPO_PORTABLE_TEST_TARGETS ${GGPO_STATIC_RUNTIME_TEST_TARGETS})
+endif()
+if(TARGET ggpo_vectorwar_net_proxy_tool)
+    list(APPEND GGPO_PORTABLE_TEST_TARGETS ggpo_vectorwar_net_proxy_tool)
 endif()
 if(TARGET ggpo_vectorwar_sdl_host_contract)
     list(APPEND GGPO_PORTABLE_TEST_TARGETS ggpo_vectorwar_sdl_host_contract)

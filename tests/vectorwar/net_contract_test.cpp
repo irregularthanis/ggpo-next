@@ -133,13 +133,22 @@ static void TestSelectorStartsOnRelayAndSwitchesWhenFaster()
    CHECK(h.selector.Active() == 1, "switches after three faster acks");
 }
 
-static void TestSelectorStaysOnRelayWhenNotFaster()
+static void TestSelectorPrefersHealthyDirectAtEqualLatency()
 {
    Harness h;
    h.RoundTrip(0, 30);
    h.selector.PeerProbeReceived(1, h.now);
-   for (int i = 0; i < 6; ++i) h.RoundTrip(1, 28);   /* within the 5 ms margin */
-   CHECK(h.selector.Active() == PathSelector::kRelay, "no switch inside the margin");
+   for (int i = 0; i < 3; ++i) h.RoundTrip(1, 34);   /* within the 5 ms margin */
+   CHECK(h.selector.Active() == 1, "healthy direct preferred within the margin");
+}
+
+static void TestSelectorStaysOnRelayWhenDirectIsSlower()
+{
+   Harness h;
+   h.RoundTrip(0, 30);
+   h.selector.PeerProbeReceived(1, h.now);
+   for (int i = 0; i < 6; ++i) h.RoundTrip(1, 50);   /* 20 ms slower */
+   CHECK(h.selector.Active() == PathSelector::kRelay, "slower direct path not used");
 }
 
 static void TestSelectorSymmetricNatNeverValidates()
@@ -216,7 +225,8 @@ int main()
    TestEndpoints();
    TestProbes();
    TestSelectorStartsOnRelayAndSwitchesWhenFaster();
-   TestSelectorStaysOnRelayWhenNotFaster();
+   TestSelectorPrefersHealthyDirectAtEqualLatency();
+   TestSelectorStaysOnRelayWhenDirectIsSlower();
    TestSelectorSymmetricNatNeverValidates();
    TestSelectorFallsBackOnSilenceAndBacksOff();
    TestSelectorFallsBackWhenDirectDegrades();

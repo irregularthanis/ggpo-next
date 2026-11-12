@@ -218,14 +218,17 @@ direct source).
 ```mermaid
 stateDiagram-v2
     [*] --> Relay
-    Relay --> Direct: direct validated and<br/>RTT lower by margin<br/>for 3 consecutive probes
-    Direct --> Relay: no direct traffic or ack<br/>for 500 ms, or RTT worse<br/>by margin for 3 probes
+    Relay --> Direct: direct validated and<br/>RTT at most 5 ms above relay<br/>for 3 consecutive acks
+    Direct --> Relay: no direct traffic<br/>for 500 ms, or RTT 20 ms<br/>above relay for 3 acks
     Relay --> Relay: probing continues<br/>with backoff
 ```
 
-- Prefer direct when its smoothed round-trip time beats the relay's by a margin
-  (default 5 ms) for three consecutive probes; fall back on 500 ms of silence or
-  sustained degradation. The margins prevent flapping.
+- Prefer a healthy direct path even at equal latency, since it takes the
+  server off the data path: switch once it is validated and its smoothed
+  round-trip time is at most 5 ms above the relay's for three consecutive
+  acknowledgements. Fall back on 500 ms of silence, or when it is more than
+  20 ms slower than the relay for three acknowledgements. The gap between the
+  two margins prevents flapping.
 - After a fallback, direct probing resumes with exponential backoff (up to 5 s).
 - GGPO's rollback absorbs the frames lost during a switch; the frozen checksum
   tests prove no desync.

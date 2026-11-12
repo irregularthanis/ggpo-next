@@ -68,3 +68,13 @@ set(GGPO_EXAMPLES_VECTORWAR_NET_SRC
 	"net/vw_siphash.cpp"
 	"net/vw_siphash.h"
 )
+
+# Sockets, matchmaking client and path proxy (need the platform's sockets).
+set(GGPO_EXAMPLES_VECTORWAR_NET_IO_SRC
+	"net/vw_matchmaking.cpp"
+	"net/vw_matchmaking.h"
+	"net/vw_path_proxy.cpp"
+	"net/vw_path_proxy.h"
+	"net/vw_udp.cpp"
+	"net/vw_udp.h"
+)

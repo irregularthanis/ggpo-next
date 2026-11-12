@@ -12,6 +12,7 @@ PathConfig::PathConfig() :
    probe_interval_ms(250),
    relay_probe_interval_ms(500),
    switch_margin_ms(5),
+   fallback_margin_ms(20),
    switch_confirmations(3),
    silence_fallback_ms(500),
    max_backoff_ms(5000),
@@ -125,9 +126,9 @@ PathSelector::Evaluate(int candidate)
    if (_active == kRelay) {
       if (candidate == kRelay || !Validated(candidate)) return;
       Candidate &c = _candidates[candidate];
-      const bool faster = relay_rtt < 0 ||
-                          c.srtt + (int)_config.switch_margin_ms < relay_rtt;
-      c.better = faster ? c.better + 1 : 0;
+      const bool healthy = relay_rtt < 0 ||
+                           c.srtt <= relay_rtt + (int)_config.switch_margin_ms;
+      c.better = healthy ? c.better + 1 : 0;
       if (c.better >= _config.switch_confirmations) {
          _active = candidate;
          c.better = 0;
@@ -137,7 +138,7 @@ PathSelector::Evaluate(int candidate)
    }
    if (candidate != _active || relay_rtt < 0) return;
    Candidate &c = _candidates[candidate];
-   const bool worse = c.srtt > relay_rtt + (int)_config.switch_margin_ms;
+   const bool worse = c.srtt > relay_rtt + (int)_config.fallback_margin_ms;
    c.worse = worse ? c.worse + 1 : 0;
 }
 

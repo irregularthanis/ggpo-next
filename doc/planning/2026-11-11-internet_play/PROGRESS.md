@@ -65,8 +65,8 @@ Status: In progress
 
 ### M3: Vector War client (depends: M1)
 
-- [ ] M3-T01: `vw_udp`, `vw_platform_name`.
-- [ ] M3-T02: `vw_matchmaking`: resolve, join, match, bind to every relay
+- [ ] M3-T01: `vw_udp` (done: `src/apps/vectorwar/net/vw_udp`), `vw_platform_name`.
+- [ ] M3-T02 (client flow done in `vw_matchmaking`; GGPO hand-off pending): `vw_matchmaking`: resolve, join, match, bind to every relay
   port, hand off to GGPO on the same port with remote players at the relay.
 - [ ] M3-T03: `vw_hello` for direct mode: platform exchange and nonce-based
   player order.
@@ -115,8 +115,10 @@ Status: In progress
 - [x] M8-T01: Protocol v3: `PEERS_REQUEST` (LAN candidate) and `PEERS`,
   shared vectors; v2 clients and servers keep relay-only behavior (server side;
   the C++ client decodes the same vectors in M8-T02).
-- [ ] M8-T02: Path proxy between GGPO's loopback endpoints and one public
-  socket; inbound from relay and validated direct addresses.
+- [x] M8-T02: Path proxy between GGPO's loopback endpoints and one public
+  socket; inbound from relay and validated direct addresses; peer-reflexive
+  candidates (`vw_path_proxy`; `vectorwar_net_proxy_loopback` with the real
+  server: 2 and 3 players go direct, relay-only mode stays on the relay).
 - [x] M8-T03: `PROBE`/`PROBE_ACK`/`KEEPALIVE` with SipHash MAC; unit tests
   for authentication and rejection (`src/apps/vectorwar/net/vw_path_probe`).
 - [x] M8-T04: Per-peer path state machine with fake-clock tests (switch,
