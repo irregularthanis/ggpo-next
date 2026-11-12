@@ -1,61 +1,96 @@
 {
-  "description": "Vector War matchmaking protocol version 1 test vectors. Decoded by the Python server tests and the C++ client tests; regenerate only for a new protocol version.",
-  "version": 1,
+  "description": "Vector War matchmaking and relay protocol version 2 test vectors. Decoded by the Python server tests and the C++ client tests; regenerate only for a new protocol version.",
+  "version": 2,
   "vectors": [
     {
-      "name": "register_linux",
-      "type": "REGISTER",
+      "name": "join_public_two",
+      "type": "JOIN",
       "fields": {
         "nonce": 81985529216486895,
         "platform": 2,
-        "build": 1
+        "group_size": 2,
+        "lobby": ""
       },
-      "hex": "56574d4d01010000efcdab8967452301020001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      "hex": "56574d4d02010000efcdab8967452301020200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
     },
     {
-      "name": "waiting_first",
+      "name": "join_lobby_four",
+      "type": "JOIN",
+      "fields": {
+        "nonce": 81985529216486895,
+        "platform": 3,
+        "group_size": 4,
+        "lobby": "K7Q2"
+      },
+      "hex": "56574d4d02010000efcdab8967452301030400004b37513200000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "waiting_three_of_four",
       "type": "WAITING",
       "fields": {
         "nonce": 81985529216486895,
-        "position": 1
+        "joined": 3,
+        "group_size": 4
       },
-      "hex": "56574d4d01020000efcdab896745230101000000"
+      "hex": "56574d4d02020000efcdab896745230103040000"
     },
     {
-      "name": "match_player1",
+      "name": "match_two_players",
       "type": "MATCH",
       "fields": {
         "nonce": 81985529216486895,
-        "session": 18364758544493064720,
+        "token": 18364758544493064720,
         "player": 1,
-        "peer_platform": 3,
-        "peer_ip": "203.0.113.9",
-        "peer_port": 7001
+        "relay_ports": [
+          7101,
+          7102
+        ],
+        "platforms": [
+          1,
+          3
+        ]
       },
-      "hex": "56574d4d01030000efcdab89674523011032547698badcfe0103591bcb007109"
+      "hex": "56574d4d02030000efcdab89674523011032547698badcfe01020000bd1b0100be1b03000000000000000000"
     },
     {
-      "name": "match_player2",
+      "name": "match_four_players",
       "type": "MATCH",
       "fields": {
-        "nonce": 1229782938247303441,
-        "session": 18364758544493064720,
-        "player": 2,
-        "peer_platform": 1,
-        "peer_ip": "198.51.100.10",
-        "peer_port": 65535
+        "nonce": 81985529216486895,
+        "token": 18364758544493064720,
+        "player": 3,
+        "relay_ports": [
+          7101,
+          7102,
+          7103,
+          7104
+        ],
+        "platforms": [
+          1,
+          3,
+          2,
+          0
+        ]
       },
-      "hex": "56574d4d0103000011111111111111111032547698badcfe0201ffffc633640a"
+      "hex": "56574d4d02030000efcdab89674523011032547698badcfe03040000bd1b0100be1b0300bf1b0200c01b0000"
     },
     {
-      "name": "punch_windows",
-      "type": "PUNCH",
+      "name": "bind_player_two",
+      "type": "BIND",
       "fields": {
-        "session": 18364758544493064720,
-        "nonce": 81985529216486895,
-        "platform": 1
+        "token": 18364758544493064720,
+        "player": 2
       },
-      "hex": "56574d4d010400001032547698badcfeefcdab896745230101000000"
+      "hex": "56574d4d020400001032547698badcfe02000000"
+    },
+    {
+      "name": "bound_player_two",
+      "type": "BOUND",
+      "fields": {
+        "token": 18364758544493064720,
+        "player": 2
+      },
+      "hex": "56574d4d020500001032547698badcfe02000000"
     },
     {
       "name": "hello_android",
@@ -64,7 +99,7 @@
         "nonce": 81985529216486895,
         "platform": 3
       },
-      "hex": "56574d4d01050000efcdab896745230103000000"
+      "hex": "56574d4d02060000efcdab896745230103000000"
     },
     {
       "name": "error_version",
@@ -73,7 +108,7 @@
         "nonce": 81985529216486895,
         "code": 1
       },
-      "hex": "56574d4d01060000efcdab896745230101000000"
+      "hex": "56574d4d02070000efcdab896745230101000000"
     }
   ]
 }

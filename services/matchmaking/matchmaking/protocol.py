@@ -1,31 +1,31 @@
-"""Vector War matchmaking wire protocol, version 1.
+"""Vector War matchmaking and relay wire protocol, version 2.
 
 Every datagram starts with an 8-byte header: the magic ``VWMM``, the protocol
 version, the message type and two reserved zero bytes. Integers are
 little-endian. The C++ client mirrors these layouts; ``protocol_vectors.json``
 holds encoded examples that both sides' tests decode.
 
-A server reply is never larger than the request that caused it: ``REGISTER``
-is padded to 64 bytes and every server message is shorter, so the server
-cannot amplify a spoofed flood.
+No reply is ever larger than the request that caused it: ``JOIN`` is padded to
+64 bytes and ``MATCH`` is 44; ``BOUND`` is exactly the size of ``BIND``. The
+server therefore cannot amplify a spoofed flood.
 """
 
-import ipaddress
 import struct
 from dataclasses import dataclass
 
 MAGIC = b"VWMM"
-VERSION = 1
+VERSION = 2
+MAX_PLAYERS = 4
 
 HEADER = struct.Struct("<4sBBH")
 
-REGISTER = 1
+JOIN = 1
 WAITING = 2
 MATCH = 3
-PUNCH = 4
-HELLO = 5
-ERROR = 6
-RELAY = 7  # Reserved for a future relay; never sent by version 1.
+BIND = 4
+BOUND = 5
+HELLO = 6
+ERROR = 7
 
 PLATFORM_UNKNOWN = 0
 PLATFORM_WINDOWS = 1
@@ -42,48 +42,72 @@ ERROR_VERSION_MISMATCH = 1
 ERROR_RATE_LIMITED = 2
 ERROR_SERVER_FULL = 3
 
-REGISTER_SIZE = 64
+JOIN_SIZE = 64
+LOBBY_CODE_SIZE = 8
+LOBBY_ALPHABET = frozenset(b"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
-_REGISTER_BODY = struct.Struct("<QBBH")    # nonce, platform, reserved, build
-_WAITING_BODY = struct.Struct("<QHH")      # nonce, queue position, reserved
-_MATCH_BODY = struct.Struct("<QQBBH4s")    # nonce, session, player, peer platform, peer port, peer IPv4
-_PUNCH_BODY = struct.Struct("<QQB3x")      # session, sender nonce, sender platform
-_HELLO_BODY = struct.Struct("<QB3x")       # sender nonce, sender platform
-_ERROR_BODY = struct.Struct("<QB3x")       # nonce, error code
+_JOIN_BODY = struct.Struct("<QBBH8s")     # nonce, platform, group size, reserved, lobby code
+_WAITING_BODY = struct.Struct("<QBBH")    # nonce, players joined, group size, reserved
+_MATCH_BODY = struct.Struct("<QQBBH")     # nonce, session token, player, player count, reserved
+_MATCH_SLOT = struct.Struct("<HBB")       # relay port, platform, reserved (x MAX_PLAYERS)
+_BIND_BODY = struct.Struct("<QB3x")       # session token, sender player
+_HELLO_BODY = struct.Struct("<QB3x")      # sender nonce, sender platform
+_ERROR_BODY = struct.Struct("<QB3x")      # nonce, error code
+
+MATCH_SIZE = HEADER.size + _MATCH_BODY.size + MAX_PLAYERS * _MATCH_SLOT.size
+BIND_SIZE = HEADER.size + _BIND_BODY.size
 
 
 class ProtocolError(ValueError):
-    """A datagram that is not a valid version-1 message."""
+    """A datagram that is not a valid version-2 message."""
+
+
+def normalize_lobby(code):
+    """Return the 8-byte wire form of a lobby code ('' means the public queue)."""
+    try:
+        raw = code.strip().upper().encode("ascii") if isinstance(code, str) else bytes(code)
+    except UnicodeEncodeError:
+        raise ProtocolError("lobby code must be up to 8 letters or digits") from None
+    raw = raw.rstrip(b"\x00")
+    if len(raw) > LOBBY_CODE_SIZE or any(c not in LOBBY_ALPHABET for c in raw):
+        raise ProtocolError("lobby code must be up to 8 letters or digits")
+    return raw.ljust(LOBBY_CODE_SIZE, b"\x00")
 
 
 @dataclass(frozen=True)
-class Register:
+class Join:
     nonce: int
     platform: int
-    build: int
+    group_size: int
+    lobby: str = ""
 
 
 @dataclass(frozen=True)
 class Waiting:
     nonce: int
-    position: int
+    joined: int
+    group_size: int
 
 
 @dataclass(frozen=True)
 class Match:
     nonce: int
-    session: int
+    token: int
     player: int
-    peer_platform: int
-    peer_ip: str
-    peer_port: int
+    relay_ports: tuple
+    platforms: tuple
 
 
 @dataclass(frozen=True)
-class Punch:
-    session: int
-    nonce: int
-    platform: int
+class Bind:
+    token: int
+    player: int
+
+
+@dataclass(frozen=True)
+class Bound:
+    token: int
+    player: int
 
 
 @dataclass(frozen=True)
@@ -104,20 +128,26 @@ def _header(message_type):
 
 def encode(message):
     """Encode one message object to its exact wire bytes."""
-    if isinstance(message, Register):
-        body = _REGISTER_BODY.pack(message.nonce, message.platform, 0, message.build)
-        data = _header(REGISTER) + body
-        return data + bytes(REGISTER_SIZE - len(data))
+    if isinstance(message, Join):
+        body = _JOIN_BODY.pack(message.nonce, message.platform, message.group_size, 0,
+                               normalize_lobby(message.lobby))
+        data = _header(JOIN) + body
+        return data + bytes(JOIN_SIZE - len(data))
     if isinstance(message, Waiting):
-        return _header(WAITING) + _WAITING_BODY.pack(message.nonce, message.position, 0)
+        return _header(WAITING) + _WAITING_BODY.pack(message.nonce, message.joined, message.group_size, 0)
     if isinstance(message, Match):
-        address = ipaddress.IPv4Address(message.peer_ip).packed
+        count = len(message.relay_ports)
+        if not 2 <= count <= MAX_PLAYERS or len(message.platforms) != count:
+            raise ValueError("MATCH needs 2-4 players with one platform each")
+        slots = b"".join(_MATCH_SLOT.pack(port, platform, 0)
+                         for port, platform in zip(message.relay_ports, message.platforms))
+        slots += bytes((MAX_PLAYERS - count) * _MATCH_SLOT.size)
         return _header(MATCH) + _MATCH_BODY.pack(
-            message.nonce, message.session, message.player,
-            message.peer_platform, message.peer_port, address)
-    if isinstance(message, Punch):
-        return _header(PUNCH) + _PUNCH_BODY.pack(
-            message.session, message.nonce, message.platform)
+            message.nonce, message.token, message.player, count, 0) + slots
+    if isinstance(message, Bind):
+        return _header(BIND) + _BIND_BODY.pack(message.token, message.player)
+    if isinstance(message, Bound):
+        return _header(BOUND) + _BIND_BODY.pack(message.token, message.player)
     if isinstance(message, Hello):
         return _header(HELLO) + _HELLO_BODY.pack(message.nonce, message.platform)
     if isinstance(message, Error):
@@ -138,7 +168,7 @@ def peek_header(data):
 
 
 def decode(data):
-    """Decode exact version-1 wire bytes; raise ``ProtocolError`` otherwise."""
+    """Decode exact version-2 wire bytes; raise ``ProtocolError`` otherwise."""
     version, message_type = peek_header(data)
     if version != VERSION:
         raise ProtocolError(f"unsupported version {version}")
@@ -149,24 +179,37 @@ def decode(data):
             raise ProtocolError(f"type {message_type}: expected {layout.size}-byte body, got {len(body)}")
         return layout.unpack(body)
 
-    if message_type == REGISTER:
-        if len(data) != REGISTER_SIZE:
-            raise ProtocolError(f"REGISTER must be {REGISTER_SIZE} bytes")
-        nonce, platform, reserved, build = _REGISTER_BODY.unpack_from(body)
-        if reserved != 0 or any(body[_REGISTER_BODY.size:]):
-            raise ProtocolError("REGISTER padding must be zero")
-        return Register(nonce, platform, build)
+    if message_type == JOIN:
+        if len(data) != JOIN_SIZE:
+            raise ProtocolError(f"JOIN must be {JOIN_SIZE} bytes")
+        nonce, platform, group_size, reserved, lobby = _JOIN_BODY.unpack_from(body)
+        if reserved != 0 or any(body[_JOIN_BODY.size:]):
+            raise ProtocolError("JOIN padding must be zero")
+        if not 2 <= group_size <= MAX_PLAYERS:
+            raise ProtocolError("group size must be 2-4")
+        code = normalize_lobby(lobby).rstrip(b"\x00").decode("ascii")
+        return Join(nonce, platform, group_size, code)
     if message_type == WAITING:
-        nonce, position, _ = exact(_WAITING_BODY)
-        return Waiting(nonce, position)
+        nonce, joined, group_size, _ = exact(_WAITING_BODY)
+        return Waiting(nonce, joined, group_size)
     if message_type == MATCH:
-        nonce, session, player, peer_platform, peer_port, address = exact(_MATCH_BODY)
-        if player not in (1, 2):
-            raise ProtocolError("player number must be 1 or 2")
-        return Match(nonce, session, player, peer_platform,
-                     str(ipaddress.IPv4Address(address)), peer_port)
-    if message_type == PUNCH:
-        return Punch(*exact(_PUNCH_BODY))
+        if len(data) != MATCH_SIZE:
+            raise ProtocolError(f"MATCH must be {MATCH_SIZE} bytes")
+        nonce, token, player, count, _ = _MATCH_BODY.unpack_from(body)
+        if not 2 <= count <= MAX_PLAYERS or not 1 <= player <= count:
+            raise ProtocolError("invalid player number or count")
+        slots = [_MATCH_SLOT.unpack_from(body, _MATCH_BODY.size + i * _MATCH_SLOT.size)
+                 for i in range(MAX_PLAYERS)]
+        if any(any(slot) for slot in slots[count:]):
+            raise ProtocolError("unused MATCH slots must be zero")
+        return Match(nonce, token, player,
+                     tuple(port for port, _, _ in slots[:count]),
+                     tuple(platform for _, platform, _ in slots[:count]))
+    if message_type in (BIND, BOUND):
+        token, player = exact(_BIND_BODY)
+        if not 1 <= player <= MAX_PLAYERS:
+            raise ProtocolError("invalid player number")
+        return (Bind if message_type == BIND else Bound)(token, player)
     if message_type == HELLO:
         return Hello(*exact(_HELLO_BODY))
     if message_type == ERROR:

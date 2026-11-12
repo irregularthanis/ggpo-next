@@ -3,6 +3,11 @@ output "server_address" {
   value       = "${module.duckdns.fqdn}:${module.host.server_port}"
 }
 
+output "relay_port_range" {
+  description = "Public UDP relay port range; must be reachable from players."
+  value       = module.host.relay_port_range
+}
+
 output "fqdn" {
   description = "DuckDNS name of the server."
   value       = module.duckdns.fqdn

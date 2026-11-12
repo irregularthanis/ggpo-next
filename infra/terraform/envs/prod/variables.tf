@@ -25,6 +25,15 @@ variable "server_port" {
   default     = 7100
 }
 
+variable "relay_port_range" {
+  description = "Public UDP relay port range."
+  type = object({
+    first = number
+    last  = number
+  })
+  default = { first = 7101, last = 7499 }
+}
+
 variable "admin_cidr" {
   description = "Your public IP as x.x.x.x/32; the only SSH source allowed."
   type        = string

@@ -27,21 +27,24 @@ variables {
   extra_cloud_init = [{ filename = "extra.yaml", content = "#cloud-config\nruncmd:\n  - echo extra-part-marker\n" }]
 }
 
-run "firewall_opens_only_udp_server_port_publicly_and_ssh_to_admin" {
+run "firewall_opens_only_the_lobby_and_relay_ports_publicly_and_ssh_to_admin" {
   # The rule set has provider-computed fields, so it is only known after a
   # (mocked) apply.
   command = apply
 
   assert {
-    condition     = length(oci_core_security_list.server.ingress_security_rules) == 2
-    error_message = "Exactly two ingress rules are expected: matchmaking UDP and admin SSH."
+    condition     = length(oci_core_security_list.server.ingress_security_rules) == 3
+    error_message = "Exactly three ingress rules are expected: lobby UDP, relay UDP range and admin SSH."
   }
   assert {
     condition = alltrue([
       for rule in oci_core_security_list.server.ingress_security_rules :
-      rule.source != "0.0.0.0/0" || (rule.protocol == "17" && try(one(rule.udp_options).min, 0) == 7100 && try(one(rule.udp_options).max, 0) == 7100)
+      rule.source != "0.0.0.0/0" || (rule.protocol == "17" && (
+        (try(one(rule.udp_options).min, 0) == 7100 && try(one(rule.udp_options).max, 0) == 7100) ||
+        (try(one(rule.udp_options).min, 0) == 7101 && try(one(rule.udp_options).max, 0) == 7499)
+      ))
     ])
-    error_message = "Only UDP 7100 may be open to 0.0.0.0/0."
+    error_message = "Only UDP 7100 and the relay range 7101-7499 may be open to 0.0.0.0/0."
   }
   assert {
     condition = length([
@@ -83,6 +86,14 @@ run "cloud_init_runs_the_pinned_image_on_the_host_network" {
   assert {
     condition     = strcontains(base64decode(oci_core_instance.server.metadata["user_data"]), "iptables -I INPUT 1 -p udp --dport 7100 -j ACCEPT")
     error_message = "cloud-init must open the server port in the image's iptables rules."
+  }
+  assert {
+    condition     = strcontains(base64decode(oci_core_instance.server.metadata["user_data"]), "iptables -I INPUT 1 -p udp --dport 7101:7499 -j ACCEPT")
+    error_message = "cloud-init must open the relay range in the image's iptables rules."
+  }
+  assert {
+    condition     = strcontains(base64decode(oci_core_instance.server.metadata["user_data"]), "--relay-ports 7101-7499")
+    error_message = "The server must be started with the relay range."
   }
   assert {
     condition     = strcontains(base64decode(oci_core_instance.server.metadata["user_data"]), "echo extra-part-marker")
@@ -137,6 +148,22 @@ run "rejects_privileged_or_invalid_port" {
     server_port = 80
   }
   expect_failures = [var.server_port]
+}
+
+run "rejects_a_relay_range_that_contains_the_lobby_port" {
+  command = plan
+  variables {
+    relay_port_range = { first = 7000, last = 7200 }
+  }
+  expect_failures = [oci_core_security_list.server]
+}
+
+run "rejects_an_oversized_or_inverted_relay_range" {
+  command = plan
+  variables {
+    relay_port_range = { first = 8000, last = 9500 }
+  }
+  expect_failures = [var.relay_port_range]
 }
 
 run "rejects_shapes_beyond_the_free_allowance" {

@@ -7,6 +7,7 @@ packages:
 runcmd:
   # Oracle's Ubuntu images reject every inbound port except SSH in iptables.
   - iptables -I INPUT 1 -p udp --dport ${port} -j ACCEPT
+  - iptables -I INPUT 1 -p udp --dport ${relay_first}:${relay_last} -j ACCEPT
   - netfilter-persistent save
   - systemctl enable --now docker
   # Host networking keeps players' real source addresses visible to the server.
@@ -15,3 +16,4 @@ runcmd:
     --network host --read-only --cap-drop ALL
     --security-opt no-new-privileges
     ${image} --host 0.0.0.0 --port ${port}
+    --relay-ports ${relay_first}-${relay_last}

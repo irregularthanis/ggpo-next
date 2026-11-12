@@ -6,6 +6,7 @@ locals {
   vcn_cidr  = "10.71.0.0/16"
   subnet    = "10.71.1.0/24"
   container = "${var.name}-server"
+  relay     = var.relay_port_range
 }
 
 data "oci_identity_availability_domains" "all" {
@@ -50,6 +51,13 @@ resource "oci_core_security_list" "server" {
   vcn_id         = oci_core_vcn.main.id
   display_name   = "${var.name}-server"
 
+  lifecycle {
+    precondition {
+      condition     = var.server_port < local.relay.first || var.server_port > local.relay.last
+      error_message = "server_port must not be inside relay_port_range."
+    }
+  }
+
   egress_security_rules {
     destination = "0.0.0.0/0"
     protocol    = "all"
@@ -63,6 +71,17 @@ resource "oci_core_security_list" "server" {
     udp_options {
       min = var.server_port
       max = var.server_port
+    }
+  }
+
+  # Relay: UDP from anywhere, only on the relay range.
+  ingress_security_rules {
+    protocol    = "17"
+    source      = "0.0.0.0/0"
+    description = "Vector War relay"
+    udp_options {
+      min = local.relay.first
+      max = local.relay.last
     }
   }
 
@@ -96,9 +115,11 @@ data "cloudinit_config" "server" {
     filename     = "server.yaml"
     content_type = "text/cloud-config"
     content = templatefile("${path.module}/server.cloud-init.yaml.tftpl", {
-      image     = var.container_image
-      port      = var.server_port
-      container = local.container
+      image       = var.container_image
+      port        = var.server_port
+      relay_first = local.relay.first
+      relay_last  = local.relay.last
+      container   = local.container
     })
   }
 

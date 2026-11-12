@@ -28,6 +28,23 @@ variable "server_port" {
   }
 }
 
+variable "relay_port_range" {
+  description = "Public UDP ports the relay forwards game traffic on, one per player per session."
+  type = object({
+    first = number
+    last  = number
+  })
+  default = { first = 7101, last = 7499 }
+  validation {
+    condition = (
+      var.relay_port_range.first >= 1024 && var.relay_port_range.last <= 65535 &&
+      var.relay_port_range.first <= var.relay_port_range.last &&
+      var.relay_port_range.last - var.relay_port_range.first < 1000
+    )
+    error_message = "relay_port_range must be at most 1000 ports within 1024-65535, with first <= last."
+  }
+}
+
 variable "admin_cidr" {
   description = "Only source allowed to reach SSH, e.g. your home IP as x.x.x.x/32."
   type        = string

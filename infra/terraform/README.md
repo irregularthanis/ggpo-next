@@ -1,8 +1,8 @@
 # Matchmaking server infrastructure
 
-Terraform for the Vector War matchmaking server: one always-free Oracle Cloud
-Ampere A1 VM that runs the server container, and a free DuckDNS name pointing
-at it. You bring it up before friends play and destroy it afterwards. CI never
+Terraform for the Vector War lobby and relay server: one always-free Oracle
+Cloud Ampere A1 VM that runs the server container, and a free DuckDNS name
+pointing at it. You bring it up before friends play and destroy it afterwards. CI never
 creates real infrastructure; it only runs the tests below against mocked
 providers.
 
@@ -10,7 +10,7 @@ Plan and decisions: [internet play technical plan](../../doc/planning/2026-11-11
 
 | Path | Contents |
 | --- | --- |
-| [`modules/host`](modules/host) | Network, firewall (public UDP server port, SSH from `admin_cidr` only), VM, and cloud-init that runs the container |
+| [`modules/host`](modules/host) | Network, firewall (public UDP lobby port and relay range, SSH from `admin_cidr` only), VM, and cloud-init that runs the container |
 | [`modules/duckdns`](modules/duckdns) | No cloud resources: renders the cloud-init part that keeps the DuckDNS name pointing at the VM |
 | [`envs/prod`](envs/prod) | Provider, remote state, variables and wiring; the directory you apply from |
 
@@ -70,9 +70,9 @@ tflint --recursive --config "$PWD/.tflint.hcl"
 
 | Test file | What it proves |
 | --- | --- |
-| [`modules/host/tests/host.tftest.hcl`](modules/host/tests/host.tftest.hcl) | Only the UDP server port is open to the internet and SSH only to `admin_cidr`; the VM is the always-free A1 shape; cloud-init runs the image by digest, read-only on the host network, opens the port in iptables, and merges extra parts; after a mocked apply, the instance, subnet, route and outputs are wired in state; bad inputs are rejected |
+| [`modules/host/tests/host.tftest.hcl`](modules/host/tests/host.tftest.hcl) | Only the UDP lobby port and relay range are open to the internet and SSH only to `admin_cidr`; a relay range containing the lobby port, or larger than 1000 ports, is rejected; the VM is the always-free A1 shape; cloud-init runs the image by digest with the relay range, read-only on the host network, opens both in iptables, and merges extra parts; after a mocked apply, the instance, subnet, route and outputs are wired in state; bad inputs are rejected |
 | [`modules/duckdns/tests/duckdns.tftest.hcl`](modules/duckdns/tests/duckdns.tftest.hcl) | The update URL names the subdomain and lets DuckDNS use the server's own IP; refresh at boot and every 5 minutes; the token file is root-only; bad names and tokens are rejected |
-| [`envs/prod/tests/prod.tftest.hcl`](envs/prod/tests/prod.tftest.hcl) | After a mocked apply, state exposes the `name:port` Vector War uses and the instance IP, including with a custom port |
+| [`envs/prod/tests/prod.tftest.hcl`](envs/prod/tests/prod.tftest.hcl) | After a mocked apply, state exposes the `name:port` Vector War uses, the relay range and the instance IP, including with a custom port |
 
 The `Infrastructure` workflow runs all of these, the matchmaking server tests,
 and a multi-architecture image build on every code change; its aggregate check
@@ -84,4 +84,6 @@ is **Complete infrastructure checks**.
   (at most 2 OCPUs and 12 GB).
 - One VCN, one public IP, no load balancer, no block volume beyond the boot
   volume.
+- Relay traffic counts against the free 10 TB per month of outbound data;
+  Vector War sends a few small packets per frame per player.
 - Run `terraform destroy` when you are done; nothing is left running.

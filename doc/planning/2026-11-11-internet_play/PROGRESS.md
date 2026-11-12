@@ -32,15 +32,15 @@ Status: In progress
   (two-player version 1, in #16).
 - [x] M1-T03: Server unit tests registered in CTest.
 - [x] M1-T04: Container image (non-root, read-only) with a build smoke test.
-- [ ] M1-T05: Protocol version 2: `JOIN` with group size and lobby code,
+- [x] M1-T05: Protocol version 2: `JOIN` with group size and lobby code,
   `MATCH` with every player's relay port and platform, `BIND` / `BOUND`;
   vectors regenerated.
-- [ ] M1-T06: Lobbies: groups of 2–4 by lobby code and size, player numbering,
+- [x] M1-T06: Lobbies: groups of 2–4 by lobby code and size, player numbering,
   expiry, limits.
-- [ ] M1-T07: Relay: port pool, `BIND` latching per destination port,
+- [x] M1-T07: Relay: port pool, `BIND` latching per destination port,
   forwarding with source rewrite, foreign traffic dropped, output never larger
   than input, per-player rate cap, session expiry.
-- [ ] M1-T08: Relay tests with real UDP sockets on loopback for 2 and 4
+- [x] M1-T08: Relay tests with real UDP sockets on loopback for 2 and 4
   players.
 
 ### M2: Infrastructure (depends: M0; parallel with M1)
@@ -56,7 +56,7 @@ Status: In progress
 - [x] M2-T05: `terraform test` state assertions with mocked apply (outputs
   wired, DNS points at the VM IP from state).
 - [x] M2-T06: Variable validation tests with `expect_failures`.
-- [ ] M2-T08: Firewall and cloud-init open the relay port range; tests and
+- [x] M2-T08: Firewall and cloud-init open the relay port range; tests and
   validation updated.
 - [x] M2-T07: `infrastructure.yml` (fmt, validate, tflint, test, server tests,
   image build) with the **Complete infrastructure checks** aggregate.

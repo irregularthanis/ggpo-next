@@ -44,16 +44,20 @@ run "applied_state_exposes_the_address_vector_war_uses" {
     condition     = output.server_port == 7100
     error_message = "server_port must default to 7100."
   }
+  assert {
+    condition     = output.relay_port_range == "7101-7499"
+    error_message = "The relay range must default to 7101-7499."
+  }
 }
 
 run "custom_port_flows_to_the_address" {
   command = apply
   variables {
-    server_port = 7200
+    server_port = 7600
   }
 
   assert {
-    condition     = output.server_address == "vw-friends.duckdns.org:7200"
+    condition     = output.server_address == "vw-friends.duckdns.org:7600"
     error_message = "A custom port must reach server_address."
   }
 }

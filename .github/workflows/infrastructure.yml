@@ -109,7 +109,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ggpo-matchmaking:ci
           outputs: type=cacheonly
-      - name: Smoke test the image answers a version probe
+      - name: Smoke test the image answers a version probe (lobby) and binds the relay range
         run: |
           set -euo pipefail
           docker buildx build --load -t ggpo-matchmaking:smoke services/matchmaking
@@ -129,9 +129,12 @@ jobs:
                   time.sleep(0.5)
           else:
               raise SystemExit("server did not answer")
-          assert reply[:4] == b"VWMM" and reply[5] == 6 and reply[16] == 1, reply.hex()
+          # ERROR (type 7) with code 1 (version mismatch).
+          assert reply[:4] == b"VWMM" and reply[5] == 7 and reply[16] == 1, reply.hex()
           print("version probe answered with ERROR(version mismatch)")
           PY
+          docker logs mm 2>&1 | grep -q "399 relay ports"
+          echo "server bound the default relay range (399 ports)"
       - name: Log in to GHCR
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: docker/login-action@v3
