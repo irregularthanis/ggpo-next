@@ -93,6 +93,12 @@ class Network:
         if kind == "symmetric":
             masquerade.append("--random-fully")
         ns(router, *masquerade)
+        # Drop unsolicited inbound UDP before conntrack confirms it, as home
+        # routers do. Otherwise a peer's early probe leaves a confirmed entry
+        # that makes MASQUERADE pick another source port for the later
+        # outbound flow, so cone NAT would never punch through.
+        ns(router, "iptables", "-A", "INPUT", "-i", "wan0", "-p", "udp",
+           "-m", "conntrack", "--ctstate", "NEW", "-j", "DROP")
         self.routers.append((router, wan_ip, kind))
         return router
 
