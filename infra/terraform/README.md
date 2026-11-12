@@ -2,8 +2,9 @@
 
 Terraform for the Vector War lobby and relay server: one always-free Oracle
 Cloud Ampere A1 VM that runs the server container, and a free DuckDNS name
-pointing at it. You bring it up before friends play and destroy it afterwards. CI never
-creates real infrastructure; it only runs the tests below against mocked
+pointing at it. You bring it up before friends play and destroy it afterwards,
+locally or with the manual **Deploy matchmaking server** workflow. Automatic CI
+never creates real infrastructure; it only runs the tests below against mocked
 providers.
 
 Plan and decisions: [internet play technical plan](../../doc/planning/2026-11-11-internet_play/TECH_PLAN.md).
@@ -52,6 +53,50 @@ The DuckDNS name stays reserved after `destroy`. While the server is down,
 Vector War's Matchmaking reports that the server is unreachable, and direct
 `IP:PORT` play still works. Allow a minute or two after `apply` for the VM to
 install Docker, start the container and update DuckDNS.
+
+## Deploy from GitHub Actions
+
+The **Deploy matchmaking server** workflow
+([`.github/workflows/deploy-matchmaking.yml`](../../.github/workflows/deploy-matchmaking.yml))
+does the same from the Actions tab: **Run workflow** and pick an action.
+
+| Action | Effect |
+| --- | --- |
+| `apply` | Creates or updates the server, waits until the DuckDNS name resolves to the VM (the VM updates its own record at boot and every 5 minutes) and the server answers on the lobby port, then prints the address in the run summary |
+| `plan` | Shows what `apply` would change, without changing anything |
+| `destroy` | Tears everything down and clears the DuckDNS record, so the name stops resolving to an IP that may be reassigned |
+
+It is manual only: never a required check and never run by pushes or pull
+requests, so it blocks nothing. Runs are serialized, so `apply` and `destroy`
+never race on the state. By default it deploys the current `:latest` image
+pinned by its digest; the `container_image` input overrides that. The GHCR
+package must be public, because the VM pulls it without credentials.
+
+Configure a GitHub **environment** named `matchmaking` (Settings → Environments)
+with the values from the one-time setup above:
+
+| Kind | Name | Value |
+| --- | --- | --- |
+| Secret | `OCI_REGION` | Home region, e.g. `us-ashburn-1` |
+| Secret | `OCI_TENANCY_OCID` | Tenancy OCID |
+| Secret | `OCI_USER_OCID` | User that owns the API key |
+| Secret | `OCI_FINGERPRINT` | API key fingerprint |
+| Secret | `OCI_PRIVATE_KEY` | API private key (PEM, whole file) |
+| Secret | `OCI_COMPARTMENT_OCID` | Compartment (the tenancy OCID is fine) |
+| Variable | `STATE_BUCKET` | Object Storage bucket for the state |
+| Variable | `STATE_NAMESPACE` | Object Storage namespace |
+| Secret | `STATE_ACCESS_KEY_ID` | Customer Secret Key ID (S3-compatible API) |
+| Secret | `STATE_SECRET_ACCESS_KEY` | Customer Secret Key secret |
+| Secret | `ADMIN_CIDR` | Your public IP as `x.x.x.x/32` (SSH only) |
+| Secret | `SSH_PUBLIC_KEY` | Public key for SSH |
+| Variable | `DUCKDNS_SUBDOMAIN` | Subdomain without `.duckdns.org` |
+| Secret | `DUCKDNS_TOKEN` | DuckDNS account token |
+
+The workflow checks that all of them are set before touching Terraform, writes
+the OCI key and backend settings only for the run, and deletes them at the end.
+State lives in the same bucket as local runs, so you can apply from Actions and
+destroy locally, or the other way round. Optionally add yourself as a required
+reviewer on the environment to confirm each run.
 
 ## Tests
 

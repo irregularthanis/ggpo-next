@@ -96,6 +96,9 @@ Status: In progress
 
 ### M6: First manual run and trial (depends: M2, M4, M5)
 
+- [x] M6-T00: Manual, non-blocking **Deploy matchmaking server** workflow
+  (`apply`, `plan`, `destroy`); after `apply` it waits for the VM's own DuckDNS
+  update and a lobby answer; `destroy` clears the DuckDNS record.
 - [ ] M6-T01: First manual `terraform apply`; record the plan and outputs;
   `terraform destroy` afterwards leaves nothing billable.
 - [ ] M6-T02: Set the compiled default server to the DuckDNS name.
