@@ -28,6 +28,8 @@ def main():
     parser.add_argument("--executable", required=True)
     parser.add_argument("--player1-executable", required=True)
     parser.add_argument("--local-address", required=True)
+    # Large matrices queue role jobs independently across OS runner pools.
+    parser.add_argument("--rendezvous-timeout", type=int, default=600)
     parser.add_argument("--session-id", required=True)
     parser.add_argument("--scenario", required=True)
     parser.add_argument("--player1-platform", required=True)
@@ -51,7 +53,7 @@ def main():
         os.environ["GITHUB_RUN_ID"], os.environ["GITHUB_RUN_ATTEMPT"],
         args.session_id,
     )
-    _, endpoint = rendezvous.discover()
+    _, endpoint = rendezvous.discover(deadline_seconds=args.rendezvous_timeout)
     workspace = args.workspace.resolve()
     local = PeerSupervisor(workspace)
     local.prepare({"executable": args.executable, "result": "evidence/player2.json",

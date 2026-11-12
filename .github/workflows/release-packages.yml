@@ -243,14 +243,103 @@ jobs:
           path: build/ggpo-*-mingw.zip
           if-no-files-found: error
 
+  package-android:
+    # One archive with an installed CMake SDK for every supported Android ABI.
+    name: Android SDK
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the tagged source
+        uses: actions/checkout@v4
+      - name: Build, install and audit every ABI
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = push ]; then version="${GITHUB_REF_NAME#v}"; else version=dev; fi
+          name="ggpo-${version}-android"
+          stage="$PWD/build/stage/$name"
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            cmake -S . -B "build/android-$abi" -G Ninja \
+              -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake" \
+              -DANDROID_ABI="$abi" -DANDROID_PLATFORM=21 \
+              -DCMAKE_BUILD_TYPE=Release -DGGPO_BUILD_VECTORWAR=OFF \
+              -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX="$stage/$abi"
+            cmake --build "build/android-$abi" --parallel 4
+            cmake --install "build/android-$abi"
+            python3 tests/android/audit_android_sdk.py "$stage/$abi" \
+              --ndk "$ANDROID_NDK_LATEST_HOME" --abi "$abi" --api 21 \
+              --manifest tests/baseline/linux/exports.txt \
+              --report "build/android-$abi-audit.json"
+          done
+          cp LICENSE "$stage/"
+          tar -C build/stage -czf "build/$name.tar.gz" "$name"
+      - name: Validate the release archive
+        run: |
+          set -euo pipefail
+          archive=$(find build -maxdepth 1 -name 'ggpo-*-android.tar.gz' -print -quit)
+          mkdir -p build/extracted
+          tar -C build/extracted -xzf "$archive"
+          root=$(find build/extracted -mindepth 1 -maxdepth 1 -type d -print -quit)
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            for file in include/ggponet.h lib/libGGPO.so lib/libGGPO.a lib/cmake/GGPO/GGPOConfig.cmake; do
+              test -f "$root/$abi/$file" || { echo "Android SDK is missing $abi/$file" >&2; exit 1; }
+            done
+          done
+      - name: Upload packaged SDK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-package-android
+          path: build/ggpo-*-android.tar.gz
+          if-no-files-found: error
+
+  package-vectorwar-android:
+    name: Android Vector War APK
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the tagged source
+        uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Fetch the pinned SDL2 source
+        run: |
+          curl -sSL https://github.com/libsdl-org/SDL/releases/download/release-2.30.9/SDL2-2.30.9.tar.gz \
+            | tar -xz -C "$RUNNER_TEMP"
+          echo "SDL2_SOURCE_DIR=$RUNNER_TEMP/SDL2-2.30.9" >> "$GITHUB_ENV"
+      - name: Build and stage the APK
+        run: |
+          set -euo pipefail
+          gradle -p src/apps/vectorwar/android assembleDebug --no-daemon
+          if [ "${GITHUB_EVENT_NAME}" = push ]; then version="${GITHUB_REF_NAME#v}"; else version=dev; fi
+          cp src/apps/vectorwar/android/app/build/outputs/apk/debug/app-debug.apk \
+            "build/ggpo-${version}-vectorwar-android.apk"
+          unzip -l "build/ggpo-${version}-vectorwar-android.apk" | grep -E 'lib/.*\.so$'
+      - name: Upload Vector War APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-package-vectorwar-android
+          path: build/ggpo-*-vectorwar-android.apk
+          if-no-files-found: error
+
   package-vectorwar-linux:
     name: Linux x86-64 Vector War
     runs-on: ubuntu-24.04
     steps:
       - name: Check out the tagged source
         uses: actions/checkout@v4
-      - name: Build the repository Linux environment
-        run: docker build -f docker/linux/Dockerfile -t ggpo-vectorwar-release .
+      - name: Enable cached container builds
+        uses: docker/setup-buildx-action@v3
+      - name: Build the shared Linux environment
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/linux/Dockerfile
+          load: true
+          tags: ggpo-vectorwar-release
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
       - name: Build and smoke-test the interactive app
         run: |
           mkdir -p build/vectorwar-linux
@@ -323,7 +412,7 @@ jobs:
   publish-release:
     name: Publish release assets
     if: github.event_name == 'push'
-    needs: [package-windows, package-windows-mingw, package-linux, package-vectorwar-linux, package-vectorwar-windows]
+    needs: [package-windows, package-windows-mingw, package-linux, package-android, package-vectorwar-linux, package-vectorwar-windows, package-vectorwar-android]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -337,7 +426,7 @@ jobs:
 
       - name: Generate checksums
         working-directory: release-assets
-        run: sha256sum ggpo-*.zip ggpo-*.tar.gz ggpo-*.deb ggpo-*.rpm > SHA256SUMS
+        run: sha256sum ggpo-*.zip ggpo-*.tar.gz ggpo-*.deb ggpo-*.rpm ggpo-*.apk > SHA256SUMS
 
       - name: Create or update the GitHub Release
         env:
@@ -352,4 +441,4 @@ jobs:
             fi
             gh release create "$TAG" --verify-tag --generate-notes --title "GGPO $TAG" "${prerelease_args[@]}"
           fi
-          gh release upload "$TAG" release-assets/ggpo-*.zip release-assets/ggpo-*.tar.gz release-assets/ggpo-*.deb release-assets/ggpo-*.rpm release-assets/SHA256SUMS --clobber
+          gh release upload "$TAG" release-assets/ggpo-*.zip release-assets/ggpo-*.tar.gz release-assets/ggpo-*.deb release-assets/ggpo-*.rpm release-assets/ggpo-*.apk release-assets/SHA256SUMS --clobber

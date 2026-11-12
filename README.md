@@ -43,18 +43,19 @@ integration guidance is in the [Developer Guide](doc/DeveloperGuide.md).
 
 ## Install or build the SDK
 
-The SDK supports Windows (MSVC and MinGW-w64, x64 and x86) and Linux builds. The Vector War sample runs on
-Windows (Win32/GDI) and Linux (SDL2);
-Apple and other unsupported SDK targets fail configuration explicitly.
+The SDK supports Windows (MSVC and MinGW-w64, x64 and x86), Linux, and Android
+(arm64-v8a, armeabi-v7a, and x86_64). Vector War runs on Windows (Win32/GDI),
+Linux (SDL2), and Android (SDL2/touch). Apple and other unsupported SDK targets
+fail configuration explicitly.
 
 Choose either:
 
-- **Release SDK:** download a tested Windows ZIP or Linux x86-64 DEB, RPM, or
-  raw tar.gz package from
+- **Release SDK:** download a tested Windows ZIP, Linux x86-64 package, or
+  multi-ABI Android tar.gz from
   [Releases](https://github.com/irregularthanis/ggpo-next/releases). This is the
   shortest path for application developers.
-- **Source build:** use CMake directly on Windows or the repository's Ubuntu
-  24.04 Docker image on Linux when changing GGPO or running its tests.
+- **Source build:** use CMake directly on Windows, the repository's Ubuntu
+  24.04 Docker image on Linux, or CMake with the Android NDK.
 
 Every SDK contains both the shared and the static library. Applications link
 `GGPO::GGPO` (shared by default) and choose static with `-DGGPO_USE_STATIC=ON`.

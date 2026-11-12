@@ -2,7 +2,10 @@
 #include "sdl_renderer.h"
 #include "vectorwar_inputs.h"
 
-#include <SDL2/SDL.h>
+#include "vw_sdl.h"
+#if defined(__ANDROID__)
+#include "sdl_touch_controls.h"
+#endif
 
 SDLVectorWarHost::SDLVectorWarHost() { }
 
@@ -27,6 +30,9 @@ SDLVectorWarHost::ReadLocalInput(int) const
    if (keys[SDL_SCANCODE_RIGHT]) input |= INPUT_ROTATE_RIGHT;
    if (keys[SDL_SCANCODE_D]) input |= INPUT_FIRE;
    if (keys[SDL_SCANCODE_S]) input |= INPUT_BOMB;
+#if defined(__ANDROID__)
+   input |= vw_touch::ReadInput();
+#endif
    return input;
 }
 

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 # TODO: SDK Versioning.
-project(GGPO VERSION 0.5.0)
+project(GGPO VERSION 0.6.0)
 
 include(CTest)
 
@@ -17,6 +17,13 @@ include(src/cmake/helper_methods.cmake)
 # requires SSE2 by default.
 if(MINGW AND CMAKE_SIZEOF_VOID_P EQUAL 4)
 	add_compile_options(-msse2 -mfpmath=sse)
+endif()
+
+# Android (ARM in particular) contracts a*b+c into fused multiply-add, which
+# rounds differently from x86 and broke Vector War's frozen checksum on arm64.
+# Apply to every target: library, tests, and samples.
+if(ANDROID)
+	add_compile_options(-ffp-contract=off)
 endif()
 
 if(WIN32)
@@ -35,12 +42,19 @@ else()
 	set(GGPO_BUILD_VECTORWAR_DEFAULT ON)
 endif()
 option(GGPO_BUILD_VECTORWAR "Enable the build of the Vector War example app" ${GGPO_BUILD_VECTORWAR_DEFAULT})
+option(GGPO_BUILD_VECTORWAR_GUI "Enable the interactive Vector War frontend" ON)
 if(MINGW AND GGPO_BUILD_VECTORWAR)
 	message(FATAL_ERROR "Vector War is not supported with MinGW; configure with -DGGPO_BUILD_VECTORWAR=OFF")
 endif()
 # Linkage: leave BUILD_SHARED_LIBS unset to build both shared and static GGPO,
 # or pass -DBUILD_SHARED_LIBS=ON/OFF for one flavor (see src/CMakeLists.txt).
-option(GGPO_RUN_TESTS_ON_BUILD "Run self-contained GGPO tests during the default build" ON)
+# Cross-compiled tests (Android) cannot run on the build host.
+if(CMAKE_CROSSCOMPILING)
+	set(GGPO_RUN_TESTS_ON_BUILD_DEFAULT OFF)
+else()
+	set(GGPO_RUN_TESTS_ON_BUILD_DEFAULT ON)
+endif()
+option(GGPO_RUN_TESTS_ON_BUILD "Run self-contained GGPO tests during the default build" ${GGPO_RUN_TESTS_ON_BUILD_DEFAULT})
 
 if(GGPO_BUILD_SDK)
 	add_subdirectory(src)
@@ -56,6 +70,11 @@ endif()
 if(BUILD_TESTING AND GGPO_BUILD_SDK)
 	add_subdirectory(tests)
 	if(GGPO_RUN_TESTS_ON_BUILD)
+		if(ANDROID)
+			set(GGPO_POSIX_TEST_PREFIX android)
+		else()
+			set(GGPO_POSIX_TEST_PREFIX linux)
+		endif()
 		if(WIN32)
 			set(GGPO_PLATFORM_TEST_TARGETS
 				ggpo_windows_public_layout
@@ -64,10 +83,10 @@ if(BUILD_TESTING AND GGPO_BUILD_SDK)
 				ggpo_windows_peer_smoke)
 		else()
 			set(GGPO_PLATFORM_TEST_TARGETS
-				ggpo_linux_public_layout
-				ggpo_linux_packet_layout
-				ggpo_linux_synctest_smoke
-				ggpo_linux_peer_smoke)
+				ggpo_${GGPO_POSIX_TEST_PREFIX}_public_layout
+				ggpo_${GGPO_POSIX_TEST_PREFIX}_packet_layout
+				ggpo_${GGPO_POSIX_TEST_PREFIX}_synctest_smoke
+				ggpo_${GGPO_POSIX_TEST_PREFIX}_peer_smoke)
 		endif()
 		# The registered frontend lifecycle test must not race its executable link.
 		if(TARGET VectorWar)

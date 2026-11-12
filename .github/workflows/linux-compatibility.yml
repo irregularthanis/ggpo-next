@@ -7,7 +7,15 @@ on:
   workflow_dispatch:
 
 jobs:
+  changes:
+    uses: ./.github/workflows/classify-changes.yml
+    with:
+      base: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+      force: ${{ github.event_name == 'workflow_dispatch' }}
+
   sdk:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     # Each lane builds libGGPO.so and libGGPO.a together and tests both.
     name: Linux ${{ matrix.compiler }}
     runs-on: ubuntu-24.04

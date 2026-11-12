@@ -84,7 +84,8 @@ Declared in the [root build file](../../CMakeLists.txt):
 | Option | Default | Effect |
 | --- | ---: | --- |
 | `GGPO_BUILD_SDK` | `ON` | Adds the GGPO library targets |
-| `GGPO_BUILD_VECTORWAR` | `ON` | Adds Vector War only when `WIN32` is true |
+| `GGPO_BUILD_VECTORWAR` | `ON` (except MinGW) | Adds the portable Vector War core and headless fixture |
+| `GGPO_BUILD_VECTORWAR_GUI` | `ON` | Adds the Win32, Linux SDL2, or Android SDL2 interactive frontend; disable for SDL-free headless builds |
 | `BUILD_SHARED_LIBS` | unset | Unset builds both libraries; `ON` builds only shared, `OFF` only static |
 | `GGPO_BUILD_SHARED` | both / from `BUILD_SHARED_LIBS` | Builds `GGPO_shared` (`GGPO.dll` + `GGPO.lib`, `libGGPO.so`) |
 | `GGPO_BUILD_STATIC` | both / from `BUILD_SHARED_LIBS` | Builds `GGPO_static` (`libGGPO.lib`, `libGGPO.a`) |
@@ -174,12 +175,14 @@ Pushing a final tag such as `v0.2.0`, or a prerelease tag such as
 [`Package release SDK`](../../.github/workflows/release-packages.yml) workflow.
 The tag must match the version declared by the root [`project()`](../../CMakeLists.txt).
 
-The workflow builds Windows x64 and x86 SDKs for MSVC and for MinGW-w64, and one
-Linux x86-64 SDK, each containing both the shared and the static library. MinGW
+The workflow builds Windows x64 and x86 SDKs for MSVC and MinGW-w64, one Linux
+x86-64 SDK, and one Android SDK containing arm64-v8a, armeabi-v7a, and x86_64.
+Each ABI prefix contains both shared and static libraries. MinGW
 zips end in `-mingw.zip` and carry `share/GGPO/TOOLCHAIN.txt`; validation
 rejects `.lib` files in MinGW zips and `.a` files in MSVC zips. It also publishes standalone interactive Vector War archives
-for Windows x64/x86 and Linux x86-64. Windows publishes ZIP files; Linux
-publishes the GUI as a tarball and the SDK in these formats:
+for Windows x64/x86 and Linux x86-64, plus a multi-ABI Android APK. Windows
+publishes ZIP files; Android publishes a tar.gz SDK and APK; Linux publishes
+the GUI as a tarball and the SDK in these formats:
 
 | Format | Install shape | Validation |
 | --- | --- | --- |
@@ -199,8 +202,9 @@ the GitHub Release.
 | --- | --- | --- |
 | Windows | Supported SDK and Vector War build | Existing reference platform |
 | Linux | SDK and SDL2 Vector War GUI supported through the Ubuntu 24.04 container | Additional distribution formats remain follow-up work |
+| Android | NDK SDK and SDL2/touch Vector War APK for arm64-v8a, armeabi-v7a, and x86_64 | Physical-device qualification remains follow-up work |
 | macOS | Explicitly rejected until an Apple platform layer exists | Adapter, CI, lifecycle/frontend, and packaging remain |
-| Mobile and consoles | No build target | Platform services, lifecycle, socket policy, packaging, and validation absent |
+| Other mobile platforms and consoles | No build target | Platform services, lifecycle, socket policy, packaging, and validation absent |
 
 The build-port roadmap should preserve the public API while moving OS facilities
 behind explicit adapters. See [Portability](Portability.md).

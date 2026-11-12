@@ -24,8 +24,9 @@ language paths resolve the same C-linkage exports, and the same API is
 available from the shared and the static library; see
 [Link GGPO into an application](../DeveloperGuide.md#link-ggpo-into-an-application).
 
-This page reflects the source; the older [Developer Guide](../DeveloperGuide.md)
-contains useful integration guidance but some example names differ from the header.
+This page is the reference generated from the source. The
+[Developer Guide](../DeveloperGuide.md) covers installation, linking per
+platform, and integration guidance, using the same names as the header.
 
 ## Language and ABI contract
 

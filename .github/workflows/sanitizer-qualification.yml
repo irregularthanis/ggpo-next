@@ -78,3 +78,54 @@ jobs:
           name: windows-msvc-asan
           path: build/windows-asan/Testing
           if-no-files-found: warn
+
+  android-asan:
+    # Android ASan+UBSan in an x86_64 emulator (hosted arm64 runners have no
+    # KVM). The sanitizer runtime and libc++_shared.so sit beside the tests so
+    # tests/android/run_on_device.py pushes them with each executable.
+    name: Android ASan and UBSan (x86_64 emulator)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Instrument static GGPO and the tests
+        run: |
+          ndk="$ANDROID_NDK_LATEST_HOME"
+          flags="-fsanitize=address,undefined -fno-omit-frame-pointer"
+          cmake -S . -B build/asan -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$ndk/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=x86_64 -DANDROID_PLATFORM=27 -DANDROID_STL=c++_shared \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+            -DGGPO_BUILD_VECTORWAR=OFF -DBUILD_TESTING=ON \
+            "-DCMAKE_C_FLAGS=$flags" "-DCMAKE_CXX_FLAGS=$flags" \
+            "-DCMAKE_EXE_LINKER_FLAGS=$flags" \
+            "-DCMAKE_CROSSCOMPILING_EMULATOR=python3;$GITHUB_WORKSPACE/tests/android/run_on_device.py"
+          cmake --build build/asan --parallel 4
+          bin=$(echo build/asan/bin/*/Release)
+          clang="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
+          cp "$("$clang" --target=x86_64-linux-android27 -print-file-name=libclang_rt.asan-x86_64-android.so)" "$bin/"
+          cp "$ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/x86_64-linux-android/libc++_shared.so" "$bin/"
+          ls "$bin"/*.so
+      - name: Run the instrumented suite in the emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          GGPO_TEST_LAUNCHER: ${{ github.workspace }}/tests/android/run_on_device.py
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot
+          script: ctest --test-dir build/asan --output-on-failure --timeout 300
+      - name: Upload sanitizer test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-asan-ubsan
+          path: build/asan/Testing
+          if-no-files-found: warn

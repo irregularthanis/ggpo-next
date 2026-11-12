@@ -8,7 +8,7 @@ Status: In progress
 
 ### M0: Freeze coverage and CI baselines
 
-Architecture: [test layers](../../architecture/Testing.md#test-layers).
+Architecture: [test layers](../../architecture/Testing.md#coverage-map).
 
 - [x] M0-T01: Inventory all 16 public exports and classify existing coverage.
 - [x] M0-T02: Inventory portable components and all 16 callable platform
@@ -96,7 +96,7 @@ Parallel with M1/M2; owns `tests/platform`; integrates in M5.
 | M4-T02 | [`protocol_test.cpp`](../../../tests/unit/protocol_test.cpp) | Exact, truncated, trailing, partial-byte and unknown-type cases | Production `UdpMsg::IsValidPacketSize` and receive guard | PASS |
 | M4-T03 | [Frozen Windows compatibility run 42491233746](https://github.com/irregularthanis/ggpo-next/actions/runs/42491233746) | Baseline/candidate exports, layouts and cross-revision DLL execution | Frozen Windows baseline and current candidate | PASS; no public ABI or packet-layout change |
 | M5-T01 | [Portability qualification](../../architecture/Portability.md#follow-up-platform-contract) | Supported/experimental checklist | Future native adapters | Published |
-| M5-T02 | [Testing architecture](../../architecture/Testing.md#test-layers) | Retain ABI, linkage, consumer and package layers | Windows and Linux | Requirements preserved |
+| M5-T02 | [Testing architecture](../../architecture/Testing.md#coverage-map) | Retain ABI, linkage, consumer and package layers | Windows and Linux | Requirements preserved |
 | M5-T04 | [Platform status](../../architecture/Build.md#platform-status) | Current support/limitations review | Windows, Linux and unsupported targets | Published |
 | M6-T01 | [`tests/CMakeLists.txt`](../../../tests/CMakeLists.txt) | `ctest --print-labels` and unchanged test-name audit | Portable, native, ABI, protocol and negative suites | Labels added without renaming tests |
 | M6-T02 | [Sanitizer workflow](../../../.github/workflows/sanitizer-qualification.yml) | `python3 scripts/linux/build_in_container.py --compiler clang --library static --sanitizers --out /tmp/ggpo-pr7-sanitizers` | Ubuntu 24.04 repository image; Clang 18; ASan+UBSan; production objects, 13 tests and installed C/C++ consumers | Initial run found zero-duration statistics and uninitialized round-trip state; both fixed with a focused regression; final PASS, 13/13 |

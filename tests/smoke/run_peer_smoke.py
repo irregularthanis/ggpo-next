@@ -13,6 +13,7 @@ import os
 import socket
 import statistics
 import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -42,6 +43,11 @@ def run_pair(executable_a, executable_b, frames, run_number,
             [str(executable_a), "1", str(port_a), str(port_b), str(frames), str(result_a)],
             [str(executable_b), "2", str(port_b), str(port_a), str(frames), str(result_b)],
         ]
+        # GGPO_TEST_LAUNCHER runs each peer through a launcher (Android: adb).
+        launcher = os.environ.get("GGPO_TEST_LAUNCHER")
+        if launcher:
+            prefix = [sys.executable, launcher]
+            commands = [prefix + command for command in commands]
         started = time.perf_counter()
         environments = []
         for fault in (fault_a, fault_b):
@@ -114,13 +120,16 @@ def main():
                         help="optional second peer executable")
     parser.add_argument("--frames", type=int, default=180)
     parser.add_argument("--runs", type=int, default=1)
+    parser.add_argument("--timeout", type=int, default=45,
+                        help="per-pair process deadline in seconds")
     parser.add_argument("--summary", type=Path)
     args = parser.parse_args()
 
     executable_a = args.executable.resolve()
     executable_b = (args.peer_b or args.executable).resolve()
     results = [
-        run_pair(executable_a, executable_b, args.frames, run_number + 1)
+        run_pair(executable_a, executable_b, args.frames, run_number + 1,
+                 timeout_seconds=args.timeout)
         for run_number in range(args.runs)
     ]
     elapsed = [result["elapsed_ms"] for result in results]

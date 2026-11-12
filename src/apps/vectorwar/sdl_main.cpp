@@ -2,7 +2,7 @@
 #include "sdl_renderer.h"
 #include "vectorwar.h"
 
-#include <SDL2/SDL.h>
+#include "vw_sdl.h"
 #include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,6 +36,9 @@ static void RunMainLoop(SDLVectorWarHost *host)
          if (event.type == SDL_QUIT) running = false;
          if (event.type == SDL_KEYDOWN) {
             if (event.key.keysym.sym == SDLK_ESCAPE) running = false;
+#if defined(__ANDROID__)
+            if (event.key.keysym.sym == SDLK_AC_BACK) running = false;
+#endif
             if (event.key.keysym.sym == SDLK_p) VectorWar_TogglePerformanceMonitor();
             if (event.key.keysym.sym >= SDLK_F1 && event.key.keysym.sym <= SDLK_F12) {
                VectorWar_DisconnectPlayer((int)(event.key.keysym.sym - SDLK_F1));
@@ -57,6 +60,10 @@ int main(int argc, char **argv)
       SDLVectorWarRenderer renderer;
       if (!renderer.IsReady()) return 1;
       renderer.SetStatusText("Vector War SDL frontend smoke");
+#if defined(__ANDROID__)
+      // Read by CI from logcat; there is no console on Android.
+      SDL_Log("Vector War SDL frontend smoke: OK");
+#endif
       return 0;
    }
    if (argc < 4) {

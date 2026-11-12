@@ -16,7 +16,7 @@ The core consumes semantic services declared by
 [`platform.h`](../../src/lib/ggpo/platform.h). The Windows implementation in
 [`platform_windows.cpp`](../../src/lib/ggpo/platform_windows.cpp) owns Win32,
 Winsock, native error mapping, and socket representation. The Linux
-implementation in [`platform_linux.cpp`](../../src/lib/ggpo/platform_linux.cpp)
+implementation in [`platform_posix.cpp`](../../src/lib/ggpo/platform_posix.cpp)
 provides the same contracts with POSIX facilities. Platform CMake modules own
 their native source and build inputs; Apple remains follow-up work.
 

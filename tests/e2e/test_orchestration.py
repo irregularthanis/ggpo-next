@@ -130,6 +130,16 @@ class MatrixTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "incomplete"):
                 build_manifest(root)
             write_report("ml", "mingw-linux")
+            with self.assertRaisesRegex(ValueError, "incomplete"):
+                build_manifest(root)
+            for scenario in ("android-android", "android-linux", "linux-android",
+                             "android-windows", "windows-android",
+                             "android-mingw", "mingw-android"):
+                write_report(f"a-{scenario}", scenario)
+            for scenario in ("android-android", "android-linux", "linux-android",
+                             "android-windows", "windows-android"):
+                write_report(f"avw-{scenario}", f"vectorwar-{scenario}",
+                             fixture="vectorwar")
             self.assertEqual(build_manifest(root)["result"], "pass")
             write_report("duplicate", "linux-linux")
             with self.assertRaisesRegex(ValueError, "duplicate"):

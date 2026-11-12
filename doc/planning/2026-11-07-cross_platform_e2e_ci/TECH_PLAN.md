@@ -13,7 +13,7 @@ Qualified implementation: `9cc921b57b994d7fc5f77eda7c63a5340af709fc`
 - [`peer_smoke.cpp`](../../../tests/smoke/peer_smoke.cpp) already runs the production session API and native socket adapter, accepts a remote IP, advances 180 deterministic frames, and writes JSON.
 - [`run_peer_smoke.py`](../../../tests/smoke/run_peer_smoke.py) owns same-host process supervision; [`compare_peer_results.py`](../../../tests/smoke/compare_peer_results.py) compares native-host results. Existing negative tests reject startup, timeout, mismatch, and shutdown faults.
 - [`SmokeChecksum`](../../../tests/smoke/smoke_session.cpp) hashes native structure bytes, so padding/byte order are unsuitable as the cross-platform contract. The fixture also relies on a fixed one-second drain.
-- Current [testing architecture](../../architecture/Testing.md#native-cross-host-smoke) documents a manual Windows↔Linux run; [portability](../../architecture/Portability.md#protocol-considerations) requires native cross-platform evidence.
+- Current [testing architecture](../../architecture/Testing.md#cross-platform-e2e) documents a manual Windows↔Linux run; [portability](../../architecture/Portability.md#protocol-considerations) requires native cross-platform evidence.
 - Tailscale Action v4.4.0 documents OAuth `auth_keys` scope, mandatory tags, ephemeral nodes, cleanup after logout, and eventual peer visibility. It must be pinned by commit, not a floating major tag.
 
 ## Changes
@@ -21,11 +21,11 @@ Qualified implementation: `9cc921b57b994d7fc5f77eda7c63a5340af709fc`
 | Status | File / symbol | Practical edit | Milestone | Architecture |
 |---|---|---|---|---|
 | Modify | `tests/smoke/smoke_session.*`, `peer_smoke.cpp` | Add canonical state bytes, schema 2 identity/lifecycle fields, and a test-only completion barrier without changing GGPO API/wire data | M1 | [Shared deterministic state](../../architecture/Testing.md#shared-deterministic-state) |
-| Modify | `tests/smoke/compare_peer_results.py` | Accept schema 1; strictly validate schema 2, scenario identity, canonical checksum, oracle state, events, and closure | M1 | [Native cross-host smoke](../../architecture/Testing.md#native-cross-host-smoke) |
+| Modify | `tests/smoke/compare_peer_results.py` | Accept schema 1; strictly validate schema 2, scenario identity, canonical checksum, oracle state, events, and closure | M1 | [Native cross-host smoke](../../architecture/Testing.md#cross-platform-e2e) |
 | Add | `tests/e2e/result_schema.py`, tests | Define schema parsing, canonical encoding, independent state oracle, manifest completeness, and known vectors | M1 | [Evidence](../../architecture/Testing.md#evidence-and-interpretation) |
 | Add | `tests/e2e/peer_agent.py`, `run_matrix.py`, `rendezvous.py` | Implement allow-listed agent commands, HMAC control messages, run-scoped Deployment discovery, matrix generation, deadlines, and cleanup | M2 | [Network boundaries](../../architecture/Networking.md#network-boundaries) |
 | Add | `tests/e2e/test_*.py` | Reject wrong identity/MAC, replay, duplicate/missing scenario, timeout, crash, and unsafe command/path | M2 | [Negative peer contracts](../../architecture/Testing.md#negative-peer-contracts) |
-| Add | `.github/workflows/cross-platform-e2e.yml` | Build native artifacts, join ephemeral nodes, execute two concurrent agents, validate with `if: always()`, and upload evidence | M3 | [Build and CI integration](../../architecture/Testing.md#build-and-ci-integration) |
+| Add | `.github/workflows/cross-platform-e2e.yml` | Build native artifacts, join ephemeral nodes, execute two concurrent agents, validate with `if: always()`, and upload evidence | M3 | [Build and CI integration](../../architecture/Testing.md#ci-gating-and-labels) |
 | Modify | `doc/architecture/Testing.md`, `Networking.md`, `Portability.md` | Document the automated boundary, result contract, security/trigger limits, and remaining coverage | M4 | [Testing](../../architecture/Testing.md) |
 | Add | `tests/e2e/udp_proxy.py`, seeded profiles | Add reproducible latency/loss after clean matrix stability | M5 | [Transport model](../../architecture/Networking.md#transport-and-endpoint-model) |
 
@@ -142,6 +142,6 @@ thresholds.
 ## References
 
 - [Tailscale GitHub Action v4.4.0](https://github.com/tailscale/github-action/releases/tag/v4.4.0) — current official action; pinned commit `064b10558093f38325e838ddea35486bdc6b1d5c`.
-- [Testing architecture](../../architecture/Testing.md#native-cross-host-smoke) — existing manual cross-host contract.
+- [Testing architecture](../../architecture/Testing.md#cross-platform-e2e) — existing manual cross-host contract.
 - [Networking architecture](../../architecture/Networking.md#transport-and-endpoint-model) — production UDP ownership.
 - [Portability architecture](../../architecture/Portability.md#protocol-considerations) — cross-platform wire risks and qualification sequence.

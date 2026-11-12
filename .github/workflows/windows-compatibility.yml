@@ -7,7 +7,15 @@ on:
   workflow_dispatch:
 
 jobs:
+  changes:
+    uses: ./.github/workflows/classify-changes.yml
+    with:
+      base: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+      force: ${{ github.event_name == 'workflow_dispatch' }}
+
   baseline:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     name: Windows compatibility (${{ matrix.architecture }}, ${{ matrix.label }}, ${{ matrix.configuration }})
     runs-on: windows-2022
     strategy:
@@ -45,6 +53,8 @@ jobs:
           if-no-files-found: error
 
   final-compatibility:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     name: Frozen Windows baseline / candidate compatibility
     runs-on: windows-2022
     steps:
@@ -70,6 +80,8 @@ jobs:
           if-no-files-found: error
 
   portable-header:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     name: Portable public header (${{ matrix.compiler }})
     runs-on: ubuntu-24.04
     strategy:

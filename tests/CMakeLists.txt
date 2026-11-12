@@ -76,39 +76,44 @@ if(WIN32)
     set_tests_properties(windows_packet_layout PROPERTIES LABELS "native;abi;protocol")
     set(GGPO_SMOKE_PREFIX windows)
 else()
-    # Linux counterparts reuse the same frozen assertions: the public layout
+    # POSIX platforms (Linux, Android) name native tests by platform.
+    if(ANDROID)
+        set(GGPO_SMOKE_PREFIX android)
+    else()
+        set(GGPO_SMOKE_PREFIX linux)
+    endif()
+    # Linux and Android counterparts reuse the same frozen assertions: the public layout
     # matches on LP64, and the packed wire layout must be byte-identical for
     # Linux<->Windows peers to interoperate.
-    add_executable(ggpo_linux_public_layout
+    add_executable(ggpo_${GGPO_SMOKE_PREFIX}_public_layout
         baseline/windows/public_layout.cpp
     )
-    ggpo_configure_test(ggpo_linux_public_layout)
-    add_test(NAME linux_public_layout COMMAND ggpo_linux_public_layout)
-    set_tests_properties(linux_public_layout PROPERTIES LABELS "native;abi")
+    ggpo_configure_test(ggpo_${GGPO_SMOKE_PREFIX}_public_layout)
+    add_test(NAME ${GGPO_SMOKE_PREFIX}_public_layout COMMAND ggpo_${GGPO_SMOKE_PREFIX}_public_layout)
+    set_tests_properties(${GGPO_SMOKE_PREFIX}_public_layout PROPERTIES LABELS "native;abi")
 
-    add_executable(ggpo_linux_packet_layout
+    add_executable(ggpo_${GGPO_SMOKE_PREFIX}_packet_layout
         baseline/windows/packet_layout.cpp
         platform/fake/platform_fake.cpp
         platform/fake/platform_fake.h
     )
-    ggpo_configure_test(ggpo_linux_packet_layout)
-    target_include_directories(ggpo_linux_packet_layout PRIVATE
+    ggpo_configure_test(ggpo_${GGPO_SMOKE_PREFIX}_packet_layout)
+    target_include_directories(ggpo_${GGPO_SMOKE_PREFIX}_packet_layout PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/platform/fake
     )
-    add_test(NAME linux_packet_layout COMMAND ggpo_linux_packet_layout)
-    set_tests_properties(linux_packet_layout PROPERTIES LABELS "native;abi;protocol")
+    add_test(NAME ${GGPO_SMOKE_PREFIX}_packet_layout COMMAND ggpo_${GGPO_SMOKE_PREFIX}_packet_layout)
+    set_tests_properties(${GGPO_SMOKE_PREFIX}_packet_layout PROPERTIES LABELS "native;abi;protocol")
 
     # Shared builds freeze the dynamic ggpo_* export set like the DLL manifest.
     if(TARGET GGPO_shared)
-        add_test(NAME linux_exports
+        add_test(NAME ${GGPO_SMOKE_PREFIX}_exports
             COMMAND ${PYTHON_EXECUTABLE}
                     ${CMAKE_CURRENT_SOURCE_DIR}/baseline/linux/check_exports.py
                     $<TARGET_FILE:GGPO_shared>
                     ${CMAKE_CURRENT_SOURCE_DIR}/baseline/linux/exports.txt
         )
-        set_tests_properties(linux_exports PROPERTIES LABELS "native;abi")
+        set_tests_properties(${GGPO_SMOKE_PREFIX}_exports PROPERTIES LABELS "native;abi")
     endif()
-    set(GGPO_SMOKE_PREFIX linux)
 endif()
 
 # Runtime contracts: SyncTest isolates rollback, while peer loopback exercises
@@ -135,14 +140,24 @@ add_executable(${GGPO_PEER_TARGET}
 )
 ggpo_configure_test(${GGPO_PEER_TARGET})
 target_link_libraries(${GGPO_PEER_TARGET} PRIVATE GGPO::GGPO)
+set(GGPO_PEER_PROCESS_TIMEOUT 45)
+set(GGPO_PEER_CTEST_TIMEOUT 90)
+if(ANDROID)
+    # API 21's emulator can take substantially longer to launch two adb-backed
+    # peers than current Android releases. Keep the execution bounded while
+    # giving the same network contract enough time to complete.
+    set(GGPO_PEER_PROCESS_TIMEOUT 120)
+    set(GGPO_PEER_CTEST_TIMEOUT 180)
+endif()
 add_test(NAME ${GGPO_SMOKE_PREFIX}_peer_loopback
     COMMAND ${PYTHON_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/smoke/run_peer_smoke.py
             $<TARGET_FILE:${GGPO_PEER_TARGET}>
             --frames 180
+            --timeout ${GGPO_PEER_PROCESS_TIMEOUT}
 )
 set_tests_properties(${GGPO_SMOKE_PREFIX}_peer_loopback PROPERTIES
-    TIMEOUT 90
+    TIMEOUT ${GGPO_PEER_CTEST_TIMEOUT}
     LABELS "native;network"
 )
 
@@ -199,9 +214,10 @@ if(TARGET GGPO_shared AND TARGET GGPO_static)
                 ${CMAKE_CURRENT_SOURCE_DIR}/smoke/run_peer_smoke.py
                 $<TARGET_FILE:${GGPO_STATIC_PEER_TARGET}>
                 --frames 180
+                --timeout ${GGPO_PEER_PROCESS_TIMEOUT}
     )
     set_tests_properties(${GGPO_SMOKE_PREFIX}_static_peer_loopback PROPERTIES
-        TIMEOUT 90
+        TIMEOUT ${GGPO_PEER_CTEST_TIMEOUT}
         LABELS "native;network;static"
     )
     set(GGPO_STATIC_RUNTIME_TEST_TARGETS
@@ -215,7 +231,7 @@ include(${PROJECT_SOURCE_DIR}/src/CMakeSources.cmake)
 set(GGPO_FAKE_CORE_RELATIVE_SOURCES ${GGPO_LIB_SRC})
 list(REMOVE_ITEM GGPO_FAKE_CORE_RELATIVE_SOURCES
     "lib/ggpo/platform_windows.cpp"
-    "lib/ggpo/platform_linux.cpp"
+    "lib/ggpo/platform_posix.cpp"
 )
 set(GGPO_FAKE_CORE_SOURCES)
 foreach(source ${GGPO_FAKE_CORE_RELATIVE_SOURCES})
@@ -406,6 +422,26 @@ elseif(TARGET VectorWar)
     set_tests_properties(linux_vectorwar_gui_host_contract PROPERTIES
         ENVIRONMENT "SDL_VIDEODRIVER=dummy"
         LABELS "native;platform;sample;vectorwar-host")
+elseif(TARGET VectorWarAndroid)
+    # The APK's SDL2 frontend, built when GGPO_ANDROID_SDL2_SOURCE_DIR supplies
+    # SDL2. The test selects the dummy video driver itself; the launcher
+    # pushes libSDL2.so from its build directory.
+    add_executable(ggpo_vectorwar_sdl_host_contract
+        vectorwar/sdl_host_contract_test.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_host.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_renderer.cpp
+    )
+    ggpo_configure_test(ggpo_vectorwar_sdl_host_contract)
+    target_include_directories(ggpo_vectorwar_sdl_host_contract PRIVATE
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar
+    )
+    target_link_libraries(ggpo_vectorwar_sdl_host_contract PRIVATE
+        GGPO::GGPO SDL2::SDL2 log android)
+    add_test(NAME android_vectorwar_gui_host_contract
+        COMMAND ggpo_vectorwar_sdl_host_contract)
+    set_tests_properties(android_vectorwar_gui_host_contract PROPERTIES
+        ENVIRONMENT "GGPO_LAUNCHER_LIB_DIRS=$<TARGET_FILE_DIR:SDL2>"
+        LABELS "native;platform;sample;vectorwar-host")
 endif()
 
 # Launch two instances of the real Vector War application core over native
@@ -415,9 +451,10 @@ if(TARGET VectorWarHeadless)
         COMMAND ${PYTHON_EXECUTABLE}
                 ${CMAKE_CURRENT_SOURCE_DIR}/vectorwar/run_headless_loopback.py
                 $<TARGET_FILE:VectorWarHeadless>
+                --timeout ${GGPO_PEER_PROCESS_TIMEOUT}
     )
     set_tests_properties(vectorwar_headless_loopback PROPERTIES
-        TIMEOUT 60
+        TIMEOUT ${GGPO_PEER_CTEST_TIMEOUT}
         LABELS "native;network;sample"
     )
     add_test(NAME vectorwar_headless_negative_contracts

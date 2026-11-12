@@ -25,6 +25,8 @@ if(WIN32)
 	include(platform/windows/Platform.cmake)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	include(platform/linux/Platform.cmake)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
+	include(platform/android/Platform.cmake)
 else()
 	message(FATAL_ERROR "Unsupported GGPO platform: ${CMAKE_SYSTEM_NAME}")
 endif()
@@ -44,10 +46,12 @@ function(ggpo_add_library target type export_name)
 		${CMAKE_CURRENT_SOURCE_DIR}/lib/ggpo
 	)
 	ggpo_configure_platform(${target})
-	set_target_properties(${target} PROPERTIES
-		VERSION ${PROJECT_VERSION}
-		EXPORT_NAME ${export_name}
-	)
+	set_target_properties(${target} PROPERTIES EXPORT_NAME ${export_name})
+	# Android packages libraries by plain name (libGGPO.so); versioned files
+	# and symlinks cannot be loaded from an APK.
+	if(NOT ANDROID)
+		set_target_properties(${target} PROPERTIES VERSION ${PROJECT_VERSION})
+	endif()
 endfunction()
 
 set(GGPO_LIBRARY_TARGETS)
@@ -127,7 +131,9 @@ endif()
 
 # Recorded in GGPOConfig.cmake so a Windows consumer built with the other
 # toolchain is rejected instead of failing at link time.
-if(MSVC)
+if(ANDROID)
+	set(GGPO_TOOLCHAIN android)
+elseif(MSVC)
 	set(GGPO_TOOLCHAIN msvc)
 elseif(MINGW)
 	set(GGPO_TOOLCHAIN mingw)
