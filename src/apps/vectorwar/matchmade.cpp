@@ -25,11 +25,19 @@ void Say(const char *text)
    fflush(stdout);
 }
 
-void Progress(int joined, int group_size, void *)
+void Progress(int joined, int group_size, void *context)
 {
    char text[64];
    snprintf(text, sizeof(text), "vectorwar-match: waiting for players %d/%d", joined, group_size);
    Say(text);
+   const MatchmadeArgs *args = (const MatchmadeArgs *)context;
+   if (args->progress) args->progress(joined, group_size, args->ui_context);
+}
+
+bool KeepGoing(void *context)
+{
+   const MatchmadeArgs *args = (const MatchmadeArgs *)context;
+   return !args->keep_going || args->keep_going(args->ui_context);
 }
 
 bool ParsePort(const char *text, unsigned short *port, bool allow_zero)
@@ -103,6 +111,8 @@ MatchmadeStart(const MatchmadeArgs &args, GGPOPlayer players[GGPO_MAX_PLAYERS], 
    options.lobby = args.lobby;
    options.platform = VwLocalPlatform();  /* same numbering as vwnet */
    options.progress = Progress;
+   options.keep_going = KeepGoing;
+   options.context = (void *)&args;
    if (!vwnet::Matchmake(session->proxy.PublicSocket(), server, options, &session->match,
                          error, error_length)) {
       MatchmadeStop(session);

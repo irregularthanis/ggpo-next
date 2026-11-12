@@ -77,6 +77,12 @@ def main():
     parser.add_argument("tool", type=Path)
     parser.add_argument("services", type=Path, help="services/matchmaking")
     args = parser.parse_args()
+    silent_port, = free_ports(1)
+    errors = subprocess.run([str(args.tool), "--client-errors", str(silent_port)],
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=30)
+    print(errors.stdout.strip())
+    if errors.returncode != 0:
+        raise SystemExit(f"client errors: tool failed ({errors.returncode})")
     check("hole punching", run(args.tool, args.services, 2, "direct"), 2, True)
     check("hole punching", run(args.tool, args.services, 3, "direct"), 3, True)
     check("relay fallback", run(args.tool, args.services, 2, "relay"), 2, False)

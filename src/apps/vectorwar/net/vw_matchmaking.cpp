@@ -39,8 +39,9 @@ bool Receive(UdpSocket *socket, Message *message, Endpoint *from, int wait_ms)
 
 MatchmakingOptions::MatchmakingOptions() :
    group_size(2), lobby(""), platform(kPlatformUnknown),
-   join_timeout_ms(120000), bind_timeout_ms(10000), candidates_timeout_ms(3000),
-   advertise_lan(true), progress(NULL), context(NULL)
+   join_timeout_ms(120000), server_timeout_ms(5000), bind_timeout_ms(10000),
+   candidates_timeout_ms(3000), advertise_lan(true), progress(NULL), keep_going(NULL),
+   context(NULL)
 {
 }
 
@@ -69,10 +70,19 @@ Matchmake(UdpSocket *socket, const Endpoint &server, const MatchmakingOptions &o
    const uint32_t join_start = NowMs();
    uint32_t last_join = join_start - 1000;
    int last_joined = -1;
+   bool answered = false;
    Message match;
    bool matched = false;
    while (!matched) {
       const uint32_t now = NowMs();
+      if (options.keep_going && !options.keep_going(options.context)) {
+         SetError(error, error_length, "cancelled");
+         return false;
+      }
+      if (!answered && Elapsed(now, join_start) > (int)options.server_timeout_ms) {
+         SetError(error, error_length, "matchmaking server unreachable");
+         return false;
+      }
       if (Elapsed(now, join_start) > (int)options.join_timeout_ms) {
          SetError(error, error_length, "timed out waiting for other players");
          return false;
@@ -84,6 +94,7 @@ Matchmake(UdpSocket *socket, const Endpoint &server, const MatchmakingOptions &o
       Message reply;
       Endpoint from;
       if (!Receive(socket, &reply, &from, 50) || !SameEndpoint(from, server)) continue;
+      if (reply.nonce == join.nonce) answered = true;
       if (reply.type == kWaiting && reply.nonce == join.nonce) {
          if (reply.joined != last_joined && options.progress) {
             options.progress(reply.joined, reply.group_size, options.context);
@@ -123,7 +134,7 @@ Matchmake(UdpSocket *socket, const Endpoint &server, const MatchmakingOptions &o
       if (all) break;
       const uint32_t now = NowMs();
       if (Elapsed(now, bind_start) > (int)options.bind_timeout_ms) {
-         SetError(error, error_length, "timed out binding to the relay");
+         SetError(error, error_length, "could not reach the relay");
          return false;
       }
       if (Elapsed(now, last_bind) >= 200) {

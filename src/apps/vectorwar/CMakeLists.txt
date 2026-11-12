@@ -8,7 +8,14 @@ add_common_flags(VectorWarCore)
 # VectorWarNet: matchmaking client and path proxy (see matchmade.h).
 target_link_libraries(VectorWarCore PUBLIC GGPO::GGPO VectorWarNet)
 target_include_directories(VectorWarCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+# Shown, editable, on every start screen; empty until the server's DuckDNS name
+# is chosen (see doc/architecture/Matchmaking.md).
+set(GGPO_VECTORWAR_MATCHMAKING_HOST "" CACHE STRING
+	"Default matchmaking server (HOST[:PORT]) on the Vector War start screen")
+target_compile_definitions(VectorWarCore PRIVATE
+	"VW_DEFAULT_MATCHMAKING_HOST=\"${GGPO_VECTORWAR_MATCHMAKING_HOST}\"")
 if(MSVC)
+	target_compile_definitions(VectorWarCore PRIVATE _CRT_SECURE_NO_WARNINGS)
 	target_compile_options(VectorWarCore PRIVATE "/W4" "/WX")
 else()
 	target_compile_options(VectorWarCore PRIVATE -Wall -Wextra)

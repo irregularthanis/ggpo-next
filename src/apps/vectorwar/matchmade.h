@@ -18,6 +18,12 @@ struct MatchmadeArgs {
    char lobby[16];               /* "" = public queue */
    unsigned short local_port;    /* public UDP port; 0 = any */
    bool relay_only;
+   /* Optional start-screen hooks (NULL from the command line): progress
+    * while the lobby fills, and keep_going, polled about every 50 ms, which
+    * cancels by returning false. */
+   void (*progress)(int joined, int group_size, void *context);
+   bool (*keep_going)(void *context);
+   void *ui_context;
 };
 
 /* Parses "HOST[:PORT] PLAYERS [LOBBY] LOCAL_PORT [--relay-only]" from

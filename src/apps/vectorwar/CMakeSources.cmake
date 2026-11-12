@@ -12,6 +12,7 @@ set(GGPO_EXAMPLES_VECTORWAR_INC_NOFILTER
 	"vw_bitmap_font.h"
 	"vw_legend.h"
 	"vw_player_colors.h"
+	"vw_start_form.h"
 )
 
 set(GGPO_EXAMPLES_VECTORWAR_SRC_NOFILTER
@@ -20,6 +21,7 @@ set(GGPO_EXAMPLES_VECTORWAR_SRC_NOFILTER
 	"state_contract.cpp"
 	"vectorwar.cpp"
 	"vw_legend.cpp"
+	"vw_start_form.cpp"
 )
 
 set(GGPO_EXAMPLES_VECTORWAR_WIN32_INC
@@ -28,6 +30,7 @@ set(GGPO_EXAMPLES_VECTORWAR_WIN32_INC
 	"Resource.h"
 	"targetver.h"
 	"win32_host.h"
+	"win32_start_dialog.h"
 )
 
 set(GGPO_EXAMPLES_VECTORWAR_WIN32_SRC
@@ -35,6 +38,7 @@ set(GGPO_EXAMPLES_VECTORWAR_WIN32_SRC
 	"ggpo_perfmon.cpp"
 	"main.cpp"
 	"win32_host.cpp"
+	"win32_start_dialog.cpp"
 )
 
 set(GGPO_EXAMPLES_VECTORWAR_WIN32RES
@@ -47,6 +51,9 @@ set(GGPO_EXAMPLES_VECTORWAR_SDL_SRC
 	"sdl_main.cpp"
 	"sdl_renderer.cpp"
 	"sdl_renderer.h"
+	"sdl_start_screen.cpp"
+	"sdl_start_screen.h"
+	"sdl_text.h"
 	"sdl_touch_controls.h"
 	"vw_sdl.h"
 )

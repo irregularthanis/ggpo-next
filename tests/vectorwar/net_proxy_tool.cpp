@@ -3,7 +3,10 @@
  * tagged datagrams to every remote player's loopback endpoint and checks that
  * each player's datagrams come back from that player's endpoint.
  *
- * usage: net_proxy_tool SERVER_PORT GROUP_SIZE LOBBY direct|relay SECONDS RESULT.json */
+ * usage: net_proxy_tool SERVER_PORT GROUP_SIZE LOBBY direct|relay SECONDS RESULT.json
+ *        net_proxy_tool --client-errors SILENT_PORT
+ * The second form checks the errors a start screen shows: an unreachable
+ * server, and a cancel from the keep_going hook. */
 
 #include "vw_matchmaking.h"
 #include "vw_path_proxy.h"
@@ -15,8 +18,48 @@
 
 using namespace vwnet;
 
+static bool StopAfter200Ms(void *context)
+{
+   return (int32_t)(NowMs() - *(uint32_t *)context) < 200;
+}
+
+static int ClientErrors(uint16_t silent_port)
+{
+   UdpSocket socket;
+   if (!socket.Open(0, true)) return 1;
+   const Endpoint nobody = MakeEndpoint(127, 0, 0, 1, silent_port);
+   MatchResult match;
+   char error[128];
+
+   MatchmakingOptions options;
+   options.server_timeout_ms = 1000;
+   uint32_t start = NowMs();
+   if (Matchmake(&socket, nobody, options, &match, error, sizeof(error)) ||
+       strcmp(error, "matchmaking server unreachable") != 0 ||
+       (int32_t)(NowMs() - start) > 3000) {
+      fprintf(stderr, "unreachable server not reported promptly: %s\n", error);
+      return 1;
+   }
+
+   MatchmakingOptions cancel;
+   start = NowMs();
+   cancel.keep_going = StopAfter200Ms;
+   cancel.context = &start;
+   if (Matchmake(&socket, nobody, cancel, &match, error, sizeof(error)) ||
+       strcmp(error, "cancelled") != 0 || (int32_t)(NowMs() - start) > 1000) {
+      fprintf(stderr, "cancel not honoured promptly: %s\n", error);
+      return 1;
+   }
+   printf("net-proxy-tool: unreachable server and cancel reported\n");
+   return 0;
+}
+
 int main(int argc, char **argv)
 {
+   if (argc == 3 && strcmp(argv[1], "--client-errors") == 0) {
+      if (!NetStartup()) return 1;
+      return ClientErrors((uint16_t)atoi(argv[2]));
+   }
    if (argc != 7) {
       fprintf(stderr, "usage: %s SERVER_PORT GROUP_SIZE LOBBY direct|relay SECONDS RESULT.json\n", argv[0]);
       return 2;

@@ -26,11 +26,15 @@ struct MatchmakingOptions {
    const char *lobby;                  /* "" for the public queue */
    int platform;
    uint32_t join_timeout_ms;           /* waiting for the group to fill */
+   uint32_t server_timeout_ms;         /* no answer at all: server unreachable */
    uint32_t bind_timeout_ms;
    uint32_t candidates_timeout_ms;
    bool advertise_lan;                 /* send our LAN address as a candidate */
    /* Called with (joined, group_size) whenever WAITING changes; may be NULL. */
    void (*progress)(int joined, int group_size, void *context);
+   /* Polled about every 50 ms while waiting for the group (a start screen
+    * pumps its events here); returning false cancels. May be NULL. */
+   bool (*keep_going)(void *context);
    void *context;
    MatchmakingOptions();
 };

@@ -117,6 +117,33 @@ BEGIN
     LTEXT           "0 %",IDC_PACKET_LOSS,240,89,52,8
 END
 
+// Start screen: shown when vectorwar.exe runs without arguments. The fields
+// match the Linux SDL form and the Android launcher (vw_start_form.h).
+IDD_START DIALOGEX 0, 0, 300, 202
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "GGPO Vector War"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "Local UDP port:",IDC_STATIC,14,10,90,8
+    EDITTEXT        IDC_START_LOCAL_PORT,110,8,50,13,ES_AUTOHSCROLL | ES_NUMBER
+    GROUPBOX        "Direct: two players, IP:PORT",IDC_STATIC,7,26,286,50
+    LTEXT           "You are player (1 or 2):",IDC_STATIC,14,40,92,8
+    EDITTEXT        IDC_START_PLAYER_NUMBER,110,38,24,13,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Other player (IP:PORT):",IDC_STATIC,14,57,92,8
+    EDITTEXT        IDC_START_REMOTE,110,55,176,13,ES_AUTOHSCROLL
+    GROUPBOX        "Matchmaking: 2 to 4 players, share the lobby code",IDC_STATIC,7,82,286,66
+    LTEXT           "Server:",IDC_STATIC,14,96,92,8
+    EDITTEXT        IDC_START_SERVER,110,94,176,13,ES_AUTOHSCROLL
+    LTEXT           "Players (2 to 4):",IDC_STATIC,14,113,92,8
+    EDITTEXT        IDC_START_PLAYERS,110,111,24,13,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Lobby code (optional):",IDC_STATIC,14,130,92,8
+    EDITTEXT        IDC_START_LOBBY,110,128,70,13,ES_AUTOHSCROLL | ES_UPPERCASE
+    LTEXT           "",IDC_START_STATUS,7,156,286,16
+    DEFPUSHBUTTON   "Connect",IDC_START_CONNECT,7,180,80,16
+    PUSHBUTTON      "Matchmaking",IDC_START_MATCHMAKING,110,180,80,16
+    PUSHBUTTON      "Quit",IDCANCEL,213,180,80,16
+END
+
 #endif    // English (U.S.) resources
 /////////////////////////////////////////////////////////////////////////////
 

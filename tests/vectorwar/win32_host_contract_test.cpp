@@ -4,10 +4,79 @@
 
 #include "renderer.h"
 #include "win32_host.h"
+#include "win32_start_dialog.h"
+#include "Resource.h"
+
+// gamestate.cpp refers to the core's session; this test does not link the core.
+GGPOSession *ggpo = NULL;
+
+static bool ArgsAre(Win32StartDialog &dialog, VwStartMode mode, const char *expected)
+{
+   VwStartForm form;
+   dialog.ReadForm(&form);
+   VwStartArgs args;
+   char error[128] = "";
+   char joined[256] = "";
+   if (!VwStartFormArgs(form, mode, &args, error, sizeof(error))) {
+      sprintf_s(joined, sizeof(joined), "error: %s", error);
+   }
+   for (int i = 0; i < args.argc; ++i) {
+      if (i) strcat_s(joined, sizeof(joined), " ");
+      strcat_s(joined, sizeof(joined), args.argv[i]);
+   }
+   if (strcmp(joined, expected) != 0) {
+      fprintf(stderr, "start dialog gave \"%s\", expected \"%s\"\n", joined, expected);
+      return false;
+   }
+   return true;
+}
+
+static Win32StartDialog::Action Click(Win32StartDialog &dialog, int id)
+{
+   SendMessageA(dialog.Handle(), WM_COMMAND, MAKEWPARAM(id, BN_CLICKED),
+                (LPARAM)GetDlgItem(dialog.Handle(), id));
+   return dialog.Pump(0);
+}
+
+// The start dialog from VectorWar.rc: defaults, fields to arguments, buttons.
+static bool StartDialogContract()
+{
+   Win32StartDialog dialog(GetModuleHandle(NULL));
+   if (!dialog.IsReady()) {
+      fprintf(stderr, "start dialog not created (%lu)\n", GetLastError());
+      return false;
+   }
+   bool ok = true;
+   SetDlgItemTextA(dialog.Handle(), IDC_START_REMOTE, "192.168.1.20:7001");
+   ok = ok && ArgsAre(dialog, kVwStartDirect, "7000 2 local 192.168.1.20:7001");
+   SetDlgItemTextA(dialog.Handle(), IDC_START_PLAYER_NUMBER, "2");
+   ok = ok && ArgsAre(dialog, kVwStartDirect, "7000 2 192.168.1.20:7001 local");
+   ok = ok && Click(dialog, IDC_START_CONNECT) == Win32StartDialog::kConnect;
+
+   SetDlgItemTextA(dialog.Handle(), IDC_START_SERVER, "vw.example.org");
+   SetDlgItemTextA(dialog.Handle(), IDC_START_PLAYERS, "3");
+   SetDlgItemTextA(dialog.Handle(), IDC_START_LOBBY, "abc12");
+   ok = ok && ArgsAre(dialog, kVwStartMatchmaking, "--matchmaking vw.example.org 3 ABC12 7000");
+   ok = ok && Click(dialog, IDC_START_MATCHMAKING) == Win32StartDialog::kMatchmaking;
+
+   // While waiting the start buttons do nothing and Quit becomes Cancel.
+   dialog.SetWaiting(true);
+   char label[16] = "";
+   GetDlgItemTextA(dialog.Handle(), IDCANCEL, label, sizeof(label));
+   ok = ok && strcmp(label, "Cancel") == 0;
+   ok = ok && Click(dialog, IDC_START_CONNECT) == Win32StartDialog::kNone;
+   ok = ok && Click(dialog, IDCANCEL) == Win32StartDialog::kCancel;
+   dialog.SetWaiting(false);
+   ok = ok && Click(dialog, IDCANCEL) == Win32StartDialog::kQuit;
+   if (!ok) fprintf(stderr, "Win32 start dialog contract failed\n");
+   return ok;
+}
 
 int
 main()
 {
+   if (!StartDialogContract()) return 1;
+
    const wchar_t *class_name = L"GGPOVectorWarHostContract";
    WNDCLASSW window_class = { 0 };
    window_class.lpfnWndProc = DefWindowProcW;
@@ -62,6 +131,6 @@ main()
    host.InitializePerformanceMonitor();
    host.ShutdownPerformanceMonitor();
    DestroyWindow(window);
-   printf("vectorwar-win32-host: window, bounds, renderer, legend, clock and diagnostics pass\n");
+   printf("vectorwar-win32-host: window, start dialog, bounds, renderer, legend, clock and diagnostics pass\n");
    return 0;
 }

@@ -413,6 +413,22 @@ add_test(NAME vectorwar_legend_contract COMMAND ggpo_vectorwar_legend_contract)
 set_tests_properties(vectorwar_legend_contract PROPERTIES
     LABELS "portable;sample;legend")
 
+# The start screen's fields map to the command-line arguments.
+add_executable(ggpo_vectorwar_start_form_contract
+    vectorwar/start_form_contract_test.cpp
+    ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/vw_start_form.cpp
+)
+ggpo_configure_static_test(ggpo_vectorwar_start_form_contract)
+target_include_directories(ggpo_vectorwar_start_form_contract PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/apps/vectorwar
+)
+if(MSVC)
+    target_compile_definitions(ggpo_vectorwar_start_form_contract PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+add_test(NAME vectorwar_start_form_contract COMMAND ggpo_vectorwar_start_form_contract)
+set_tests_properties(vectorwar_start_form_contract PROPERTIES
+    LABELS "portable;sample;start-screen")
+
 # Hole punching with relay fallback end to end on loopback: the real server
 # and one path proxy per player with a stand-in for GGPO. Native builds only:
 # a cross-compiled tool cannot reach the host's loopback server.
@@ -483,10 +499,13 @@ if(MSVC)
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/ggpo_perfmon.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/gamestate.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/vw_legend.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/vw_start_form.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/win32_start_dialog.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/VectorWar.rc
     )
     ggpo_configure_test(ggpo_vectorwar_win32_host_contract)
     target_compile_definitions(ggpo_vectorwar_win32_host_contract PRIVATE
-        _UNICODE UNICODE)
+        _UNICODE UNICODE _CRT_SECURE_NO_WARNINGS)
     target_include_directories(ggpo_vectorwar_win32_host_contract PRIVATE
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar
     )
@@ -502,8 +521,10 @@ elseif(TARGET VectorWar)
         vectorwar/sdl_host_contract_test.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_host.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_renderer.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_start_screen.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/gamestate.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/vw_legend.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/vw_start_form.cpp
     )
     ggpo_configure_test(ggpo_vectorwar_sdl_host_contract)
     target_include_directories(ggpo_vectorwar_sdl_host_contract PRIVATE
@@ -524,8 +545,10 @@ elseif(TARGET VectorWarAndroid)
         vectorwar/sdl_host_contract_test.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_host.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_renderer.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_start_screen.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/gamestate.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/vw_legend.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/vw_start_form.cpp
     )
     ggpo_configure_test(ggpo_vectorwar_sdl_host_contract)
     target_include_directories(ggpo_vectorwar_sdl_host_contract PRIVATE
@@ -584,6 +607,7 @@ endif()
 set(GGPO_PORTABLE_TEST_TARGETS
     ggpo_vectorwar_net_contract
     ggpo_vectorwar_legend_contract
+    ggpo_vectorwar_start_form_contract
 	ggpo_vectorwar_state_contract
     ggpo_vectorwar_gameplay_contract
     ggpo_vectorwar_native_host_contract
