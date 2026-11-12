@@ -744,13 +744,23 @@ lightweight path. Compatibility workflows still report their check state, but
 skip build, emulator, and E2E matrices. Manual dispatch always runs the full
 suite.
 
-Branch protection requires two stable aggregate checks for the new platform
-coverage. `Complete Android compatibility` covers every Android build, native
-test, emulator, SDK, sanitizer, Vector War APK, and APK-smoke lane. `Complete
-native E2E matrix` covers the trusted Linux, Windows, MinGW, and Android peer
-matrix. The aggregates pass without running their expensive matrices for a
-documentation-only change; for a code change, any missing or failed required
-lane makes its aggregate fail.
+Pull-request runs of the compatibility and native E2E workflows share one
+concurrency group per PR: a new push cancels the superseded run, so runners
+only work on the latest commit. Cancelled E2E roles still run their
+`if: always()` cleanup. Runs on `master` and manual dispatches are never
+cancelled; release packaging, sanitizer qualification and the owner-approval
+check have no concurrency group.
+
+The `master` ruleset requires one stable aggregate check per workflow rather
+than individual lanes: `Complete Linux compatibility`, `Complete MinGW
+compatibility`, `Complete Windows compatibility`, `Complete Android
+compatibility`, and `Complete native E2E matrix`, plus `Fork owner approval`.
+Each aggregate covers every lane of its workflow. Individual matrix lanes cannot
+be required directly: a lane skipped on a documentation-only change never
+reports its expanded name, so the requirement would wait forever. Each aggregate
+passes without running its expensive lanes for a documentation-only change; for
+a code change, any missing, skipped, or failed lane, or a failed change
+classifier, makes it fail.
 
 With `BUILD_TESTING=ON` and the default `GGPO_RUN_TESTS_ON_BUILD=ON`, the
 `ggpo_check` target runs these tests as part of the normal build. Packaging or

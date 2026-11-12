@@ -7,6 +7,12 @@ on:
     branches: [master]
   workflow_dispatch:
 
+# A newer push to the same pull request supersedes this run, so cancel it and
+# free the runners. Runs on master pushes and manual dispatches always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
   actions: read
@@ -315,6 +321,11 @@ jobs:
     needs: [changes, build-linux, build-windows, build-mingw, build-android, execute]
     runs-on: ubuntu-24.04
     steps:
+      - name: Require a successful change classifier
+        # A failed classifier must not look like a documentation-only change.
+        env:
+          CHANGES: ${{ needs.changes.result }}
+        run: test "$CHANGES" = success
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         if: needs.changes.outputs.code == 'true'
