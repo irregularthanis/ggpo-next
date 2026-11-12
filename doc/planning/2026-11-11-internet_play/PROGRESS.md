@@ -12,13 +12,15 @@ Status: Not started
   outbound allowance, region availability) and record them here.
 - [x] M0-T02: D2 decided: DuckDNS subdomain (no domain owned). Reserve the
   name and store the token as a deploy secret.
-- [ ] M0-T05: Check whether Oracle Container Instances fall inside the
-  always-free allowance; if so, run the server there instead of on a VM.
-- [ ] M0-T03: NAT mapping spike in Linux network namespaces: a mapping created
-  by one socket survives closing it and GGPO binding the same port, for
-  full-cone and port-restricted NAT; record the time window.
-- [ ] M0-T04: Confirm `terraform test` mocks cover every resource type in the
-  chosen providers.
+- [ ] M0-T05: Oracle Container Instances test (findings so far in the
+  [technical plan](TECH_PLAN.md#provider-decision-d1)). With Terraform in the
+  free account, create a 1 OCPU / 1 GB `CI.Standard.A1.Flex` instance with a
+  public IP, an ingress rule for one UDP port, and a UDP echo container. Pass if:
+  1. it can be created from an Always Free-only account;
+  2. a datagram sent from a home network is echoed back;
+  3. the cost report shows $0 after 24 hours.
+  If all pass, use Container Instances; otherwise keep the VM. Destroy the test
+  instance afterwards.
 
 ### M1: Protocol and server (depends: M0)
 

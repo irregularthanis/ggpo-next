@@ -132,9 +132,21 @@ M0 confirms the chosen provider's current free-tier terms before any apply.
 container; the VM exists only to run it. Matchmaking and hole punching need a
 public UDP port, and the free managed container services (Cloud Run, Render,
 Koyeb) accept only HTTP or TCP, while those with UDP (Fly.io, Azure Container
-Instances, AWS Fargate) have no lasting free tier. Oracle Container Instances
-support UDP; if M0 confirms they fall inside the always-free allowance, the
-`host` module switches to them and nothing else changes.
+Instances, AWS Fargate) have no lasting free tier.
+
+**Oracle Container Instances (candidate, M0-T05).** Research on 2026-11-11:
+
+| Question | Finding | Confidence |
+| --- | --- | --- |
+| Free? | Oracle's pricing page: no extra charge beyond the shape's compute rate, and the free Ampere A1 hours are shared across bare metal, VMs and Container Instances | Search excerpts of the pricing page; the page itself refused direct access |
+| Allowance | 1,500 OCPU-hours and 9,000 GB-hours per month (about 2 OCPUs, 12 GB) since the 2026 reduction, plus 10 TB outbound per month | Oracle's Always Free resource page |
+| Always Free-only accounts | Not stated; Container Instances is absent from the Always Free resource page | Unknown |
+| UDP | Each instance has its own VNIC and optional public IP; ingress is opened with security list or NSG rules, which support UDP; no documented restriction and no port mapping | Very likely, not proven |
+
+If M0-T05 passes, the `host` module creates an A1 container instance instead
+of a VM, and the `dns` module updates DuckDNS from Terraform after creation (or
+the instance uses a reserved public IP), because there is no cloud-init.
+Everything else in this plan is unchanged.
 
 ### DNS (decision D2: DuckDNS)
 
