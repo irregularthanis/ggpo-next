@@ -47,6 +47,17 @@ int main()
    Check(socket.Receive(received, sizeof(received), &bytes, &from) ==
             ggpo_platform::IO_WOULD_BLOCK,
          "empty receive is explicitly would-block");
+   Check(socket.LastError() == 0, "successful I/O records no error");
+   ggpo_test::FailNextSocketSend(ggpo_platform::IO_WOULD_BLOCK);
+   Check(socket.Send("x", 1, endpoint) == ggpo_platform::IO_WOULD_BLOCK &&
+            socket.LastError() != 0,
+         "scripted would-block send is visible with its native error");
+   ggpo_test::FailNextSocketSend(ggpo_platform::IO_ERROR);
+   Check(socket.Send("x", 1, endpoint) == ggpo_platform::IO_ERROR,
+         "scripted send error is visible");
+   Check(socket.Send("x", 1, endpoint) == ggpo_platform::IO_OK,
+         "a scripted send failure affects one send only");
+   socket.Receive(received, sizeof(received), &bytes, &from);
    socket.Close();
    Check(socket.Send("x", 1, endpoint) == ggpo_platform::IO_ERROR,
          "close releases socket state");

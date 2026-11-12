@@ -15,7 +15,8 @@
 
 struct ggpo_platform::UdpSocket::Impl {
    SOCKET socket;
-   Impl() : socket(INVALID_SOCKET) { }
+   int last_error;
+   Impl() : socket(INVALID_SOCKET), last_error(0) { }
 };
 
 BOOL WINAPI
@@ -194,7 +195,8 @@ ggpo_platform::UdpSocket::Send(const void *data, int bytes,
    if (result != SOCKET_ERROR) {
       return IO_OK;
    }
-   return WSAGetLastError() == WSAEWOULDBLOCK ? IO_WOULD_BLOCK : IO_ERROR;
+   _impl->last_error = WSAGetLastError();
+   return _impl->last_error == WSAEWOULDBLOCK ? IO_WOULD_BLOCK : IO_ERROR;
 }
 
 ggpo_platform::IoResult
@@ -206,7 +208,8 @@ ggpo_platform::UdpSocket::Receive(void *data, int capacity, int *bytes,
    const int result = recvfrom(_impl->socket, (char *)data, capacity, 0,
                                (sockaddr *)&native_address, &native_length);
    if (result == SOCKET_ERROR) {
-      return WSAGetLastError() == WSAEWOULDBLOCK ? IO_WOULD_BLOCK : IO_ERROR;
+      _impl->last_error = WSAGetLastError();
+      return _impl->last_error == WSAEWOULDBLOCK ? IO_WOULD_BLOCK : IO_ERROR;
    }
    if (bytes) {
       *bytes = result;
@@ -220,6 +223,12 @@ ggpo_platform::UdpSocket::Receive(void *data, int capacity, int *bytes,
       from->port = ntohs(native_address.sin_port);
    }
    return IO_OK;
+}
+
+int
+ggpo_platform::UdpSocket::LastError() const
+{
+   return _impl->last_error;
 }
 
 void

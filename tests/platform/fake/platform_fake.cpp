@@ -8,6 +8,8 @@
 
 static uint32 fake_time_ms = 0;
 static bool fail_next_socket_open = false;
+static ggpo_platform::IoResult next_send_result = ggpo_platform::IO_OK;
+static int assert_failures = 0;
 static int network_startups = 0;
 static int network_shutdowns = 0;
 
@@ -16,7 +18,8 @@ struct ggpo_platform::UdpSocket::Impl {
    char data[256];
    int bytes;
    UdpEndpoint from;
-   Impl() : open(false), bytes(0) { memset(&from, 0, sizeof(from)); }
+   int last_error;
+   Impl() : open(false), bytes(0), last_error(0) { memset(&from, 0, sizeof(from)); }
 };
 
 uint32 ggpo_platform::MonotonicTimeMs() { return fake_time_ms; }
@@ -29,7 +32,7 @@ void ggpo_platform::WaitMs(int timeout_ms)
 uint32 ggpo_platform::ProcessId() { return 1; }
 int ggpo_platform::GetConfigInt(const char *, int fallback) { return fallback; }
 bool ggpo_platform::GetConfigBool(const char *, bool fallback) { return fallback; }
-void ggpo_platform::AssertFailed(const char *) { }
+void ggpo_platform::AssertFailed(const char *) { ++assert_failures; }
 bool ggpo_platform::EnsureDirectory(const char *) { return true; }
 bool ggpo_platform::NetworkStartup()
 {
@@ -95,6 +98,12 @@ ggpo_platform::IoResult ggpo_platform::UdpSocket::Send(
    if (!_impl->open || !data || bytes < 0 || bytes > (int)sizeof(_impl->data)) {
       return IO_ERROR;
    }
+   if (next_send_result != IO_OK) {
+      const IoResult scripted = next_send_result;
+      next_send_result = IO_OK;
+      _impl->last_error = scripted == IO_WOULD_BLOCK ? 11 : 111; // EAGAIN, ECONNREFUSED
+      return scripted;
+   }
    memcpy(_impl->data, data, bytes);
    _impl->bytes = bytes;
    _impl->from = to;
@@ -118,6 +127,7 @@ ggpo_platform::IoResult ggpo_platform::UdpSocket::Receive(
    _impl->bytes = 0;
    return IO_OK;
 }
+int ggpo_platform::UdpSocket::LastError() const { return _impl->last_error; }
 void ggpo_platform::UdpSocket::Close()
 {
    _impl->open = false;
@@ -128,9 +138,13 @@ void ggpo_test::ResetFakePlatform()
 {
    fake_time_ms = 0;
    fail_next_socket_open = false;
+   next_send_result = ggpo_platform::IO_OK;
+   assert_failures = 0;
    network_startups = 0;
    network_shutdowns = 0;
 }
 void ggpo_test::FailNextSocketOpen() { fail_next_socket_open = true; }
+void ggpo_test::FailNextSocketSend(ggpo_platform::IoResult result) { next_send_result = result; }
+int ggpo_test::AssertFailureCount() { return assert_failures; }
 int ggpo_test::NetworkStartupCount() { return network_startups; }
 int ggpo_test::NetworkShutdownCount() { return network_shutdowns; }

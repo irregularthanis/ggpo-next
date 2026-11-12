@@ -309,6 +309,13 @@ ggpo_add_portable_contract(ggpo_timesync_contract
     unit/timesync_test.cpp timesync_contract)
 ggpo_add_portable_contract(ggpo_core_utilities_contract
     unit/core_utilities_test.cpp core_utilities_contract)
+ggpo_add_portable_contract(ggpo_udp_send_contract
+    unit/udp_send_test.cpp udp_send_contract)
+target_include_directories(ggpo_udp_send_contract PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/platform/fake)
+# ASSERT exits with status 0, so require the explicit pass line as well.
+set_tests_properties(udp_send_contract PROPERTIES
+    PASS_REGULAR_EXPRESSION "udp send contract: pass")
 ggpo_add_portable_contract(ggpo_protocol_contract
     unit/protocol_test.cpp protocol_contract)
 set_property(TEST protocol_contract APPEND PROPERTY LABELS protocol)
@@ -486,6 +493,7 @@ set(GGPO_PORTABLE_TEST_TARGETS
     ggpo_timesync_contract
     ggpo_core_utilities_contract
     ggpo_protocol_contract
+    ggpo_udp_send_contract
     ggpo_public_api_contract
     ggpo_fake_platform_conformance
     ggpo_native_platform_conformance
