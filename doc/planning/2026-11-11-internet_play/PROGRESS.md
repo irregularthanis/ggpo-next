@@ -92,9 +92,10 @@ Status: In progress
 
 ### M5: NAT traversal in CI (depends: M3, M1-T04)
 
-- [ ] M5-T01: Namespace topology with full-cone, port-restricted and
-  symmetric NAT and the server container.
-- [ ] M5-T02: 2- and 4-player sessions through every router type, symmetric
+- [x] M5-T01: Namespace topology with port-restricted cone and symmetric NAT
+  and the server (`tests/nat/run_nat_matrix.py`, `nat-traversal.yml`). Full
+  cone is not emulated; port-restricted is the stricter case.
+- [ ] M5-T02 (2 and 3 players done; 4 open): 2- and 4-player sessions through every router type, symmetric
   included, reach the frozen Vector War checksum.
 - [ ] M5-T03: Scheduled impairment run with `tc netem`.
 
@@ -132,9 +133,9 @@ Status: In progress
   for authentication and rejection (`src/apps/vectorwar/net/vw_path_probe`).
 - [x] M8-T04: Per-peer path state machine with fake-clock tests (switch,
   hysteresis, fallback, backoff) (`vw_path_selector`; `vectorwar_net_contract`).
-- [ ] M8-T05: NAT matrix in CI: cone pairs go direct, same-LAN goes direct,
+- [x] M8-T05: NAT matrix in CI: cone pairs go direct, same-LAN goes direct,
   symmetric/CGNAT stays on relay; all reach the frozen checksum.
-- [ ] M8-T06: Mid-match direct loss falls back without desync; relay loss
+- [x] M8-T06: Mid-match direct loss falls back without desync; relay loss
   while direct keeps the match running.
 - [ ] M8-T07: Path shown in the performance monitor and legend; docs.
 - [ ] M8-T08: Second friends trial: relay vs direct round-trip time per pair.

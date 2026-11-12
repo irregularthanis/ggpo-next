@@ -235,17 +235,32 @@ Details: [`infra/terraform/README.md`](../../infra/terraform/README.md).
 | `vectorwar_net_contract` | C++ codec against the shared vectors, the SipHash reference vector, probe authentication and tamper rejection, and every path-selector scenario on a fake clock |
 | `vectorwar_net_proxy_loopback` | Real server and one path proxy per player with a stand-in for GGPO: 2 and 3 players switch to direct with data flowing throughout; with direct disabled everything stays on the relay |
 | `vectorwar_matchmaking_loopback` | Real server and real Vector War sessions: 2 and 3 players with every pair direct, and 2 players relay-only; all converge, and two players reach the frozen checksum `b3381958` |
+| `NAT traversal` workflow ([`run_nat_matrix.py`](../../tests/nat/run_nat_matrix.py)) | Linux network namespaces with emulated routers: cone NAT is `MASQUERADE`, symmetric is `MASQUERADE --random-fully`, and routers drop unsolicited inbound UDP. Seven scenarios, listed below |
 | `Infrastructure` workflow | Terraform `fmt`, `validate`, `terraform test` with mocked providers, `tflint`, server tests, multi-arch image smoke |
 
 The two loopback tests run on every native platform (Linux, Windows MSVC,
 MinGW); a cross-compiled Android build cannot reach the build host's loopback
 server. See [Testing](Testing.md).
 
+### NAT matrix results
+
+| Scenario | Outcome checked |
+|---|---|
+| cone-cone | Both directions direct; frozen checksum `b3381958` |
+| symmetric-symmetric | Relay for the whole match |
+| cone-symmetric | Recorded only; currently stays on the relay |
+| same-lan | Direct over the RFC1918 LAN candidate |
+| three-players-mixed | Cone pair direct, pairs with the symmetric player on the relay |
+| direct-cut-mid-match | Direct, then the router path is cut at 8 s: falls back to the relay (1 switch, 1 fallback) and both peers converge |
+| server-lost-while-direct | Server killed at 8 s while direct: the match finishes direct |
+
+The two timed scenarios set `VW_HEADLESS_FRAME_MS=16` so the 1200-frame match
+runs in real time (about 19 s); without it the headless loop is unpaced.
+
 ## Limits
 
-- Loopback has no NAT, so the tests above cannot show symmetric NAT staying on
-  the relay or a mid-match fallback; that is the NAT emulation milestone (M5,
-  M8-T05/T06) with Linux network namespaces.
+- The NAT matrix runs only on Linux in CI (it needs root for namespaces); no
+  4-player run and no `tc netem` impairment yet (M5-T02/T03).
 - IPv4 only, like GGPO's endpoints.
 - No port prediction for symmetric NAT; such pairs stay on the relay.
 - Every frontend has `--matchmaking`; the start-screen field and the legend
