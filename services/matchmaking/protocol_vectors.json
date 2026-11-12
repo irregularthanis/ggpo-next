@@ -1,0 +1,79 @@
+{
+  "description": "Vector War matchmaking protocol version 1 test vectors. Decoded by the Python server tests and the C++ client tests; regenerate only for a new protocol version.",
+  "version": 1,
+  "vectors": [
+    {
+      "name": "register_linux",
+      "type": "REGISTER",
+      "fields": {
+        "nonce": 81985529216486895,
+        "platform": 2,
+        "build": 1
+      },
+      "hex": "56574d4d01010000efcdab8967452301020001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "waiting_first",
+      "type": "WAITING",
+      "fields": {
+        "nonce": 81985529216486895,
+        "position": 1
+      },
+      "hex": "56574d4d01020000efcdab896745230101000000"
+    },
+    {
+      "name": "match_player1",
+      "type": "MATCH",
+      "fields": {
+        "nonce": 81985529216486895,
+        "session": 18364758544493064720,
+        "player": 1,
+        "peer_platform": 3,
+        "peer_ip": "203.0.113.9",
+        "peer_port": 7001
+      },
+      "hex": "56574d4d01030000efcdab89674523011032547698badcfe0103591bcb007109"
+    },
+    {
+      "name": "match_player2",
+      "type": "MATCH",
+      "fields": {
+        "nonce": 1229782938247303441,
+        "session": 18364758544493064720,
+        "player": 2,
+        "peer_platform": 1,
+        "peer_ip": "198.51.100.10",
+        "peer_port": 65535
+      },
+      "hex": "56574d4d0103000011111111111111111032547698badcfe0201ffffc633640a"
+    },
+    {
+      "name": "punch_windows",
+      "type": "PUNCH",
+      "fields": {
+        "session": 18364758544493064720,
+        "nonce": 81985529216486895,
+        "platform": 1
+      },
+      "hex": "56574d4d010400001032547698badcfeefcdab896745230101000000"
+    },
+    {
+      "name": "hello_android",
+      "type": "HELLO",
+      "fields": {
+        "nonce": 81985529216486895,
+        "platform": 3
+      },
+      "hex": "56574d4d01050000efcdab896745230103000000"
+    },
+    {
+      "name": "error_version",
+      "type": "ERROR",
+      "fields": {
+        "nonce": 81985529216486895,
+        "code": 1
+      },
+      "hex": "56574d4d01060000efcdab896745230101000000"
+    }
+  ]
+}

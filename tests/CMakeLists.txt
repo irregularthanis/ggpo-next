@@ -12,6 +12,13 @@ add_test(NAME cross_host_orchestration_contract
             ${CMAKE_CURRENT_SOURCE_DIR}/e2e/test_orchestration.py
 )
 
+# Vector War matchmaking server: protocol vectors, pairing rules, loopback UDP.
+add_test(NAME matchmaking_server_contract
+    COMMAND ${PYTHON_EXECUTABLE} -m unittest discover -s tests -t .
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/services/matchmaking
+)
+set_tests_properties(matchmaking_server_contract PROPERTIES LABELS "portable;matchmaking")
+
 # Prove the run-scoped Deployment record fails closed on stale/duplicate data.
 add_test(NAME cross_host_rendezvous_contract
     COMMAND ${PYTHON_EXECUTABLE}

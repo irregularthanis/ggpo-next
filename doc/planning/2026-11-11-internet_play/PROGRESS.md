@@ -1,6 +1,6 @@
 # PROGRESS — Internet play for Vector War
 
-Status: Not started
+Status: In progress
 
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
@@ -25,24 +25,25 @@ Status: Not started
 ### M1: Protocol and server (depends: M0)
 
 - [ ] M1-T01: Protocol header, Python mirror, and shared test vectors.
-- [ ] M1-T02: `asyncio` server: pairing, expiry, rate limits, no amplification.
-- [ ] M1-T03: Server unit tests registered in CTest.
-- [ ] M1-T04: Container image (non-root, read-only) with a build smoke test.
+  Python side and `protocol_vectors.json` done; the C++ header lands with M3.
+- [x] M1-T02: `asyncio` server: pairing, expiry, rate limits, no amplification.
+- [x] M1-T03: Server unit tests registered in CTest.
+- [x] M1-T04: Container image (non-root, read-only) with a build smoke test.
 
 ### M2: Infrastructure (depends: M0; parallel with M1)
 
-- [ ] M2-T01: `host` module: VM, firewall (UDP server port public, SSH from
+- [x] M2-T01: `host` module: VM, firewall (UDP server port public, SSH from
   `admin_cidr`), cloud-init running the image by digest.
-- [ ] M2-T02: `dns` module: DuckDNS update from cloud-init (boot and every
+- [x] M2-T02: `dns` module: DuckDNS update from cloud-init (boot and every
   5 minutes), token from a secret.
-- [ ] M2-T03: `envs/prod` with remote state in free object storage and a
+- [x] M2-T03: `envs/prod` with remote state in free object storage and a
   committed provider lock file.
-- [ ] M2-T04: `terraform test` plan assertions (firewall, VM shape, image
+- [x] M2-T04: `terraform test` plan assertions (firewall, VM shape, image
   digest, DuckDNS update).
-- [ ] M2-T05: `terraform test` state assertions with mocked apply (outputs
+- [x] M2-T05: `terraform test` state assertions with mocked apply (outputs
   wired, DNS points at the VM IP from state).
-- [ ] M2-T06: Variable validation tests with `expect_failures`.
-- [ ] M2-T07: `infrastructure.yml` (fmt, validate, tflint, test, server tests,
+- [x] M2-T06: Variable validation tests with `expect_failures`.
+- [x] M2-T07: `infrastructure.yml` (fmt, validate, tflint, test, server tests,
   image build) with the **Complete infrastructure checks** aggregate.
 
 ### M3: Vector War client (depends: M1)
