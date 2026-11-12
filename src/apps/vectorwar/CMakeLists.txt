@@ -7,10 +7,6 @@ add_library(VectorWarCore STATIC
 add_common_flags(VectorWarCore)
 # VectorWarNet: matchmaking client and path proxy (see matchmade.h).
 target_link_libraries(VectorWarCore PUBLIC GGPO::GGPO VectorWarNet)
-if(ANDROID)
-	# matchmade.cpp reports matchmaking progress to logcat.
-	target_link_libraries(VectorWarCore PUBLIC log)
-endif()
 target_include_directories(VectorWarCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 if(MSVC)
 	target_compile_options(VectorWarCore PRIVATE "/W4" "/WX")

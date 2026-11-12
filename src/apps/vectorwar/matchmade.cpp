@@ -7,9 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(__ANDROID__)
-#include <android/log.h>
-#endif
 
 struct MatchmadeSession {
    vwnet::PathProxy proxy;
@@ -18,13 +15,12 @@ struct MatchmadeSession {
 
 namespace {
 
+/* Progress on stdout only: Android test executables are fully static and the
+ * NDK has no static liblog; the APK shows progress on its start screen. */
 void Say(const char *text)
 {
    printf("%s\n", text);
    fflush(stdout);
-#if defined(__ANDROID__)
-   __android_log_print(ANDROID_LOG_INFO, "VectorWar", "%s", text);
-#endif
 }
 
 void Progress(int joined, int group_size, void *)
