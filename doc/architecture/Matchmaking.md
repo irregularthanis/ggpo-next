@@ -42,6 +42,7 @@ Plan and decisions: [internet play plan](../planning/2026-11-11-internet_play/TE
 | Probes | 32-byte `PROBE`, `PROBE_ACK`, `KEEPALIVE` with a SipHash-2-4 MAC keyed by the session token | [`vw_path_probe`](../../src/apps/vectorwar/net/vw_path_probe.h), [`vw_siphash`](../../src/apps/vectorwar/net/vw_siphash.h) |
 | Path selector | Per-peer choice between the relay and direct candidates | [`vw_path_selector`](../../src/apps/vectorwar/net/vw_path_selector.h) |
 | Path proxy | Owns the public socket; sits between GGPO and the network on its own thread | [`vw_path_proxy`](../../src/apps/vectorwar/net/vw_path_proxy.h) |
+| Frontend glue | `--matchmaking` for the Win32, SDL (Linux, Android) and headless frontends: resolve, matchmake, start the proxy, build GGPO's player list | [`matchmade`](../../src/apps/vectorwar/matchmade.h) |
 | Sockets and threads | Non-blocking IPv4 UDP, `select`, mutex, thread for Windows and POSIX | [`vw_udp`](../../src/apps/vectorwar/net/vw_udp.h) |
 | Infrastructure | Oracle Cloud always-free VM, DuckDNS name, Terraform, deploy workflow | [`infra/terraform`](../../infra/terraform/README.md) |
 
@@ -247,5 +248,5 @@ server. See [Testing](Testing.md).
   M8-T05/T06) with Linux network namespaces.
 - IPv4 only, like GGPO's endpoints.
 - No port prediction for symmetric NAT; such pairs stay on the relay.
-- The matchmaking frontends (start screen, legend with the active route) and
-  the Android client follow in milestones M3/M4.
+- Every frontend has `--matchmaking`; the start-screen field and the legend
+  with the active route follow in milestone M4.

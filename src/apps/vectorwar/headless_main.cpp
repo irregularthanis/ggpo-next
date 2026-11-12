@@ -1,7 +1,6 @@
 #include "headless_host.h"
 #include "vectorwar.h"
-#include "vw_matchmaking.h"
-#include "vw_path_proxy.h"
+#include "matchmade.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -101,26 +100,12 @@ WriteResult(const char *path, int player, int frame, unsigned int checksum,
    return true;
 }
 
-static void
-ReportPaths(vwnet::PathProxy *proxy, int local_player, int num_players)
-{
-   for (int k = 1; k <= num_players; ++k) {
-      if (k == local_player) continue;
-      const vwnet::PathStatus status = proxy->Status(k);
-      char route[32];
-      vwnet::FormatEndpoint(status.route, route, sizeof(route));
-      printf("vectorwar-path: player=%d peer=%d route=%s via=%s relay_rtt_ms=%d direct_rtt_ms=%d\n",
-             local_player, k, status.direct ? "direct" : "relay", route,
-             status.relay_rtt_ms, status.direct_rtt_ms);
-   }
-}
-
 /* Play one session to target_frames and write the result; shared by the direct
- * and the matchmaking forms. proxy, when set, is reported at the end. */
+ * and the matchmaking forms. A matchmade session's routes are reported. */
 static int
 RunSession(HeadlessVectorWarHost *host, int local_player, unsigned short local_port,
            GGPOPlayer *players, int num_players, int target_frames,
-           const char *result_path, vwnet::PathProxy *proxy)
+           const char *result_path, MatchmadeSession *matchmade)
 {
    VectorWar_Init(host, local_port, num_players, players, 0);
    const unsigned int start = host->NowMs();
@@ -181,7 +166,7 @@ RunSession(HeadlessVectorWarHost *host, int local_player, unsigned short local_p
    const int running_events = VectorWar_RunningEventCount();
    const int unexpected_disconnects = VectorWar_UnexpectedDisconnectCount();
    VectorWar_Exit();
-   if (proxy) ReportPaths(proxy, local_player, num_players);
+   MatchmadeReportPaths(matchmade);
    if (!WriteResult(result_path, local_player, frame, checksum, saves, loads,
                     replay_frames, running_events, unexpected_disconnects,
                     true)) {
@@ -203,89 +188,32 @@ MatchmakingMain(int argc, char **argv)
               argv[0]);
       return 2;
    }
-   char host_name[128];
-   unsigned int server_port = 7100;
-   const char *colon = strrchr(argv[2], ':');
-   const size_t host_length = colon ? (size_t)(colon - argv[2]) : strlen(argv[2]);
-   if (host_length == 0 || host_length >= sizeof(host_name) ||
-       (colon && sscanf(colon + 1, "%u", &server_port) != 1) || server_port == 0 || server_port > 65535) {
-      fprintf(stderr, "invalid server address: %s\n", argv[2]);
-      return 2;
-   }
-   memcpy(host_name, argv[2], host_length);
-   host_name[host_length] = 0;
-   const int group_size = atoi(argv[3]);
+   /* Reuse the frontends' parser: HOST[:PORT] PLAYERS LOBBY LOCAL_PORT. */
+   char any_port[] = "0";
+   char *fields[5] = { argv[2], argv[3], argv[4], any_port, NULL };
+   int count = 4;
+   char relay_only[] = "--relay-only";
+   if (argc == 8) fields[count++] = relay_only;
+   MatchmadeArgs args;
    const int target_frames = atoi(argv[5]);
-   if (group_size < 2 || group_size > vwnet::kMaxPlayers || target_frames <= 0) {
+   if (!ParseMatchmakingArgs(count, fields, 0, &args) || target_frames <= 0) {
       fprintf(stderr, "invalid Vector War matchmaking arguments\n");
       return 2;
    }
-   if (!vwnet::NetStartup()) return 1;
-   vwnet::Endpoint server;
-   if (!vwnet::ResolveIPv4(host_name, (uint16_t)server_port, &server)) {
-      fprintf(stderr, "cannot resolve %s\n", host_name);
-      vwnet::NetShutdown();
-      return 1;
-   }
-
-   vwnet::PathProxy proxy;
-   if (!proxy.OpenPublic(0)) {
-      fprintf(stderr, "cannot open the public socket\n");
-      vwnet::NetShutdown();
-      return 1;
-   }
-   vwnet::MatchmakingOptions options;
-   options.group_size = group_size;
-   options.lobby = strcmp(argv[4], "-") == 0 ? "" : argv[4];
-#if defined(_WIN32)
-   options.platform = vwnet::kPlatformWindows;
-#elif defined(__ANDROID__)
-   options.platform = vwnet::kPlatformAndroid;
-#else
-   options.platform = vwnet::kPlatformLinux;
-#endif
-   vwnet::MatchResult match;
-   char error[128];
-   if (!vwnet::Matchmake(proxy.PublicSocket(), server, options, &match, error, sizeof(error))) {
-      fprintf(stderr, "matchmaking failed: %s\n", error);
-      vwnet::NetShutdown();
-      return 1;
-   }
-
-   /* GGPO gets its own free local port; the proxy delivers to it. */
+   GGPOPlayer players[GGPO_MAX_PLAYERS];
+   int num_players = 0, local_player = 0;
    unsigned short ggpo_port = 0;
-   {
-      vwnet::UdpSocket probe;
-      if (probe.Open(0, true)) ggpo_port = probe.LocalPort();
-   }
-   const bool allow_direct = argc != 8;
-   if (!ggpo_port || !proxy.Start(match, ggpo_port, allow_direct)) {
-      fprintf(stderr, "cannot start the path proxy\n");
-      vwnet::NetShutdown();
+   char error[160];
+   MatchmadeSession *session = MatchmadeStart(args, players, &num_players, &ggpo_port,
+                                              &local_player, error, sizeof(error));
+   if (!session) {
+      fprintf(stderr, "matchmaking failed: %s\n", error);
       return 1;
    }
-   printf("vectorwar-match: player=%d of %d candidates=%s direct=%s\n", match.player, match.count,
-          match.have_candidates ? "yes" : "no", allow_direct ? "allowed" : "disabled");
-
-   GGPOPlayer players[vwnet::kMaxPlayers];
-   memset(players, 0, sizeof(players));
-   for (int index = 0; index < match.count; ++index) {
-      players[index].size = sizeof(players[index]);
-      players[index].player_num = index + 1;
-      if (index + 1 == match.player) {
-         players[index].type = GGPO_PLAYERTYPE_LOCAL;
-      } else {
-         players[index].type = GGPO_PLAYERTYPE_REMOTE;
-         snprintf(players[index].u.remote.ip_address,
-                  sizeof(players[index].u.remote.ip_address), "127.0.0.1");
-         players[index].u.remote.port = proxy.LoopbackPort(index + 1);
-      }
-   }
-   HeadlessVectorWarHost host(match.player);
-   const int code = RunSession(&host, match.player, ggpo_port, players, match.count,
-                               target_frames, argv[6], &proxy);
-   proxy.Stop();
-   vwnet::NetShutdown();
+   HeadlessVectorWarHost host(local_player);
+   const int code = RunSession(&host, local_player, ggpo_port, players, num_players,
+                               target_frames, argv[6], session);
+   MatchmadeStop(session);
    return code;
 }
 

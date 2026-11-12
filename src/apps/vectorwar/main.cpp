@@ -3,6 +3,7 @@
 #if defined(_DEBUG)
 #   include <crtdbg.h>
 #endif
+#include "matchmade.h"
 #include "vectorwar.h"
 #include "win32_host.h"
 
@@ -90,7 +91,8 @@ void
 Syntax()
 {
    MessageBox(NULL, 
-              L"Syntax: vectorwar.exe <local port> <num players> ('local' | <remote ip>:<remote port>)*\n",
+              L"Syntax: vectorwar.exe <local port> <num players> ('local' | <remote ip>:<remote port>)*\n"
+              L"        vectorwar.exe --matchmaking <host>[:<port>] <players> [<lobby>] <local port> [--relay-only]\n",
               L"Could not start", MB_OK);
 }
 
@@ -118,6 +120,44 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
 
+   if (__argc >= 2 && wcscmp(__wargv[1], L"--matchmaking") == 0) {
+      /* Lobby, relay and hole punching: the arguments are plain ASCII. */
+      char narrow[8][160];
+      char *fields[8];
+      const int count = __argc - 2 < 8 ? __argc - 2 : 8;
+      for (int i = 0; i < count; ++i) {
+         WideCharToMultiByte(CP_UTF8, 0, __wargv[i + 2], -1, narrow[i], sizeof(narrow[i]), NULL, NULL);
+         fields[i] = narrow[i];
+      }
+      MatchmadeArgs args;
+      if (!ParseMatchmakingArgs(count, fields, 0, &args)) {
+         Syntax();
+         WSACleanup();
+         return 1;
+      }
+      GGPOPlayer players[GGPO_MAX_PLAYERS];
+      int num_players = 0;
+      unsigned short ggpo_port = 0;
+      char error[160];
+      MatchmadeSession *session = MatchmadeStart(args, players, &num_players, &ggpo_port,
+                                                 &local_player, error, sizeof(error));
+      if (!session) {
+         MessageBoxA(NULL, error, "Matchmaking failed", MB_OK);
+         WSACleanup();
+         return 1;
+      }
+      const int slot = local_player - 1;
+      if (slot >= 0 && slot < (int)(sizeof(window_offsets) / sizeof(window_offsets[0]))) {
+         ::SetWindowPos(hwnd, NULL, window_offsets[slot].x, window_offsets[slot].y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+      }
+      VectorWar_Init(&host, ggpo_port, num_players, players, 0);
+      RunMainLoop();
+      VectorWar_Exit();
+      MatchmadeStop(session);
+      WSACleanup();
+      DestroyWindow(hwnd);
+      return 0;
+   }
    if (__argc < 3) {
       Syntax();
       return 1;

@@ -397,6 +397,20 @@ relay as a live fallback. GGPO is unchanged: a path proxy owns the public
 socket and GGPO sees each remote player at a loopback endpoint. The design,
 protocol and safety rules are in [Matchmaking](Matchmaking.md).
 
+Every frontend accepts it on the command line (Windows, Linux and Android,
+where Android passes the same words through the launcher's arguments):
+
+```text
+VectorWar --matchmaking HOST[:PORT] PLAYERS [LOBBY] LOCAL_PORT [--relay-only]
+```
+
+`HOST` is the server (port 7100 by default), `PLAYERS` the group size 2-4,
+`LOBBY` an optional code of up to 8 letters or digits shared by friends, and
+`LOCAL_PORT` the public UDP port (0 picks any). The window opens once the group
+is complete. All frontends share
+[`matchmade.cpp`](../../src/apps/vectorwar/matchmade.cpp): resolve, matchmake,
+start the path proxy, and build GGPO's player list.
+
 The headless fixture exposes it for tests:
 
 ```text
@@ -409,8 +423,8 @@ peer with its route and round-trip times. `vectorwar_matchmaking_loopback`
 plays 2 and 3 players this way (every pair direct) and 2 players relay-only;
 two players reach the frozen checksum `b3381958`.
 
-The interactive frontends gain the same option and a start-screen field in a
-later milestone.
+A start-screen field and the active route in the legend follow in a later
+milestone.
 
 ## Interactive platform frontends
 

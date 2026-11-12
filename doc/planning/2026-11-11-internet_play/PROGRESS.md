@@ -66,12 +66,16 @@ Status: In progress
 ### M3: Vector War client (depends: M1)
 
 - [ ] M3-T01: `vw_udp` (done: `src/apps/vectorwar/net/vw_udp`), `vw_platform_name`.
-- [ ] M3-T02 (client flow and GGPO hand-off done for the headless fixture; GUIs pending): `vw_matchmaking`: resolve, join, match, bind to every relay
+- [x] M3-T02: `vw_matchmaking`: resolve, join, match, bind to every relay
   port, hand off to GGPO on the same port with remote players at the relay.
 - [ ] M3-T03: `vw_hello` for direct mode: platform exchange and nonce-based
   player order.
-- [ ] M3-T04 (headless done: `VectorWarHeadless --matchmaking HOST:PORT PLAYERS LOBBY|- FRAMES RESULT.json [--relay-only]`; `vectorwar_matchmaking_loopback` plays 2 and 3 players with every pair direct and relay-only, frozen checksum for 2): `--matchmaking HOST[:PORT] PLAYERS [LOBBY] LOCAL_PORT` on every client and the
-  headless fixture; every existing argument form unchanged (tested).
+- [x] M3-T04: `--matchmaking HOST[:PORT] PLAYERS [LOBBY] LOCAL_PORT [--relay-only]`
+  on the Win32 and SDL (Linux, Android) frontends through shared
+  `matchmade.cpp`; headless `--matchmaking HOST:PORT PLAYERS LOBBY|- FRAMES
+  RESULT.json [--relay-only]`; `vectorwar_matchmaking_loopback` plays 2 and 3
+  players with every pair direct and relay-only, frozen checksum for 2. Every
+  existing argument form unchanged.
 - [ ] M3-T05: Client tests against a fake server on loopback, on every
   platform.
 

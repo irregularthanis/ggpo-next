@@ -1,4 +1,5 @@
 set(GGPO_EXAMPLES_VECTORWAR_INC_NOFILTER
+	"matchmade.h"
 	"gamestate.h"
 	"gdi_renderer.h"
 	"ggpo_perfmon.h"
@@ -11,6 +12,7 @@ set(GGPO_EXAMPLES_VECTORWAR_INC_NOFILTER
 )
 
 set(GGPO_EXAMPLES_VECTORWAR_SRC_NOFILTER
+	"matchmade.cpp"
 	"gamestate.cpp"
 	"state_contract.cpp"
 	"vectorwar.cpp"

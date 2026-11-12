@@ -1,3 +1,4 @@
+#include "matchmade.h"
 #include "sdl_host.h"
 #include "sdl_renderer.h"
 #include "vectorwar.h"
@@ -11,7 +12,10 @@
 
 static void Syntax(const char *program)
 {
-   fprintf(stderr, "usage: %s LOCAL_PORT NUM_PLAYERS (local | IP:PORT)*\n", program);
+   fprintf(stderr,
+           "usage: %s LOCAL_PORT NUM_PLAYERS (local | IP:PORT)*\n"
+           "       %s --matchmaking HOST[:PORT] PLAYERS [LOBBY] LOCAL_PORT [--relay-only]\n",
+           program, program);
 }
 
 static bool ParseRemote(const char *argument, GGPOPlayer *player)
@@ -64,6 +68,34 @@ int main(int argc, char **argv)
       // Read by CI from logcat; there is no console on Android.
       SDL_Log("Vector War SDL frontend smoke: OK");
 #endif
+      return 0;
+   }
+   if (argc >= 2 && strcmp(argv[1], "--matchmaking") == 0) {
+      /* Lobby, relay and hole punching with relay fallback. */
+      MatchmadeArgs args;
+      if (!ParseMatchmakingArgs(argc, argv, 2, &args)) {
+         Syntax(argv[0]);
+         return 2;
+      }
+      GGPOPlayer players[GGPO_MAX_PLAYERS];
+      int num_players = 0, local_player = 0;
+      unsigned short ggpo_port = 0;
+      char error[160];
+      MatchmadeSession *session = MatchmadeStart(args, players, &num_players, &ggpo_port,
+                                                 &local_player, error, sizeof(error));
+      if (!session) {
+         fprintf(stderr, "matchmaking failed: %s\n", error);
+#if defined(__ANDROID__)
+         SDL_Log("matchmaking failed: %s", error);
+#endif
+         return 1;
+      }
+      SDLVectorWarHost host;
+      VectorWar_Init(&host, ggpo_port, num_players, players, 0);
+      RunMainLoop(&host);
+      MatchmadeReportPaths(session);
+      VectorWar_Exit();
+      MatchmadeStop(session);
       return 0;
    }
    if (argc < 4) {
