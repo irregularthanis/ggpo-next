@@ -9,6 +9,7 @@ Status: Draft
 - [Verified baseline](#verified-baseline)
 - [Architecture](#architecture)
   - [Relay forwarding](#relay-forwarding)
+  - [Direct path negotiation](#direct-path-negotiation)
 - [Matchmaking protocol](#matchmaking-protocol)
 - [Matchmaking server](#matchmaking-server)
 - [Infrastructure](#infrastructure)
@@ -48,8 +49,10 @@ goes through the server, which forwards GGPO's own packets between players
 without understanding them. This works behind any router, including symmetric
 NAT, carrier-grade NAT and mobile data, and supports 2 to 4 players. GGPO, its
 peer-to-peer backend, rollback and wire format are unchanged; each client just
-sees every remote player at `server:relay_port`. Hole punching is a later
-latency optimization ([open decisions](#open-decisions)).
+sees every remote player at `server:relay_port`. Once a session runs, clients
+negotiate a direct path per pair and use it while it is healthy, keeping the
+relay as a live fallback ([direct path negotiation](#direct-path-negotiation),
+decision D6).
 
 ```mermaid
 flowchart TB
@@ -127,6 +130,112 @@ sequenceDiagram
     P2->>R: GGPO packet<br/>to R[1]
     R->>P1: same bytes<br/>from R[2]
 ```
+
+### Direct path negotiation
+
+Decision D6 (proposed 2026-11-12): **ICE-style direct paths with the relay as a
+live fallback**, implemented in an in-process **path proxy** inside Vector War.
+GGPO, its API, ABI and wire format stay unchanged, preserving this plan's
+constraint.
+
+#### Placement
+
+```mermaid
+flowchart LR
+    GGPO["GGPO<br/>(unchanged)<br/>binds 127.0.0.1"]
+    Proxy["Path proxy<br/>one public UDP socket<br/>per-peer route table"]
+    Relay["Relay<br/>server:R[k]"]
+    Peer["Peer k<br/>public / LAN address"]
+    GGPO <-->|"loopback:<br/>one local endpoint<br/>per remote player"| Proxy
+    Proxy <-->|"relay path<br/>(always bound)"| Relay
+    Proxy <-->|"direct path<br/>(when healthy)"| Peer
+```
+
+- GGPO binds a loopback port and is configured with one loopback endpoint per
+  remote player (`127.0.0.1:L[k]`). It never sees a real address change.
+- The proxy owns the single public socket used for `JOIN`, `BIND`, the relay and
+  the direct paths, so all paths share one NAT mapping.
+- Outbound: a GGPO datagram for peer `k` is sent on peer `k`'s **current send
+  route** (relay `server:R[k]` or the peer's direct address).
+- Inbound: datagrams from `server:R[k]` **and** from peer `k`'s validated direct
+  address are both delivered to GGPO as coming from `127.0.0.1:L[k]`. Accepting
+  both at all times means each side may switch independently; no switch
+  handshake is needed.
+
+What does **not** change:
+
+- The GGPO library: no code, public API, ABI, export or wire-format change;
+  other applications are unaffected.
+- Vector War's existing direct mode (`IP:PORT` on the command line or start
+  screen, no server): GGPO binds the public socket itself exactly as today; the
+  proxy, probes and keepalives are not involved.
+- GGPO's datagrams on the network, byte for byte. The proxy adds only its own
+  authenticated control datagrams, and only between v3 clients in a matchmade
+  session.
+
+Alternative considered: the same route table inside ggpo-next's transport
+layer, exposed through an additive API. It avoids the loopback hop and helps
+other applications, but changes the library; deferred until another consumer
+needs it.
+
+#### Candidates
+
+| Candidate | Source | Purpose |
+| --- | --- | --- |
+| Relay `server:R[k]` | `MATCH` (protocol v2) | Always available; the start path and fallback |
+| Public (server-reflexive) address of peer `k` | Server, as observed on its lobby port | Direct path across different routers |
+| LAN address of peer `k` | Sent by the peer in `JOIN` | Players on the same network, where routers often do not hairpin |
+
+Protocol v3 adds an optional LAN address to `JOIN` and a `PEERS` message with
+each member's public and LAN candidates, sent after `MATCH`. v2 clients and
+servers keep working on the relay only; a v3 client that receives no `PEERS`
+never leaves the relay.
+
+#### Probes and authentication
+
+Control datagrams between proxies start with an 8-byte magic and carry a
+SipHash-2-4 MAC keyed by the session token, so the relay forwards them like any
+datagram and a receiver separates them from GGPO packets without framing game
+data:
+
+| Message | Fields | Use |
+| --- | --- | --- |
+| `PROBE` | session tag, from, to, sequence, send time, MAC | Every 250 ms per candidate pair; opens and keeps NAT mappings |
+| `PROBE_ACK` | echoed sequence and time, MAC | Round-trip time and proof of reachability both ways |
+| `KEEPALIVE` | session tag, from, MAC | About once per second on the relay while a pair is direct, so the relay session and mapping never expire |
+
+A candidate becomes a usable direct path only after an authenticated
+`PROBE`/`PROBE_ACK` round trip in both directions. Datagrams that fail the magic
+or MAC check are treated as GGPO data (relay path) or dropped (unvalidated
+direct source).
+
+#### Path selection per peer
+
+```mermaid
+stateDiagram-v2
+    [*] --> Relay
+    Relay --> Direct: direct validated and<br/>RTT lower by margin<br/>for 3 consecutive probes
+    Direct --> Relay: no direct traffic or ack<br/>for 500 ms, or RTT worse<br/>by margin for 3 probes
+    Relay --> Relay: probing continues<br/>with backoff
+```
+
+- Prefer direct when its smoothed round-trip time beats the relay's by a margin
+  (default 5 ms) for three consecutive probes; fall back on 500 ms of silence or
+  sustained degradation. The margins prevent flapping.
+- After a fallback, direct probing resumes with exponential backoff (up to 5 s).
+- GGPO's rollback absorbs the frames lost during a switch; the frozen checksum
+  tests prove no desync.
+- The performance monitor and legend show each peer's active path.
+
+#### NAT outcomes
+
+| Router pair | Expected path |
+| --- | --- |
+| Full-cone or port-restricted on both sides | Direct |
+| Same LAN | Direct via LAN candidate |
+| Symmetric on one or both sides, carrier-grade NAT | Relay for the whole match |
+| Direct path lost mid-match | Relay within ~500 ms, then direct again when probes recover |
+| Relay lost while direct | Match continues direct |
 
 ## Matchmaking protocol
 
@@ -387,6 +496,8 @@ terraform destroy
 4. Start screens and legend.
 5. First manual apply; point the compiled default at the DuckDNS name.
 6. Friends trial; then release with the next Vector War packages.
+7. Direct path negotiation (D6): path proxy, protocol v3 candidates, NAT matrix
+   in CI, then a second friends trial comparing relay and direct latency.
 
 ## Open decisions
 
@@ -396,6 +507,6 @@ terraform destroy
 | D2 | DNS | **Decided:** DuckDNS subdomain (no domain owned) |
 | D3 | Server ports | UDP 7100 for lobbies; relay range 7101–7499 |
 | D4 | Relay or hole punching | **Decided (2026-11-12):** relay every matchmade session; works behind any router and for 2–4 players |
-| D6 | Direct hole punching to cut relay latency | Follow-up: try a direct path per pair and fall back to the relay |
+| D6 | Direct paths to cut relay latency | **Proposed (2026-11-12):** ICE-style candidates and authenticated probes; per-pair switch to a healthy direct path with the relay kept as a live fallback; in-process path proxy in Vector War so GGPO is unchanged ([details](#direct-path-negotiation)) |
 | D7 | Server-run simulation (authoritative host backend for desync detection, late join, replays) | Separate future plan; needs a new GGPO backend next to peer-to-peer |
 | D5 | Frame delay tuning from measured round-trip time | Not in this plan; follow-up |

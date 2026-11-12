@@ -9,7 +9,8 @@ Internet without a VPN, through a small lobby and relay server that this
 repository builds and tests, and that a maintainer brings up and tears down by
 hand with Terraform on a free-tier host. Vector War gains a start screen when
 launched without arguments and an in-game legend showing each player's
-platform. Excluded: direct hole punching (a later latency optimization), a
+platform. Sessions start on the relay and then move each pair of players to a
+direct path when one works, keeping the relay as a live fallback. Excluded: a
 server-run simulation, IPv6, accounts, and any GGPO library, public API, ABI,
 export or wire format change.
 
@@ -63,6 +64,20 @@ people play, which fits in a cloud free tier.
   show the same start screen choices and the same legend, and any client can be
   matched with any other.
 
+### Direct paths with relay fallback
+
+- Every session still starts on the relay, so it works behind any router.
+- In the background each client tests a direct path to every other player
+  (public address from the server, plus LAN address for players on the same
+  network). A pair switches to the direct path once it is authenticated and
+  measurably faster, and switches back to the relay as soon as it degrades.
+- Symmetric and carrier-grade NAT pairs never find a direct path and stay on
+  the relay, with no change in behavior.
+- GGPO is untouched: an in-process path proxy in Vector War sits between GGPO
+  and the network.
+- Gameplay traffic through the server drops for every pair that goes direct;
+  the server remains required to start a session and as the fallback route.
+
 ## Users and use cases
 
 | User | Wants to |
@@ -89,8 +104,8 @@ people play, which fits in a cloud free tier.
 
 ## Non-goals
 
-- Direct hole punching between players. A later optimization to avoid the
-  relay's extra latency when a direct path exists.
+- Port prediction for symmetric NAT. Pairs whose direct path cannot be
+  established simply stay on the relay.
 - A server that runs the simulation (authoritative host for desync detection,
   late join or replays). It needs a new GGPO backend and is a separate plan.
 - IPv6 and hostnames inside the GGPO library (the frozen ABI holds a 32-byte
@@ -102,7 +117,9 @@ people play, which fits in a cloud free tier.
 
 | Risk | Mitigation |
 | --- | --- |
-| The relay adds latency (every packet detours through the server) | Pick a region central to the players; show ping in game; direct hole punching as a later optimization |
+| The relay adds latency (every packet detours through the server) | Direct path negotiation moves each pair off the relay when a direct path is healthy; pick a central region for the rest; show ping and the active path in game |
+| A direct path breaks mid-match (network change, NAT rebinding) | The relay stays bound and kept alive; a pair falls back within about half a second and rollback absorbs the gap |
+| Probes used to hijack a player's traffic | Probes carry a MAC keyed by the session token; a path is used only after an authenticated round trip |
 | The relay mapping is lost between the client's `BIND` socket closing and GGPO binding the same port | Bind GGPO immediately; GGPO's 200 ms keep-alives refresh it; measured in the NAT emulation tests |
 | Relay used as an open proxy | Forwards only between addresses that bound with the session's secret token, only to other members, never more bytes than it received; sessions expire |
 | Free tier terms change or capacity is unavailable | Provider isolated behind one Terraform module; a second provider documented |

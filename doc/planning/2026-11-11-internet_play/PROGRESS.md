@@ -108,6 +108,23 @@ Status: In progress
 - [ ] M7-T03: `infra/terraform/README.md`.
 - [ ] M7-T04: Testing.md tables and workflow.
 
+### M8: Direct path negotiation (depends: M5, M6)
+
+- [ ] M8-T01: Protocol v3: LAN candidate in `JOIN`, `PEERS` message, vectors;
+  v2 clients and servers keep relay-only behavior.
+- [ ] M8-T02: Path proxy between GGPO's loopback endpoints and one public
+  socket; inbound from relay and validated direct addresses.
+- [ ] M8-T03: `PROBE`/`PROBE_ACK`/`KEEPALIVE` with SipHash MAC; unit tests
+  for authentication and rejection.
+- [ ] M8-T04: Per-peer path state machine with fake-clock tests (switch,
+  hysteresis, fallback, backoff).
+- [ ] M8-T05: NAT matrix in CI: cone pairs go direct, same-LAN goes direct,
+  symmetric/CGNAT stays on relay; all reach the frozen checksum.
+- [ ] M8-T06: Mid-match direct loss falls back without desync; relay loss
+  while direct keeps the match running.
+- [ ] M8-T07: Path shown in the performance monitor and legend; docs.
+- [ ] M8-T08: Second friends trial: relay vs direct round-trip time per pair.
+
 ## Friends trial checklist
 
 For each session, record:
@@ -117,6 +134,7 @@ For each session, record:
 | Group size, platforms and player order | 4 players: P1 Windows, P2 Android, P3 Linux, P4 Android |
 | Each player's connection | Home fiber, home cable, mobile data, carrier-grade NAT |
 | Mode and result | Matchmaking via relay: connected / failed with message; or direct `IP:PORT` |
+| Active path per pair (after M8) | P1–P2 direct, P1–P3 relay (symmetric NAT) |
 | Round-trip time through the relay and rollbacks (performance monitor) | 70 ms, occasional 2-frame rollbacks |
 | Desync | None (checksums matched) |
 | Notes | Router model, VPN in use, anything odd |
