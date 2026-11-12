@@ -24,7 +24,9 @@ PathSelector::PathSelector(int candidates, const PathConfig &config) :
    _config(config),
    _count(candidates < 1 ? 1 : (candidates > kMaxCandidates ? kMaxCandidates : candidates)),
    _active(kRelay),
-   _sequence(0)
+   _sequence(0),
+   _switches(0),
+   _fallbacks(0)
 {
    memset(_candidates, 0, sizeof(_candidates));
    for (int i = 0; i < kMaxCandidates; ++i) _candidates[i].srtt = -1;
@@ -131,6 +133,7 @@ PathSelector::Evaluate(int candidate)
       c.better = healthy ? c.better + 1 : 0;
       if (c.better >= _config.switch_confirmations) {
          _active = candidate;
+         ++_switches;
          c.better = 0;
          c.worse = 0;
       }
@@ -166,6 +169,7 @@ PathSelector::FallBack(uint32_t now)
    if (c.backoff > _config.max_backoff_ms) c.backoff = _config.max_backoff_ms;
    c.next_probe = now + c.backoff;
    _active = kRelay;
+   ++_fallbacks;
 }
 
 }  // namespace vwnet

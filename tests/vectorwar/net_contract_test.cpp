@@ -131,6 +131,7 @@ static void TestSelectorStartsOnRelayAndSwitchesWhenFaster()
    CHECK(h.selector.Active() == PathSelector::kRelay, "two confirmations are not enough");
    h.RoundTrip(1, 20);
    CHECK(h.selector.Active() == 1, "switches after three faster acks");
+   CHECK(h.selector.SwitchesToDirect() == 1 && h.selector.Fallbacks() == 0, "switch counted");
 }
 
 static void TestSelectorPrefersHealthyDirectAtEqualLatency()
@@ -177,6 +178,7 @@ static void TestSelectorFallsBackOnSilenceAndBacksOff()
    h.now += 200;
    h.selector.Update(h.now);
    CHECK(h.selector.Active() == PathSelector::kRelay, "falls back after 500 ms of silence");
+   CHECK(h.selector.Fallbacks() == 1, "fallback counted");
    CHECK(!h.selector.Validated(1), "fallen-back path must revalidate");
    CHECK(h.selector.BackoffMs(1) == 500, "first backoff 500 ms");
    CHECK(!h.selector.ProbeDue(1, h.now + 499) && h.selector.ProbeDue(1, h.now + 500), "probe waits for backoff");

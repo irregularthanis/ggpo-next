@@ -1,0 +1,83 @@
+name: NAT traversal
+
+# Hole punching with relay fallback through emulated NAT routers: Linux network
+# namespaces give each player its own cone or symmetric NAT and the matchmaking
+# server its own "Internet" address. Root is needed for the namespaces, so this
+# runs only on a hosted runner (tests/nat/run_nat_matrix.py).
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    uses: ./.github/workflows/classify-changes.yml
+    with:
+      base: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+      force: ${{ github.event_name == 'workflow_dispatch' }}
+
+  nat:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    name: NAT matrix
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libsdl2-dev ninja-build
+      - name: Build the headless Vector War fixture
+        run: |
+          cmake -S . -B build/nat -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=OFF -DGGPO_RUN_TESTS_ON_BUILD=OFF
+          cmake --build build/nat --target VectorWarHeadless --parallel
+      - name: Run the NAT scenario matrix
+        run: |
+          sudo python3 tests/nat/run_nat_matrix.py \
+            build/nat/bin/x64/Release/VectorWarHeadless services/matchmaking \
+            --report "$RUNNER_TEMP/nat-report.json"
+          sudo chown "$USER" "$RUNNER_TEMP/nat-report.json"
+          {
+            echo "### NAT traversal"
+            echo ""
+            echo '```json'
+            cat "$RUNNER_TEMP/nat-report.json"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the route report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nat-report
+          path: ${{ runner.temp }}/nat-report.json
+          if-no-files-found: warn
+
+  final-report:
+    # One stable aggregate check for the whole workflow.
+    name: Complete NAT traversal checks
+    if: always()
+    needs: [changes, nat]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require the NAT matrix
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          CODE_CHANGED: ${{ needs.changes.outputs.code }}
+          NAT: ${{ needs.nat.result }}
+        run: |
+          # A failed classifier must not look like a documentation-only change.
+          test "$CHANGES" = success
+          if test "$CODE_CHANGED" != true; then
+            echo "Documentation-only change: the NAT matrix is not required."
+            exit 0
+          fi
+          test "$NAT" = success

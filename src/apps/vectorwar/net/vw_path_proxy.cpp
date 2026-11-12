@@ -226,6 +226,8 @@ PathProxy::Snapshot()
       status[k].direct = active != PathSelector::kRelay && peer.candidate_set[active];
       status[k].route = peer.candidates[status[k].direct ? active : 0];
       status[k].relay_rtt_ms = peer.selector->SmoothedRttMs(0);
+      status[k].switches_to_direct = peer.selector->SwitchesToDirect();
+      status[k].fallbacks = peer.selector->Fallbacks();
       status[k].direct_rtt_ms = -1;
       for (int c = 1; c < kCandidates; ++c) {
          const int rtt = peer.selector->SmoothedRttMs(c);

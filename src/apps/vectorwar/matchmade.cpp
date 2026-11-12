@@ -164,11 +164,13 @@ MatchmadeReportPaths(MatchmadeSession *session)
       const vwnet::PathStatus status = session->proxy.Status(k);
       char route[32];
       vwnet::FormatEndpoint(status.route, route, sizeof(route));
-      char text[160];
+      char text[200];
       snprintf(text, sizeof(text),
-               "vectorwar-path: player=%d peer=%d route=%s via=%s relay_rtt_ms=%d direct_rtt_ms=%d",
+               "vectorwar-path: player=%d peer=%d route=%s via=%s relay_rtt_ms=%d direct_rtt_ms=%d"
+               " switches=%d fallbacks=%d",
                match.player, k, status.direct ? "direct" : "relay", route,
-               status.relay_rtt_ms, status.direct_rtt_ms);
+               status.relay_rtt_ms, status.direct_rtt_ms,
+               status.switches_to_direct, status.fallbacks);
       Say(text);
    }
 }

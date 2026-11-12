@@ -45,6 +45,8 @@ public:
    bool Validated(int candidate) const;
    int SmoothedRttMs(int candidate) const;         /* -1 when unknown */
    uint32_t BackoffMs(int candidate) const;
+   int SwitchesToDirect() const { return _switches; }   /* relay -> direct */
+   int Fallbacks() const { return _fallbacks; }         /* direct -> relay */
 
    bool ProbeDue(int candidate, uint32_t now) const;
    /* Record a probe sent now; returns the sequence to put in it. */
@@ -81,6 +83,8 @@ private:
    int _count;
    int _active;
    uint32_t _sequence;
+   int _switches;
+   int _fallbacks;
 };
 
 }  // namespace vwnet

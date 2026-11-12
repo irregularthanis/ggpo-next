@@ -24,6 +24,8 @@ struct PathStatus {
    Endpoint route;                     /* where datagrams go now */
    int relay_rtt_ms;                   /* -1 unknown */
    int direct_rtt_ms;                  /* best validated direct; -1 none */
+   int switches_to_direct;
+   int fallbacks;
 };
 
 class PathProxy {
