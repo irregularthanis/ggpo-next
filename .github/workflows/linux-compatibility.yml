@@ -71,3 +71,26 @@ jobs:
             build/linux-${{ matrix.compiler }}/build/Testing
             build/linux-${{ matrix.compiler }}/packages
           if-no-files-found: error
+
+  final-report:
+    # One stable required check. Matrix lanes skipped on documentation-only
+    # changes never report their expanded names, so the ruleset requires this
+    # aggregate instead of the individual lanes.
+    name: Complete Linux compatibility
+    if: always()
+    needs: [changes, sdk]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every Linux qualification lane
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          CODE_CHANGED: ${{ needs.changes.outputs.code }}
+          SDK: ${{ needs.sdk.result }}
+        run: |
+          # A failed classifier must not look like a documentation-only change.
+          test "$CHANGES" = success
+          if test "$CODE_CHANGED" != true; then
+            echo "Documentation-only change: Linux qualification is not required."
+            exit 0
+          fi
+          test "$SDK" = success

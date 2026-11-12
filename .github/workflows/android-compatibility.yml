@@ -313,6 +313,7 @@ jobs:
     steps:
       - name: Require every Android qualification lane
         env:
+          CHANGES: ${{ needs.changes.result }}
           CODE_CHANGED: ${{ needs.changes.outputs.code }}
           BUILD: ${{ needs.build.result }}
           TEST: ${{ needs.test.result }}
@@ -321,6 +322,8 @@ jobs:
           VECTORWAR_APK: ${{ needs.vectorwar-apk.result }}
           VECTORWAR_APK_SMOKE: ${{ needs.vectorwar-apk-smoke.result }}
         run: |
+          # A failed classifier must not look like a documentation-only change.
+          test "$CHANGES" = success
           if test "$CODE_CHANGED" != true; then
             echo "Documentation-only change: Android qualification is not required."
             exit 0

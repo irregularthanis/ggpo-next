@@ -190,3 +190,28 @@ jobs:
           objdump -p build/mingw-uses-msvc-dll.exe | grep 'DLL Name: GGPO.dll'
           PATH="$PWD/build/msvc-sdk/bin:$PATH" ./build/mingw-uses-msvc-dll.exe
           echo "MinGW program ran against the MSVC GGPO.dll"
+
+  final-report:
+    # One stable required check. Matrix lanes skipped on documentation-only
+    # changes never report their expanded names, so the ruleset requires this
+    # aggregate instead of the individual lanes.
+    name: Complete MinGW compatibility
+    if: always()
+    needs: [changes, sdk, toolchain-isolation]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every MinGW qualification lane
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          CODE_CHANGED: ${{ needs.changes.outputs.code }}
+          SDK: ${{ needs.sdk.result }}
+          TOOLCHAIN_ISOLATION: ${{ needs.toolchain-isolation.result }}
+        run: |
+          # A failed classifier must not look like a documentation-only change.
+          test "$CHANGES" = success
+          if test "$CODE_CHANGED" != true; then
+            echo "Documentation-only change: MinGW qualification is not required."
+            exit 0
+          fi
+          test "$SDK" = success
+          test "$TOOLCHAIN_ISOLATION" = success
