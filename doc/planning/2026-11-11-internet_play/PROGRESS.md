@@ -11,7 +11,7 @@ Status: Not started
 - [ ] M0-T01: Confirm the current always-free terms for D1 (VM shape,
   outbound allowance, region availability) and record them here.
 - [x] M0-T02: D2 decided: DuckDNS subdomain (no domain owned). Reserve the
-  name and store the token as a deploy secret.
+  name; the token stays on the maintainer's machine.
 - [ ] M0-T05: Oracle Container Instances test (findings so far in the
   [technical plan](TECH_PLAN.md#provider-decision-d1)). With Terraform in the
   free account, create a 1 OCPU / 1 GB `CI.Standard.A1.Flex` instance with a
@@ -76,11 +76,11 @@ Status: Not started
   checksum; symmetric fails fast with the documented error.
 - [ ] M5-T03: Scheduled impairment run with `tc netem`.
 
-### M6: Deploy and trial (depends: M2, M4, M5)
+### M6: First manual run and trial (depends: M2, M4, M5)
 
-- [ ] M6-T01: `deploy-matchmaking.yml` with a protected environment; first
-  apply; record the plan and outputs.
-- [ ] M6-T02: Set the compiled default server to the deployed name.
+- [ ] M6-T01: First manual `terraform apply`; record the plan and outputs;
+  `terraform destroy` afterwards leaves nothing billable.
+- [ ] M6-T02: Set the compiled default server to the DuckDNS name.
 - [ ] M6-T03: Friends trial (checklist below), every platform pair in both
   player orders.
 - [ ] M6-T04: Add **Complete infrastructure checks** to the `master` ruleset.

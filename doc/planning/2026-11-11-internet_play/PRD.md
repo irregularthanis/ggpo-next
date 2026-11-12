@@ -6,7 +6,8 @@ Source: `4587549` (`master` after v0.6.0)
 
 Scope: let friends on different home networks play Vector War over the
 Internet without a VPN, using a small matchmaking and hole-punching server that
-this repository builds, deploys with Terraform on a free-tier host, and tests.
+this repository builds and tests, and that a maintainer brings up and tears
+down by hand with Terraform on a free-tier host.
 Vector War gains a start screen when launched without arguments and an in-game
 legend showing each player's platform. Excluded: a relay for networks that
 cannot be hole-punched (planned as a follow-up), IPv6, accounts, lobbies with
@@ -23,7 +24,7 @@ both of which ask non-technical friends to configure something first.
 
 A rendezvous server that tells each peer the other's public `IP:PORT`, followed
 by both peers sending at once (UDP hole punching), connects most home routers
-with no configuration. It needs only a tiny always-on host, which fits in a
+with no configuration. It needs only a tiny host while people play, which fits in a
 cloud free tier.
 
 ## Outcomes
@@ -37,6 +38,8 @@ cloud free tier.
 - The Terraform code is covered by unit tests that run without cloud
   credentials, asserting the planned resources and their attributes, and by
   tests of the resulting state.
+- CI never creates real infrastructure. The server is applied and destroyed
+  by hand, at will.
 - The matchmaking server is a container image built and tested in CI and
   published to a free registry.
 
@@ -63,7 +66,7 @@ cloud free tier.
 | --- | --- |
 | Friend with no networking knowledge | Start Vector War, press Matchmaking, and play |
 | Developer testing GGPO across the Internet | Connect two specific machines by `IP:PORT` without memorizing the CLI |
-| Maintainer | Deploy or update the server with one Terraform apply, at no cost |
+| Maintainer | Bring the server up before a play session and destroy it afterwards, each with one Terraform command, at no cost |
 | Reviewer | Trust infrastructure changes because tests prove the plan before it is applied |
 
 ## Success criteria

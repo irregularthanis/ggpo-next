@@ -16,7 +16,8 @@ Status: Draft
 - [Start screen](#start-screen)
 - [Platform legend](#platform-legend)
 - [Testing](#testing)
-- [CI and deployment](#ci-and-deployment)
+- [CI](#ci)
+- [Operation](#operation)
 - [Documentation](#documentation)
 - [Rollout](#rollout)
 - [Open decisions](#open-decisions)
@@ -197,8 +198,9 @@ under `infra/`:
 | Variable validation | `terraform test` with `expect_failures` | Invalid inputs are rejected: a non-digest image tag, a world-open `admin_cidr`, a port outside the allowed range |
 | Lint | `tflint` with the provider ruleset | Deprecated or invalid arguments |
 
-Applying for real happens only in the deploy workflow, never in pull-request
-CI.
+CI never creates, changes or destroys real infrastructure and needs no cloud
+credentials. Real `apply` and `destroy` are run by hand, whenever a play
+session needs the server (see [operation](#operation)).
 
 ## Vector War client
 
@@ -268,7 +270,7 @@ direct connections)".
 | Impairment | The same topology with `tc netem` latency and loss | Scheduled, not required per change |
 | Real world | Two friends on different home networks, per the checklist in `PROGRESS.md` | Manual, before calling the feature done |
 
-## CI and deployment
+## CI
 
 - **New workflow `infrastructure.yml`:** `fmt`, `validate`, `tflint`,
   `terraform test`; server unit tests; container build. Aggregate check
@@ -280,10 +282,30 @@ direct connections)".
   they never take the documentation fast path.
 - **Image publishing:** on `master`, build and push the server image to GHCR
   (free for public repositories), tagged by commit and recorded by digest.
-- **Deploy workflow `deploy-matchmaking.yml`:** manual dispatch only, protected
-  by a GitHub environment with required reviewer; runs `terraform plan`, shows
-  it, then `apply` with the image digest. Cloud and DNS credentials live only in
-  that environment's secrets.
+- **No deploy workflow.** CI only proves the Terraform code and builds the
+  image; it holds no cloud or DNS credentials.
+
+## Operation
+
+The server is not always on. It is created when friends want to play and
+destroyed afterwards, by hand, from a maintainer's machine:
+
+```bash
+cd infra/terraform/envs/prod
+terraform init
+terraform apply  -var image=ghcr.io/irregularthanis/ggpo-matchmaking@sha256:...
+# play
+terraform destroy
+```
+
+- Cloud and DuckDNS credentials stay on the maintainer's machine (environment
+  variables or a git-ignored `terraform.tfvars`).
+- State lives in the free object storage backend so a later `destroy` works
+  from any machine; it is never committed.
+- The DuckDNS name stays reserved while the server is destroyed. Vector War's
+  compiled default keeps pointing at it, and while the server is down the start
+  screen reports "matchmaking server unreachable" and direct `IP:PORT` still
+  works.
 
 ## Documentation
 
@@ -291,8 +313,8 @@ direct connections)".
   start screen, matchmaking, the new `--matchmaking` form, when it cannot work,
   and the overlay-VPN workaround.
 - New `doc/architecture/Matchmaking.md`: protocol, server, NAT behavior, limits.
-- `infra/terraform/README.md`: prerequisites, one-time account setup, deploy,
-  destroy, cost guardrails.
+- `infra/terraform/README.md`: prerequisites, one-time account setup, manual
+  apply and destroy, cost guardrails.
 - Testing.md: the new tests in the platform and shared tables, and the
   infrastructure workflow.
 
@@ -303,7 +325,7 @@ direct connections)".
 3. Vector War client, CLI form, and NAT emulation in CI against a local
    server container.
 4. Start screens and legend.
-5. First apply; point the compiled default at the deployed name.
+5. First manual apply; point the compiled default at the DuckDNS name.
 6. Friends trial; then release with the next Vector War packages.
 
 ## Open decisions
