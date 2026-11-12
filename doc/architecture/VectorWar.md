@@ -324,7 +324,9 @@ thrust, brake, left/right rotation, fire, and an unused bomb bit.
 [`GDIRenderer`](../../src/apps/vectorwar/gdi_renderer.cpp) draws ships, bullets,
 connection status, checksums, and text into the Win32 window. On Linux,
 [`SDLVectorWarRenderer`](../../src/apps/vectorwar/sdl_renderer.cpp) draws the
-same scene into an SDL window.
+same scene into an SDL window. Both draw the player [legend](#legend); SDL
+text uses an embedded public-domain 8x8 font
+([`vw_bitmap_font.h`](../../src/apps/vectorwar/vw_bitmap_font.h)).
 
 `VectorWar_AdvanceFrame` computes a checksum after each simulation step and stores
 it in `ngs` for display. This displayed checksum is diagnostic state; the saved
@@ -423,8 +425,44 @@ peer with its route and round-trip times. `vectorwar_matchmaking_loopback`
 plays 2 and 3 players this way (every pair direct) and 2 players relay-only;
 two players reach the frozen checksum `b3381958`.
 
-A start-screen field and the active route in the legend follow in a later
-milestone.
+### Start screen
+
+Run without arguments, every client shows the same start screen: direct
+`IP:PORT` (two players; you choose player 1 or 2) or **Matchmaking** with a
+server, 2 to 4 players and an optional lobby code. The local UDP port is shared
+by both.
+
+| Platform | Start screen |
+| --- | --- |
+| Windows | The `IDD_START` dialog in [`VectorWar.rc`](../../src/apps/vectorwar/VectorWar.rc), driven by [`win32_start_dialog.cpp`](../../src/apps/vectorwar/win32_start_dialog.cpp) |
+| Linux | An SDL form drawn with the embedded 8x8 font, [`sdl_start_screen.cpp`](../../src/apps/vectorwar/sdl_start_screen.cpp); Tab, Enter, Esc and the mouse |
+| Android | [`LauncherActivity`](../../src/apps/vectorwar/android/app/src/main/java/org/ggponext/vectorwar/LauncherActivity.java): the direct fields as before, plus server, players, lobby and **Matchmaking** |
+
+Each screen turns its fields into the command-line arguments
+([`vw_start_form.cpp`](../../src/apps/vectorwar/vw_start_form.cpp); on Android
+[`StartArgs.java`](../../src/apps/vectorwar/android/app/src/main/java/org/ggponext/vectorwar/StartArgs.java)),
+so a start-screen session starts exactly like the command line. While the
+lobby fills the screen shows "Waiting for players... 2 of 4" and **Cancel**
+(Esc; Back on Android). Failures say what happened: "matchmaking server
+unreachable" (no answer within 5 s), "the server speaks another protocol
+version", "could not reach the relay". In the SDL frontend `--matchmaking`
+from the command line or the Android launcher shows the same progress screen,
+and on Android a failure stays on screen until Back.
+
+The default server is a build setting, empty until the server's DuckDNS name
+is chosen: `-DGGPO_VECTORWAR_MATCHMAKING_HOST=name.duckdns.org` (CMake) or
+`-PmatchmakingHost=name.duckdns.org` (the APK).
+
+### Legend
+
+A legend in the top-left corner has one row per player: a swatch in that
+player's ship color, then `P1 Windows (you)`, `P2 Android direct`,
+`P3 Linux relay`. Platforms come from `MATCH`; in direct play only your own
+platform is known and peers show `unknown`. Routes come from the path proxy
+and refresh every frame. Colors come from one table per renderer
+([`vw_player_colors.h`](../../src/apps/vectorwar/vw_player_colors.h)) shared
+with the ships. The legend lives in `NonGameState`, so it never affects saved
+state or checksums ([`vw_legend.cpp`](../../src/apps/vectorwar/vw_legend.cpp)).
 
 ## Interactive platform frontends
 

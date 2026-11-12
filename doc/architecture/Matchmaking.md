@@ -263,5 +263,6 @@ runs in real time (about 19 s); without it the headless loop is unpaced.
   4-player run and no `tc netem` impairment yet (M5-T02/T03).
 - IPv4 only, like GGPO's endpoints.
 - No port prediction for symmetric NAT; such pairs stay on the relay.
-- Every frontend has `--matchmaking`; the start-screen field and the legend
-  with the active route follow in milestone M4.
+- The route is shown in the legend, not yet in the performance monitor
+  (M8-T07). Peer platforms in direct play are not exchanged, so peers show
+  `unknown` there.

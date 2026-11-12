@@ -81,13 +81,13 @@ Status: In progress
 
 ### M4: Start screen and legend on every client (depends: M3)
 
-- [ ] M4-T01: Embedded bitmap font for SDL; shared player-color accessor.
-- [ ] M4-T02: Windows start screen (Win32 dialog) with direct and
+- [x] M4-T01: Embedded bitmap font for SDL; shared player-color accessor.
+- [x] M4-T02: Windows start screen (Win32 dialog) with direct and
   Matchmaking.
-- [ ] M4-T03: Linux start screen (SDL form) with direct and Matchmaking.
-- [ ] M4-T04: Android launcher with direct and Matchmaking.
-- [ ] M4-T05: Platform legend in GDI and SDL, color-matched to ships.
-- [ ] M4-T06: Host contract tests for start screen mapping and legend on
+- [x] M4-T03: Linux start screen (SDL form) with direct and Matchmaking.
+- [x] M4-T04: Android launcher with direct and Matchmaking.
+- [x] M4-T05: Platform legend in GDI and SDL, color-matched to ships.
+- [x] M4-T06: Host contract tests for start screen mapping and legend on
   Windows, Linux and Android.
 
 ### M5: NAT traversal in CI (depends: M3, M1-T04)
@@ -137,7 +137,8 @@ Status: In progress
   symmetric/CGNAT stays on relay; all reach the frozen checksum.
 - [x] M8-T06: Mid-match direct loss falls back without desync; relay loss
   while direct keeps the match running.
-- [ ] M8-T07: Path shown in the performance monitor and legend; docs.
+- [ ] M8-T07 (legend done; performance monitor open): Path shown in the
+  performance monitor and legend; docs.
 - [ ] M8-T08: Second friends trial: relay vs direct round-trip time per pair.
 
 ## Friends trial checklist
