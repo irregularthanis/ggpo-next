@@ -35,6 +35,14 @@ MatchmadeSession *MatchmadeStart(const MatchmadeArgs &args, GGPOPlayer players[G
 /* One "vectorwar-path:" line per remote player: route and round-trip times. */
 void MatchmadeReportPaths(MatchmadeSession *session);
 
+struct VwLegend;
+
+/* Fills the legend from the match (platforms) and the proxy (routes). */
+void MatchmadeFillLegend(MatchmadeSession *session, VwLegend *legend);
+
+/* Makes the in-game legend follow this session; call after VectorWar_Init. */
+void MatchmadeAttachLegend(MatchmadeSession *session);
+
 /* Stops the proxy and releases the session; NULL is ignored. */
 void MatchmadeStop(MatchmadeSession *session);
 

@@ -1,6 +1,8 @@
 #include "sdl_renderer.h"
 
 #include "vw_sdl.h"
+#include "vw_bitmap_font.h"
+#include "vw_player_colors.h"
 #if defined(__ANDROID__)
 #include "sdl_touch_controls.h"
 #endif
@@ -12,12 +14,29 @@ namespace {
 
 void SetPlayerColor(SDL_Renderer *renderer, int player)
 {
-   static const unsigned char colors[4][3] = {
-      { 255, 64, 64 }, { 64, 255, 64 },
-      { 64, 128, 255 }, { 192, 192, 192 }
-   };
-   SDL_SetRenderDrawColor(renderer, colors[player][0], colors[player][1],
-                          colors[player][2], SDL_ALPHA_OPAQUE);
+   const unsigned char *color = VwPlayerColor(kVwColorsSdl, player);
+   SDL_SetRenderDrawColor(renderer, color[0], color[1], color[2], SDL_ALPHA_OPAQUE);
+}
+
+/* Text with the embedded 8x8 font, one point per lit pixel. */
+void DrawFontText(SDL_Renderer *renderer, int x, int y, const char *text)
+{
+   SDL_Point points[VW_FONT_SIZE * VW_FONT_SIZE];
+   for (; *text; ++text, x += VW_FONT_SIZE) {
+      const unsigned char *glyph = VwFontGlyph(*text);
+      if (!glyph) continue;
+      int count = 0;
+      for (int row = 0; row < VW_FONT_SIZE; ++row) {
+         for (int column = 0; column < VW_FONT_SIZE; ++column) {
+            if (glyph[row] & (1 << column)) {
+               points[count].x = x + column;
+               points[count].y = y + row;
+               ++count;
+            }
+         }
+      }
+      if (count) SDL_RenderDrawPoints(renderer, points, count);
+   }
 }
 
 } // namespace
@@ -112,7 +131,21 @@ SDLVectorWarRenderer::DrawShip(const Ship &ship, int player)
 }
 
 void
-SDLVectorWarRenderer::Draw(GameState &state, NonGameState &)
+SDLVectorWarRenderer::DrawLegend(const VwLegend &legend)
+{
+   char row[48];
+   for (int index = 0; VwLegendRow(legend, index, row, sizeof(row)); ++index) {
+      const int y = 28 + index * 12;
+      SDL_Rect swatch = { 12, y, 8, 8 };
+      SetPlayerColor(_renderer, index);
+      SDL_RenderFillRect(_renderer, &swatch);
+      SDL_SetRenderDrawColor(_renderer, 200, 200, 200, SDL_ALPHA_OPAQUE);
+      DrawFontText(_renderer, 24, y, row);
+   }
+}
+
+void
+SDLVectorWarRenderer::Draw(GameState &state, NonGameState &non_game_state)
 {
    if (!_renderer) return;
    SDL_SetRenderDrawColor(_renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
@@ -120,6 +153,7 @@ SDLVectorWarRenderer::Draw(GameState &state, NonGameState &)
    for (int player = 0; player < state._num_ships; ++player) {
       DrawShip(state._ships[player], player);
    }
+   DrawLegend(non_game_state.legend);
 #if defined(__ANDROID__)
    vw_touch::Draw(_renderer, 640, 480);
 #endif

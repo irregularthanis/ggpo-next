@@ -151,8 +151,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
          ::SetWindowPos(hwnd, NULL, window_offsets[slot].x, window_offsets[slot].y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
       }
       VectorWar_Init(&host, ggpo_port, num_players, players, 0);
+      MatchmadeAttachLegend(session);
       RunMainLoop();
       VectorWar_Exit();
+      MatchmadeAttachLegend(NULL);
       MatchmadeStop(session);
       WSACleanup();
       DestroyWindow(hwnd);

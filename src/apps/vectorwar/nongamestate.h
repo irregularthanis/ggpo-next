@@ -2,6 +2,7 @@
 #define _NON_GAMESTATE_H_
 
 #include "ggponet.h"
+#include "vw_legend.h"
 
 #define MAX_PLAYERS     64
 
@@ -76,6 +77,8 @@ struct NonGameState {
    GGPOPlayerHandle     local_player_handle;
    PlayerConnectionInfo players[MAX_PLAYERS];
    int                  num_players;
+
+   VwLegend             legend;     /* drawn by the renderer every frame */
 
    ChecksumInfo         now;
    ChecksumInfo         periodic;

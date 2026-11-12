@@ -2,6 +2,8 @@
 
 #include "vw_matchmaking.h"
 #include "vw_path_proxy.h"
+#include "vw_legend.h"
+#include "vectorwar.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,17 +30,6 @@ void Progress(int joined, int group_size, void *)
    char text[64];
    snprintf(text, sizeof(text), "vectorwar-match: waiting for players %d/%d", joined, group_size);
    Say(text);
-}
-
-int LocalPlatform()
-{
-#if defined(_WIN32)
-   return vwnet::kPlatformWindows;
-#elif defined(__ANDROID__)
-   return vwnet::kPlatformAndroid;
-#else
-   return vwnet::kPlatformLinux;
-#endif
 }
 
 bool ParsePort(const char *text, unsigned short *port, bool allow_zero)
@@ -110,7 +101,7 @@ MatchmadeStart(const MatchmadeArgs &args, GGPOPlayer players[GGPO_MAX_PLAYERS], 
    vwnet::MatchmakingOptions options;
    options.group_size = args.players;
    options.lobby = args.lobby;
-   options.platform = LocalPlatform();
+   options.platform = VwLocalPlatform();  /* same numbering as vwnet */
    options.progress = Progress;
    if (!vwnet::Matchmake(session->proxy.PublicSocket(), server, options, &session->match,
                          error, error_length)) {
@@ -173,6 +164,32 @@ MatchmadeReportPaths(MatchmadeSession *session)
                status.switches_to_direct, status.fallbacks);
       Say(text);
    }
+}
+
+void
+MatchmadeFillLegend(MatchmadeSession *session, VwLegend *legend)
+{
+   if (!session || !legend) return;
+   const vwnet::MatchResult &match = session->match;
+   VwLegendInitDirect(legend, match.count, match.player);
+   for (int k = 1; k <= legend->num_players; ++k) {
+      legend->platforms[k - 1] = match.platforms[k - 1];
+      if (k == match.player) continue;
+      legend->routes[k - 1] = session->proxy.Status(k).direct ? kVwRouteDirect : kVwRouteRelay;
+   }
+}
+
+namespace {
+void FillLegendSource(VwLegend *legend, void *context)
+{
+   MatchmadeFillLegend((MatchmadeSession *)context, legend);
+}
+}  // namespace
+
+void
+MatchmadeAttachLegend(MatchmadeSession *session)
+{
+   VectorWar_SetLegendSource(session ? FillLegendSource : NULL, session);
 }
 
 void

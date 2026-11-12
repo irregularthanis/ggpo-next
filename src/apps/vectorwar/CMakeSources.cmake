@@ -9,6 +9,9 @@ set(GGPO_EXAMPLES_VECTORWAR_INC_NOFILTER
 	"vectorwar_host.h"
 	"vectorwar_inputs.h"
 	"vectorwar.h"
+	"vw_bitmap_font.h"
+	"vw_legend.h"
+	"vw_player_colors.h"
 )
 
 set(GGPO_EXAMPLES_VECTORWAR_SRC_NOFILTER
@@ -16,6 +19,7 @@ set(GGPO_EXAMPLES_VECTORWAR_SRC_NOFILTER
 	"gamestate.cpp"
 	"state_contract.cpp"
 	"vectorwar.cpp"
+	"vw_legend.cpp"
 )
 
 set(GGPO_EXAMPLES_VECTORWAR_WIN32_INC

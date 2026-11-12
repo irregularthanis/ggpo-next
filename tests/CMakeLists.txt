@@ -399,6 +399,20 @@ add_test(NAME vectorwar_net_contract COMMAND ggpo_vectorwar_net_contract)
 set_tests_properties(vectorwar_net_contract PROPERTIES
     LABELS "portable;sample;matchmaking")
 
+# The in-game legend: row text, platform numbering, colors and the font.
+add_executable(ggpo_vectorwar_legend_contract
+    vectorwar/legend_contract_test.cpp
+    ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/vw_legend.cpp
+)
+ggpo_configure_static_test(ggpo_vectorwar_legend_contract)
+target_include_directories(ggpo_vectorwar_legend_contract PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/apps/vectorwar
+    ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/net
+)
+add_test(NAME vectorwar_legend_contract COMMAND ggpo_vectorwar_legend_contract)
+set_tests_properties(vectorwar_legend_contract PROPERTIES
+    LABELS "portable;sample;legend")
+
 # Hole punching with relay fallback end to end on loopback: the real server
 # and one path proxy per player with a stand-in for GGPO. Native builds only:
 # a cross-compiled tool cannot reach the host's loopback server.
@@ -467,6 +481,8 @@ if(MSVC)
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/win32_host.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/gdi_renderer.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/ggpo_perfmon.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/gamestate.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/vw_legend.cpp
     )
     ggpo_configure_test(ggpo_vectorwar_win32_host_contract)
     target_compile_definitions(ggpo_vectorwar_win32_host_contract PRIVATE
@@ -486,6 +502,8 @@ elseif(TARGET VectorWar)
         vectorwar/sdl_host_contract_test.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_host.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_renderer.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/gamestate.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/vw_legend.cpp
     )
     ggpo_configure_test(ggpo_vectorwar_sdl_host_contract)
     target_include_directories(ggpo_vectorwar_sdl_host_contract PRIVATE
@@ -506,6 +524,8 @@ elseif(TARGET VectorWarAndroid)
         vectorwar/sdl_host_contract_test.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_host.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_renderer.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/gamestate.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/vw_legend.cpp
     )
     ggpo_configure_test(ggpo_vectorwar_sdl_host_contract)
     target_include_directories(ggpo_vectorwar_sdl_host_contract PRIVATE
@@ -563,6 +583,7 @@ endif()
 # the executables before invoking CTest on multi-config generators such as MSVC.
 set(GGPO_PORTABLE_TEST_TARGETS
     ggpo_vectorwar_net_contract
+    ggpo_vectorwar_legend_contract
 	ggpo_vectorwar_state_contract
     ggpo_vectorwar_gameplay_contract
     ggpo_vectorwar_native_host_contract

@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "renderer.h"
 #include "win32_host.h"
@@ -40,6 +41,15 @@ main()
       DestroyWindow(window);
       return 1;
    }
+   // Draw one frame with a legend through the GDI path.
+   GameState state;
+   state.Init(bounds, 2);
+   static NonGameState non_game_state;
+   memset(&non_game_state, 0, sizeof(non_game_state));
+   VwLegendInitDirect(&non_game_state.legend, 2, 1);
+   non_game_state.legend.platforms[1] = kVwPlatformAndroid;
+   non_game_state.legend.routes[1] = kVwRouteRelay;
+   renderer->Draw(state, non_game_state);
    delete renderer;
 
    const unsigned int before = host.NowMs();
@@ -52,6 +62,6 @@ main()
    host.InitializePerformanceMonitor();
    host.ShutdownPerformanceMonitor();
    DestroyWindow(window);
-   printf("vectorwar-win32-host: window, bounds, renderer, clock and diagnostics pass\n");
+   printf("vectorwar-win32-host: window, bounds, renderer, legend, clock and diagnostics pass\n");
    return 0;
 }

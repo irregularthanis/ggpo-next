@@ -12,6 +12,8 @@
  *
  */
 
+struct VwLegend;
+
 void VectorWar_Init(VectorWarHost *host, unsigned short localport, int num_players, GGPOPlayer *players, int num_spectators);
 void VectorWar_InitSpectator(VectorWarHost *host, unsigned short localport, int num_players, char *host_ip, unsigned short host_port);
 void VectorWar_DrawCurrentFrame();
@@ -21,6 +23,9 @@ void VectorWar_Idle(int time);
 void VectorWar_DisconnectPlayer(int player);
 void VectorWar_TogglePerformanceMonitor();
 void VectorWar_Exit();
+/* Refreshes the legend before each draw (routes of a matchmade session);
+ * VectorWar_Init clears it, so set it after Init. NULL removes it. */
+void VectorWar_SetLegendSource(void (*source)(VwLegend *legend, void *context), void *context);
 int VectorWar_FrameNumber();
 unsigned int VectorWar_StateChecksum();
 int VectorWar_SaveCount();

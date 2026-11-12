@@ -92,9 +92,11 @@ int main(int argc, char **argv)
       }
       SDLVectorWarHost host;
       VectorWar_Init(&host, ggpo_port, num_players, players, 0);
+      MatchmadeAttachLegend(session);
       RunMainLoop(&host);
       MatchmadeReportPaths(session);
       VectorWar_Exit();
+      MatchmadeAttachLegend(NULL);
       MatchmadeStop(session);
       return 0;
    }
