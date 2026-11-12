@@ -117,10 +117,10 @@ Status: In progress
   the C++ client decodes the same vectors in M8-T02).
 - [ ] M8-T02: Path proxy between GGPO's loopback endpoints and one public
   socket; inbound from relay and validated direct addresses.
-- [ ] M8-T03: `PROBE`/`PROBE_ACK`/`KEEPALIVE` with SipHash MAC; unit tests
-  for authentication and rejection.
-- [ ] M8-T04: Per-peer path state machine with fake-clock tests (switch,
-  hysteresis, fallback, backoff).
+- [x] M8-T03: `PROBE`/`PROBE_ACK`/`KEEPALIVE` with SipHash MAC; unit tests
+  for authentication and rejection (`src/apps/vectorwar/net/vw_path_probe`).
+- [x] M8-T04: Per-peer path state machine with fake-clock tests (switch,
+  hysteresis, fallback, backoff) (`vw_path_selector`; `vectorwar_net_contract`).
 - [ ] M8-T05: NAT matrix in CI: cone pairs go direct, same-LAN goes direct,
   symmetric/CGNAT stays on relay; all reach the frozen checksum.
 - [ ] M8-T06: Mid-match direct loss falls back without desync; relay loss

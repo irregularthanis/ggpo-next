@@ -368,6 +368,37 @@ set_tests_properties(vectorwar_state_contract PROPERTIES
 
 # Shared gameplay layer: exact cardinal initialization must be bit-stable on
 # every supported compiler before networking or platform services participate.
+# Vector War networking: matchmaking codec checked against the server's
+# shared protocol vectors, SipHash, hole-punching probes and the path selector.
+include(${PROJECT_SOURCE_DIR}/src/apps/vectorwar/CMakeSources.cmake)
+set(GGPO_VECTORWAR_NET_SOURCES)
+foreach(source ${GGPO_EXAMPLES_VECTORWAR_NET_SRC})
+    list(APPEND GGPO_VECTORWAR_NET_SOURCES "${PROJECT_SOURCE_DIR}/src/apps/vectorwar/${source}")
+endforeach()
+set(GGPO_NET_VECTORS_JSON ${PROJECT_SOURCE_DIR}/services/matchmaking/protocol_vectors.json)
+set(GGPO_NET_VECTORS_INC ${CMAKE_CURRENT_BINARY_DIR}/vectorwar/net_vectors.inc)
+add_custom_command(
+    OUTPUT ${GGPO_NET_VECTORS_INC}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/vectorwar
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/vectorwar/gen_net_vectors.py
+            ${GGPO_NET_VECTORS_JSON} ${GGPO_NET_VECTORS_INC}
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/vectorwar/gen_net_vectors.py ${GGPO_NET_VECTORS_JSON}
+    COMMENT "Generating Vector War protocol vector checks"
+)
+add_executable(ggpo_vectorwar_net_contract
+    vectorwar/net_contract_test.cpp
+    ${GGPO_NET_VECTORS_INC}
+    ${GGPO_VECTORWAR_NET_SOURCES}
+)
+ggpo_configure_static_test(ggpo_vectorwar_net_contract)
+target_include_directories(ggpo_vectorwar_net_contract PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/net
+    ${CMAKE_CURRENT_BINARY_DIR}/vectorwar
+)
+add_test(NAME vectorwar_net_contract COMMAND ggpo_vectorwar_net_contract)
+set_tests_properties(vectorwar_net_contract PROPERTIES
+    LABELS "portable;sample;matchmaking")
+
 add_executable(ggpo_vectorwar_gameplay_contract
     vectorwar/gameplay_determinism_test.cpp
     ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/gamestate.cpp
@@ -485,6 +516,7 @@ endif()
 # Export every portable contract target so the root test-on-build target builds
 # the executables before invoking CTest on multi-config generators such as MSVC.
 set(GGPO_PORTABLE_TEST_TARGETS
+    ggpo_vectorwar_net_contract
 	ggpo_vectorwar_state_contract
     ggpo_vectorwar_gameplay_contract
     ggpo_vectorwar_native_host_contract

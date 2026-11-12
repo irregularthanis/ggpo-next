@@ -53,3 +53,18 @@ set(GGPO_EXAMPLES_VECTORWAR_SRC
 	${GGPO_EXAMPLES_VECTORWAR_INC_NOFILTER}
 	${GGPO_EXAMPLES_VECTORWAR_SRC_NOFILTER}
 )
+
+# Matchmaking client codec and hole punching with relay fallback; portable
+# and free of GGPO, so its contract test runs on every platform.
+set(GGPO_EXAMPLES_VECTORWAR_NET_SRC
+	"net/vw_net_protocol.cpp"
+	"net/vw_net_protocol.h"
+	"net/vw_net_types.cpp"
+	"net/vw_net_types.h"
+	"net/vw_path_probe.cpp"
+	"net/vw_path_probe.h"
+	"net/vw_path_selector.cpp"
+	"net/vw_path_selector.h"
+	"net/vw_siphash.cpp"
+	"net/vw_siphash.h"
+)
