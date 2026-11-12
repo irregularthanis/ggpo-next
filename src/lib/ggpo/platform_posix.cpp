@@ -24,8 +24,9 @@
 
 struct ggpo_platform::UdpSocket::Impl {
    int socket;
+   int last_error;
    // Start detached from any native socket descriptor.
-   Impl() : socket(-1) { }
+   Impl() : socket(-1), last_error(0) { }
 };
 
 // Return monotonic milliseconds for GGPO deadlines and elapsed-time checks.
@@ -208,6 +209,7 @@ ggpo_platform::UdpSocket::Send(const void *data, int bytes,
    if (result >= 0) {
       return IO_OK;
    }
+   _impl->last_error = errno;
    return errno == EAGAIN || errno == EWOULDBLOCK ? IO_WOULD_BLOCK : IO_ERROR;
 }
 
@@ -225,6 +227,7 @@ ggpo_platform::UdpSocket::Receive(void *data, int capacity, int *bytes,
                                     (struct sockaddr *)&native_address,
                                     &native_length);
    if (result < 0) {
+      _impl->last_error = errno;
       return errno == EAGAIN || errno == EWOULDBLOCK ? IO_WOULD_BLOCK : IO_ERROR;
    }
    if (bytes) {
@@ -239,6 +242,13 @@ ggpo_platform::UdpSocket::Receive(void *data, int capacity, int *bytes,
       from->port = ntohs(native_address.sin_port);
    }
    return IO_OK;
+}
+
+// Native errno from the most recent failed Send or Receive.
+int
+ggpo_platform::UdpSocket::LastError() const
+{
+   return _impl->last_error;
 }
 
 // Close an open descriptor and make repeated closes harmless.
