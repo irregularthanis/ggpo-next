@@ -17,7 +17,7 @@ The reason this fork exists as it is right now is to:
 ### Are you merging back to upstream?
 Maybe. Once this is mature enough we will reach out. It will depend on the original maintainer.
 
-### Is this vibe-coded
+### Is this vibe-coded?
 No, but it is AI-assisted.
 
   
