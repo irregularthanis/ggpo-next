@@ -6,6 +6,12 @@ on:
   pull_request:
   workflow_dispatch:
 
+# A newer push to the same pull request supersedes this run, so cancel it and
+# free the runners. Runs on master pushes and manual dispatches always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   changes:
     uses: ./.github/workflows/classify-changes.yml
@@ -107,3 +113,30 @@ jobs:
             -c tests/consumer/consumer.c -o /tmp/ggpo-consumer-c.o
           "$cxx" -std=c++98 -pedantic-errors -Werror "${cxx_extra[@]}" -Isrc/include \
             -c tests/consumer/consumer.cpp -o /tmp/ggpo-consumer-cpp.o
+
+  final-report:
+    # One stable required check. Matrix lanes skipped on documentation-only
+    # changes never report their expanded names, so the ruleset requires this
+    # aggregate instead of the individual lanes.
+    name: Complete Windows compatibility
+    if: always()
+    needs: [changes, baseline, final-compatibility, portable-header]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every Windows qualification lane
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          CODE_CHANGED: ${{ needs.changes.outputs.code }}
+          BASELINE: ${{ needs.baseline.result }}
+          FINAL_COMPATIBILITY: ${{ needs.final-compatibility.result }}
+          PORTABLE_HEADER: ${{ needs.portable-header.result }}
+        run: |
+          # A failed classifier must not look like a documentation-only change.
+          test "$CHANGES" = success
+          if test "$CODE_CHANGED" != true; then
+            echo "Documentation-only change: Windows qualification is not required."
+            exit 0
+          fi
+          test "$BASELINE" = success
+          test "$FINAL_COMPATIBILITY" = success
+          test "$PORTABLE_HEADER" = success

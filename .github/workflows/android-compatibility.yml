@@ -13,6 +13,12 @@ on:
   pull_request:
   workflow_dispatch:
 
+# A newer push to the same pull request supersedes this run, so cancel it and
+# free the runners. Runs on master pushes and manual dispatches always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   changes:
     uses: ./.github/workflows/classify-changes.yml
@@ -307,6 +313,7 @@ jobs:
     steps:
       - name: Require every Android qualification lane
         env:
+          CHANGES: ${{ needs.changes.result }}
           CODE_CHANGED: ${{ needs.changes.outputs.code }}
           BUILD: ${{ needs.build.result }}
           TEST: ${{ needs.test.result }}
@@ -315,6 +322,8 @@ jobs:
           VECTORWAR_APK: ${{ needs.vectorwar-apk.result }}
           VECTORWAR_APK_SMOKE: ${{ needs.vectorwar-apk-smoke.result }}
         run: |
+          # A failed classifier must not look like a documentation-only change.
+          test "$CHANGES" = success
           if test "$CODE_CHANGED" != true; then
             echo "Documentation-only change: Android qualification is not required."
             exit 0
