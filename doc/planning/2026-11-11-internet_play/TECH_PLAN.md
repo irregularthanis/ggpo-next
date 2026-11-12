@@ -133,8 +133,8 @@ sequenceDiagram
 
 ### Direct path negotiation
 
-Decision D6 (proposed 2026-11-12): **ICE-style direct paths with the relay as a
-live fallback**, implemented in an in-process **path proxy** inside Vector War.
+Decision D6 (accepted 2026-11-12): **UDP hole punching with the relay as a
+live fallback** (ICE-style direct paths), implemented in an in-process **path proxy** inside Vector War.
 GGPO, its API, ABI and wire format stay unchanged, preserving this plan's
 constraint.
 
@@ -507,6 +507,6 @@ terraform destroy
 | D2 | DNS | **Decided:** DuckDNS subdomain (no domain owned) |
 | D3 | Server ports | UDP 7100 for lobbies; relay range 7101–7499 |
 | D4 | Relay or hole punching | **Decided (2026-11-12):** relay every matchmade session; works behind any router and for 2–4 players |
-| D6 | Direct paths to cut relay latency | **Proposed (2026-11-12):** ICE-style candidates and authenticated probes; per-pair switch to a healthy direct path with the relay kept as a live fallback; in-process path proxy in Vector War so GGPO is unchanged ([details](#direct-path-negotiation)) |
+| D6 | Hole punching with relay fallback | **Decided (2026-11-12):** UDP hole punching through ICE-style candidates and authenticated probes; per-pair switch to a healthy direct path with the relay kept as a live fallback; in-process path proxy in Vector War so GGPO is unchanged ([details](#direct-path-negotiation)) |
 | D7 | Server-run simulation (authoritative host backend for desync detection, late join, replays) | Separate future plan; needs a new GGPO backend next to peer-to-peer |
 | D5 | Frame delay tuning from measured round-trip time | Not in this plan; follow-up |

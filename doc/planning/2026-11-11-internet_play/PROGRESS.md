@@ -12,6 +12,8 @@ Status: In progress
   outbound allowance, region availability) and record them here.
 - [x] M0-T06: D4 decided (2026-11-12): relay every matchmade session, 2–4
   players, lobby codes; direct hole punching becomes a later optimization.
+- [x] M0-T07: D6 decided (2026-11-12): UDP hole punching with the relay as a
+  live fallback, per pair, implemented in Vector War's path proxy (M8).
 - [x] M0-T02: D2 decided: DuckDNS subdomain (no domain owned). Reserve the
   name; the token stays on the maintainer's machine.
 - [ ] M0-T05: Oracle Container Instances test (findings so far in the

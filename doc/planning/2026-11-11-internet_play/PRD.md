@@ -9,8 +9,9 @@ Internet without a VPN, through a small lobby and relay server that this
 repository builds and tests, and that a maintainer brings up and tears down by
 hand with Terraform on a free-tier host. Vector War gains a start screen when
 launched without arguments and an in-game legend showing each player's
-platform. Sessions start on the relay and then move each pair of players to a
-direct path when one works, keeping the relay as a live fallback. Excluded: a
+platform. Sessions start on the relay and then use UDP hole punching to move
+each pair of players to a direct path when one works, keeping the relay as a
+live fallback. Excluded: a
 server-run simulation, IPv6, accounts, and any GGPO library, public API, ABI,
 export or wire format change.
 
