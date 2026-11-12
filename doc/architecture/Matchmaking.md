@@ -71,7 +71,7 @@ sequenceDiagram
     B->>S: PEERS_REQUEST(token, 2, LAN)
     S-->>A: PEERS(public + LAN<br/>of every member)
     S-->>B: PEERS
-    Note over A,B: GGPO starts; traffic flows through the relay
+    Note over A,B: GGPO starts, traffic flows through the relay
     A->>B: PROBE (direct, both ways)
     B->>A: PROBE_ACK
     Note over A,B: validated and healthy:<br/>the pair switches to direct
