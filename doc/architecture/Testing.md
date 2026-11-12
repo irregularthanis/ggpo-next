@@ -37,6 +37,7 @@
   - [Two-process loopback](#two-process-loopback)
   - [Negative peer contracts](#negative-peer-contracts)
   - [Cross-platform E2E](#cross-platform-e2e)
+  - [Matchmaking and hole punching](#matchmaking-and-hole-punching)
   - [CI gating and labels](#ci-gating-and-labels)
   - [Evidence and interpretation](#evidence-and-interpretation)
   - [Current limits and follow-ups](#current-limits-and-follow-ups)
@@ -415,8 +416,14 @@ libraries, which is the default.
 | `vectorwar_gameplay_contract` | [`gameplay_determinism_test.cpp`](../../tests/vectorwar/gameplay_determinism_test.cpp) | Vector War starts and initialization are identical on every platform |
 | `vectorwar_headless_loopback` ¹ | [`run_headless_loopback.py`](../../tests/vectorwar/run_headless_loopback.py) | Two headless Vector War processes converge over UDP with rollback |
 | `vectorwar_headless_negative_contracts` ¹ | [`headless_negative.py`](../../tests/vectorwar/headless_negative.py) | The Vector War runner rejects controlled failures |
+| `matchmaking_server_contract` | [`services/matchmaking/tests`](../../services/matchmaking/tests) | Lobby and relay server: protocol v2/v3 and shared vectors, lobbies, relay forwarding, hole-punching candidates, expiry, rate limits, real sockets on loopback |
+| `vectorwar_net_contract` | [`net_contract_test.cpp`](../../tests/vectorwar/net_contract_test.cpp), [`gen_net_vectors.py`](../../tests/vectorwar/gen_net_vectors.py) | Vector War's matchmaking codec against the server's shared vectors, SipHash, probe authentication, and the path selector on a fake clock |
+| `vectorwar_net_proxy_loopback` ² | [`run_proxy_loopback.py`](../../tests/vectorwar/run_proxy_loopback.py), [`net_proxy_tool.cpp`](../../tests/vectorwar/net_proxy_tool.cpp) | Real server and one path proxy per player: 2 and 3 players switch to direct with data flowing; relay-only stays on the relay |
+| `vectorwar_matchmaking_loopback` ¹ ² | [`run_matchmaking_loopback.py`](../../tests/vectorwar/run_matchmaking_loopback.py) | Real server and real Vector War sessions: 2 and 3 players with every pair direct, 2 players relay-only; two players reach the frozen checksum |
 
 ¹ Needs the headless Vector War app, which MinGW does not build.
+² Native builds only (Linux, Windows MSVC, MinGW): a cross-compiled Android test
+cannot reach the build host's loopback server.
 
 ### Coverage map
 
@@ -445,6 +452,9 @@ libraries, which is the default.
 | MinGW-w64 | x64 (MINGW64) and x86 (MINGW32), both MSVCRT, with both libraries: full CTest, installed consumers, export manifest, no MinGW runtime imports | [`mingw-compatibility.yml`](../../.github/workflows/mingw-compatibility.yml) | MSYS2 on Windows runners |
 | Toolchain isolation | MSVC and MinGW SDKs reject each other's CMake consumers; a MinGW program runs against the MSVC `GGPO.dll` | [`mingw-compatibility.yml`](../../.github/workflows/mingw-compatibility.yml) | One runner with both toolchains |
 | Android compatibility | Three ABIs, API 21/current emulators, installed consumers, SDK audit, APK smoke, and sanitizer qualification | [`android-compatibility.yml`](../../.github/workflows/android-compatibility.yml), [`tests/android`](../../tests/android) | NDK builds, native ARM execution, and x86_64 Android emulators |
+| Matchmaking server | Protocol, lobbies, relay, candidates, abuse limits | [`services/matchmaking/tests`](../../services/matchmaking/tests) | Python server, unit and real-socket loopback |
+| Hole punching | Codec vs shared vectors, probe authentication, path selection, proxy forwarding, real sessions direct and relay-only | [`tests/vectorwar`](../../tests/vectorwar/net_contract_test.cpp), [`src/apps/vectorwar/net`](../../src/apps/vectorwar/net) | `VectorWarNet` on every platform; loopback sessions on native platforms |
+| Infrastructure | Terraform plan and state assertions, lint, server image | [`infrastructure.yml`](../../.github/workflows/infrastructure.yml), [`infra/terraform`](../../infra/terraform/README.md) | Mocked providers; no cloud account |
 | Cross-host | Linux, Windows, MinGW, and Android peers converge | [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml), [`tests/e2e`](../../tests/e2e) | Native hosted runners joined through ephemeral Tailscale nodes |
 
 ### Shared contracts
@@ -737,6 +747,34 @@ a missing, duplicate, or failed scenario in an unconditional final job. It runs 
 same-repository PRs, trusted `master` pushes, and manual dispatch; fork and
 non-owner PR jobs are skipped.
 
+### Matchmaking and hole punching
+
+Internet play is tested in three layers, all without a cloud account:
+
+```mermaid
+flowchart LR
+    Unit["Unit<br/>server rules;<br/>codec vs shared vectors;<br/>probes; selector<br/>(fake clock)"]
+    Proxy["Proxy loopback<br/>real server,<br/>path proxies,<br/>GGPO stand-in"]
+    Sessions["Session loopback<br/>real server,<br/>real Vector War,<br/>frozen checksum"]
+    Unit --> Proxy --> Sessions
+```
+
+- The server and the C++ client decode the same
+  [`protocol_vectors.json`](../../services/matchmaking/protocol_vectors.json);
+  the C++ checks are generated from it at build time.
+- On loopback every pair can go direct, so the loopback tests prove the
+  switch, data flow on both routes, and that the proxy changes nothing in the
+  game's result. Symmetric NAT staying on the relay and mid-match fallback need
+  NAT emulation (internet-play milestones M5 and M8).
+- The `Infrastructure` workflow runs Terraform `fmt`, `validate`, `terraform
+  test` with mocked providers, `tflint`, the server tests and a multi-arch
+  image smoke; its aggregate is `Complete infrastructure checks`.
+- The **Deploy matchmaking server** workflow is manual only and never a
+  required check; after `apply` it verifies the server's own DuckDNS update and
+  a lobby answer.
+
+Design and safety rules: [Matchmaking](Matchmaking.md).
+
 ### CI gating and labels
 
 [`classify-changes.yml`](../../.github/workflows/classify-changes.yml) keeps
@@ -793,8 +831,10 @@ established by the frame, checksum, callback, and lifecycle assertions.
 
 ### Current limits and follow-ups
 
-- No spectator, disconnect/resume, simulated loss, or multi-player automated
-  session exists.
+- No spectator, disconnect/resume, or simulated loss automated session exists;
+  multi-player (3) sessions run only in the matchmaking loopback tests.
+- NAT emulation for hole punching (symmetric NAT, mid-match fallback) is still
+  to come; loopback tests cannot show it.
 - The automated matrix covers native Linux, Windows, MinGW, and Android peers,
   but not SteamOS hardware.
 - The clean cross-platform workflow does not inject latency or packet loss;

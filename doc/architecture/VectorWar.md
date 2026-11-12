@@ -16,6 +16,7 @@
 - [9. Spectators](#9-spectators)
 - [10. Shutdown](#10-shutdown)
 - [Headless application contract](#headless-application-contract)
+- [Internet play](#internet-play)
 - [End-to-end two-player example](#end-to-end-two-player-example)
 - [What the sample demonstrates](#what-the-sample-demonstrates)
 - [Sample limitations](#sample-limitations)
@@ -388,6 +389,29 @@ Runner address discovery (ephemeral Tailscale nodes and a run-scoped GitHub
 Deployment record) is described in
 [Native cross-platform qualification](CrossPlatformTesting.md#address-discovery).
 
+## Internet play
+
+Besides direct `IP:PORT` play, Vector War can join a lobby on the matchmaking
+server and play 2 to 4 players across routers, using hole punching with the
+relay as a live fallback. GGPO is unchanged: a path proxy owns the public
+socket and GGPO sees each remote player at a loopback endpoint. The design,
+protocol and safety rules are in [Matchmaking](Matchmaking.md).
+
+The headless fixture exposes it for tests:
+
+```text
+VectorWarHeadless --matchmaking HOST:PORT PLAYERS LOBBY|- FRAMES RESULT.json [--relay-only]
+```
+
+It matchmakes through `VectorWarNet`, binds GGPO on a free local port, runs the
+same session loop as the direct form, and prints one `vectorwar-path:` line per
+peer with its route and round-trip times. `vectorwar_matchmaking_loopback`
+plays 2 and 3 players this way (every pair direct) and 2 players relay-only;
+two players reach the frozen checksum `b3381958`.
+
+The interactive frontends gain the same option and a start-screen field in a
+later milestone.
+
 ## Interactive platform frontends
 
 Windows retains the native Win32/GDI frontend in [`main.cpp`](../../src/apps/vectorwar/main.cpp)
@@ -474,7 +498,8 @@ For frame 120:
   Other traces still require their own cross-platform qualification.
 - Raw `memcpy` serialization is not versioned and is unsuitable for pointers or
   dynamic containers.
-- The sample uses a full peer mesh rather than an authoritative server.
+- The sample uses a full peer mesh rather than an authoritative server; the
+  matchmaking server only groups and relays players.
 - Automated tests cover the application core, native GUI lifecycle, and two
   native processes exchanging scripted inputs over loopback UDP.
 

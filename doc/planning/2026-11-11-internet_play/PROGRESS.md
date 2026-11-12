@@ -109,9 +109,11 @@ Status: In progress
 ### M7: Documentation (depends: M6)
 
 - [ ] M7-T01: Developer Guide "Play over the Internet".
-- [ ] M7-T02: `doc/architecture/Matchmaking.md`.
+- [x] M7-T02: `doc/architecture/Matchmaking.md` (kept current as the client
+  and frontends land).
 - [ ] M7-T03: `infra/terraform/README.md`.
-- [ ] M7-T04: Testing.md tables and workflow.
+- [ ] M7-T04: Testing.md tables and workflow (server, net, proxy and session
+  loopback tests and the infrastructure workflows listed; NAT emulation pending).
 
 ### M8: Direct path negotiation (depends: M5, M6)
 
