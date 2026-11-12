@@ -349,8 +349,9 @@ infra/terraform/
   capabilities.
 - **DNS module:** keeps the DuckDNS name pointing at the VM's public IP. With
   no official DuckDNS provider, the module renders the update URL and token
-  into cloud-init, which calls it at boot and every 5 minutes; Terraform outputs
-  the expected name and IP so tests can check them.
+  into cloud-init, which calls it 30 s after boot and every 5 minutes, so the
+  server publishes its own address whenever it comes up; Terraform outputs the
+  expected name and IP so tests and the deploy workflow can check them.
 - **Inputs:** image reference (digest), server port, DNS name, `admin_cidr`,
   SSH public key. **Outputs:** public IP, FQDN, server port.
 - **State backend:** the provider's free object storage through Terraform's S3
@@ -371,9 +372,10 @@ under `infra/`:
 | Variable validation | `terraform test` with `expect_failures` | Invalid inputs are rejected: a non-digest image tag, a world-open `admin_cidr`, a port outside the allowed range |
 | Lint | `tflint` with the provider ruleset | Deprecated or invalid arguments |
 
-CI never creates, changes or destroys real infrastructure and needs no cloud
-credentials. Real `apply` and `destroy` are run by hand, whenever a play
-session needs the server (see [operation](#operation)).
+Automatic CI (pushes and pull requests) never creates, changes or destroys real
+infrastructure and needs no cloud credentials. Real `apply` and `destroy` run
+only when a maintainer asks: locally, or with the manual **Deploy matchmaking
+server** workflow (see [operation](#operation)).
 
 ## Vector War client
 
@@ -464,24 +466,37 @@ mismatch, or "could not reach the relay".
 ## Operation
 
 The server is not always on. It is created when friends want to play and
-destroyed afterwards, by hand, from a maintainer's machine:
+destroyed afterwards, either way:
 
-```bash
-cd infra/terraform/envs/prod
-terraform init
-terraform apply  -var image=ghcr.io/irregularthanis/ggpo-matchmaking@sha256:...
-# play
-terraform destroy
-```
+| Way | How |
+| --- | --- |
+| One click | Actions → **Deploy matchmaking server** → Run workflow → `apply`, `plan` or `destroy` |
+| Local | `terraform -chdir=infra/terraform/envs/prod init -backend-config=backend.hcl`, then `apply` / `destroy` |
 
-- Cloud and DuckDNS credentials stay on the maintainer's machine (environment
-  variables or a git-ignored `terraform.tfvars`).
+The deploy workflow (`.github/workflows/deploy-matchmaking.yml`):
+
+- runs only on manual dispatch; it is never a required check and never runs for
+  pushes or pull requests, so it blocks nothing;
+- is serialized, so `apply` and `destroy` never race on the state;
+- reads credentials from the `matchmaking` GitHub environment, checks that all
+  are set, and keeps the OCI key and backend settings on the runner only for
+  the run;
+- deploys `:latest` pinned by digest unless a digest is given;
+- after `apply`, waits until the DuckDNS name resolves to the new VM (the VM
+  updates its own record) and the lobby answers a version probe, then prints
+  the server address;
+- after `destroy`, clears the DuckDNS record so the name does not resolve to a
+  released IP that may be reassigned.
+
+- Local runs keep credentials on the maintainer's machine (environment
+  variables or a git-ignored `terraform.tfvars`); the workflow keeps them in
+  the GitHub environment.
 - State lives in the free object storage backend so a later `destroy` works
   from any machine; it is never committed.
-- The DuckDNS name stays reserved while the server is destroyed. Vector War's
-  compiled default keeps pointing at it, and while the server is down the start
-  screen reports "matchmaking server unreachable" and direct `IP:PORT` still
-  works.
+- The DuckDNS name stays reserved while the server is destroyed (its record
+  cleared by the workflow). Vector War's compiled default keeps pointing at it,
+  and while the server is down the start screen reports "matchmaking server
+  unreachable" and direct `IP:PORT` still works.
 
 ## Documentation
 
@@ -489,8 +504,9 @@ terraform destroy
   start screen, matchmaking, the new `--matchmaking` form, when it cannot work,
   and the overlay-VPN workaround.
 - New `doc/architecture/Matchmaking.md`: protocol, lobby, relay forwarding, limits.
-- `infra/terraform/README.md`: prerequisites, one-time account setup, manual
-  apply and destroy, cost guardrails.
+- `infra/terraform/README.md`: prerequisites, one-time account setup, local
+  apply and destroy, the deploy workflow and its `matchmaking` environment,
+  cost guardrails.
 - Testing.md: the new tests in the platform and shared tables, and the
   infrastructure workflow.
 
@@ -501,7 +517,8 @@ terraform destroy
 3. Vector War client, CLI form, and NAT emulation in CI (every router type,
    2 and 4 players) against a local server container.
 4. Start screens and legend.
-5. First manual apply; point the compiled default at the DuckDNS name.
+5. First apply (deploy workflow or local); point the compiled default at the
+   DuckDNS name.
 6. Friends trial; then release with the next Vector War packages.
 7. Direct path negotiation (D6): path proxy, protocol v3 candidates, NAT matrix
    in CI, then a second friends trial comparing relay and direct latency.

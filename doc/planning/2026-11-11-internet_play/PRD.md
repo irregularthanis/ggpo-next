@@ -41,8 +41,11 @@ people play, which fits in a cloud free tier.
 - The Terraform code is covered by unit tests that run without cloud
   credentials, asserting the planned resources and their attributes, and by
   tests of the resulting state.
-- CI never creates real infrastructure. The server is applied and destroyed
-  by hand, at will.
+- Automatic CI never creates real infrastructure. The server is applied and
+  destroyed at will, from a maintainer's machine or with one click on the
+  manual, non-blocking **Deploy matchmaking server** workflow.
+- The server keeps its own DuckDNS record current after every boot; destroying
+  it clears the record.
 - The matchmaking server is a container image built and tested in CI and
   published to a free registry.
 
@@ -86,7 +89,7 @@ people play, which fits in a cloud free tier.
 | Friend with no networking knowledge | Start Vector War, press Matchmaking, and play |
 | Group of friends | Agree on a lobby code, all press Matchmaking with 2–4 players, and play together |
 | Developer testing GGPO across the Internet | Connect two specific machines by `IP:PORT` without memorizing the CLI |
-| Maintainer | Bring the server up before a play session and destroy it afterwards, each with one Terraform command, at no cost |
+| Maintainer | Bring the server up before a play session and destroy it afterwards, each with one Terraform command or one click in GitHub Actions, at no cost |
 | Reviewer | Trust infrastructure changes because tests prove the plan before it is applied |
 
 ## Success criteria
@@ -98,7 +101,9 @@ people play, which fits in a cloud free tier.
   checksum through every emulated router type: full-cone, port-restricted and
   symmetric NAT.
 - `terraform test` passes in CI with mocked providers, and a fresh apply on an
-  empty account creates a reachable server at the configured DNS name.
+  empty account (locally or from the deploy workflow) creates a server that
+  answers at the configured DNS name; the workflow verifies both the DNS update
+  and the lobby answer.
 - Monthly hosting cost: $0.
 - Existing Vector War command lines, tests, release packages and E2E checks
   are unchanged.
