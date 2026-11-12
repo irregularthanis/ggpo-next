@@ -8,6 +8,7 @@ Status: Draft
 
 - [Verified baseline](#verified-baseline)
 - [Architecture](#architecture)
+  - [Relay forwarding](#relay-forwarding)
 - [Matchmaking protocol](#matchmaking-protocol)
 - [Matchmaking server](#matchmaking-server)
 - [Infrastructure](#infrastructure)
@@ -29,9 +30,11 @@ Facts from `4587549` that constrain the design:
 | Fact | Source | Consequence |
 | --- | --- | --- |
 | GGPO accepts only a numeric IPv4 string in `GGPOPlayer.u.remote.ip_address[32]` | [`ggponet.h`](../../../src/include/ggponet.h), `inet_pton(AF_INET)` in both adapters | Vector War resolves hostnames and passes numeric IPv4; no library change |
-| GGPO binds one UDP socket to the given local port and sends to the exact configured endpoint | [`platform_posix.cpp`](../../../src/lib/ggpo/platform_posix.cpp), [`platform_windows.cpp`](../../../src/lib/ggpo/platform_windows.cpp) | Each peer must be given the other's **public** `IP:PORT`, which only a rendezvous server can observe |
+| GGPO binds one UDP socket to the given local port and sends to the exact configured endpoint | [`platform_posix.cpp`](../../../src/lib/ggpo/platform_posix.cpp), [`platform_windows.cpp`](../../../src/lib/ggpo/platform_windows.cpp) | Routers rewrite ports, so a peer cannot simply be told the other's address; a relay presents every remote player as `server:port` instead |
 | GGPO sends keep-alives every 200 ms and sync retries every 2 s | [`udp_proto.cpp`](../../../src/lib/ggpo/network/udp_proto.cpp) | Once open, NAT mappings stay open during play |
-| GGPO's packet validator rejects unknown messages | [`protocol_test.cpp`](../../../tests/unit/protocol_test.cpp) | Late matchmaking or hello packets reaching the GGPO socket are dropped safely |
+| GGPO's packet validator rejects unknown messages | [`protocol_test.cpp`](../../../tests/unit/protocol_test.cpp) | Late matchmaking, `BOUND` or `HELLO` packets reaching the GGPO socket are dropped safely |
+| GGPO's peer-to-peer backend keeps one `UdpProtocol` endpoint per remote player and sends each player's packets to that player's configured address | [`p2p.cpp`](../../../src/lib/ggpo/backends/p2p.cpp) | A relay port per player makes every remote player look like an ordinary peer; no library change |
+| `GGPO_MAX_PLAYERS` is 4 | [`ggponet.h`](../../../src/include/ggponet.h) | Groups of 2 to 4 players |
 | `ggpo_chat` is a no-op in every backend | [`backend.h`](../../../src/lib/ggpo/backends/backend.h) | Platform names cannot travel inside the GGPO session; they are exchanged before it starts |
 | The SDL renderer draws no text; its status goes to the window title | [`sdl_renderer.cpp`](../../../src/apps/vectorwar/sdl_renderer.cpp) | SDL needs an embedded bitmap font for the start screen and legend |
 | GDI and SDL use different ship colors (GDI: red, green, blue, gray; SDL: lighter red, green, blue, light gray) | [`gdi_renderer.cpp`](../../../src/apps/vectorwar/gdi_renderer.cpp), `SetPlayerColor` in `sdl_renderer.cpp` | Each legend uses its own renderer's colors, read from one table per renderer |
@@ -40,65 +43,116 @@ Facts from `4587549` that constrain the design:
 
 ## Architecture
 
+Decision (2026-11-12): **relay**, not hole punching. Every matchmade session
+goes through the server, which forwards GGPO's own packets between players
+without understanding them. This works behind any router, including symmetric
+NAT, carrier-grade NAT and mobile data, and supports 2 to 4 players. GGPO, its
+peer-to-peer backend, rollback and wire format are unchanged; each client just
+sees every remote player at `server:relay_port`. Hole punching is a later
+latency optimization ([open decisions](#open-decisions)).
+
 ```mermaid
 flowchart TB
     subgraph CLOUD["Free-tier cloud, created by Terraform"]
         direction TB
         DNS["DuckDNS name<br/>name.duckdns.org<br/>→ VM IP"]
-        VM["Always-free VM<br/>firewall: UDP 7100,<br/>SSH from admin only"]
-        CTR["Container<br/>matchmaking server<br/>image from GHCR"]
+        VM["Always-free VM<br/>firewall: UDP 7100<br/>and relay range,<br/>SSH from admin only"]
+        CTR["Container<br/>lobby + relay<br/>image from GHCR"]
         DNS --> VM --> CTR
     end
 
-    subgraph A["Player A, behind NAT"]
-        VWA["Vector War<br/>start screen →<br/>Matchmaking"]
+    subgraph P1["Player 1"]
+        VW1["Vector War<br/>GGPO socket<br/>port P1"]
     end
 
-    subgraph B["Player B, behind NAT"]
-        VWB["Vector War<br/>start screen →<br/>Matchmaking"]
+    subgraph P2["Player 2"]
+        VW2["Vector War<br/>GGPO socket<br/>port P2"]
     end
 
-    VWA -->|"1. REGISTER<br/>from local port P"| CTR
-    VWB -->|"1. REGISTER<br/>from local port Q"| CTR
-    CTR -->|"2. MATCH: peer's<br/>public IP:port,<br/>player number,<br/>platform"| VWA
-    CTR -->|"2. MATCH"| VWB
-    VWA <-->|"3. PUNCH, then<br/>4. GGPO session<br/>direct UDP"| VWB
+    subgraph PN["Players 3, 4"]
+        VWN["Vector War<br/>(optional)"]
+    end
+
+    VW1 -->|"1. JOIN lobby,<br/>group size"| CTR
+    VW2 -->|"1. JOIN"| CTR
+    VWN -->|"1. JOIN"| CTR
+    CTR -->|"2. MATCH: player<br/>number, relay port<br/>per player, token,<br/>platforms"| VW1
+    VW1 <-->|"3. BIND, then<br/>4. GGPO packets<br/>via relay ports"| CTR
+    VW2 <-->|"3, 4"| CTR
+    VWN <-->|"3, 4"| CTR
 ```
 
-1. Each client sends `REGISTER` from the same local UDP port GGPO will use. The
-   server sees the router's public `IP:PORT` for that socket.
-2. When two clients are waiting, the server sends each a `MATCH` with the
-   other's public endpoint, player number, and platform.
-3. Both clients send `PUNCH` to each other from that port until they hear the
-   peer, opening both routers' mappings.
-4. The client closes its socket and GGPO binds the same port at once, pointed
-   at the peer's public endpoint. Play then uses only direct UDP; the server is
-   not involved.
+1. Each client sends `JOIN` with a lobby code (or none) and a group size of 2,
+   3 or 4, from the same local UDP port GGPO will use.
+2. When a group is full, the server allocates one relay port `R[j]` per player
+   `j` and sends each member a `MATCH`: its player number, every player's relay
+   port and platform, and a random 64-bit session token.
+3. From its GGPO port, each client sends `BIND` (token and own player number) to
+   every other player's relay port until acknowledged. The server records the
+   exact source address each `BIND` arrives from, so routers that use a
+   different public port per destination are handled.
+4. The client closes its socket, GGPO binds the same port, and every remote
+   player `k` is configured as `server:R[k]`. GGPO's packets then flow through
+   the relay.
 
-The server never forwards game traffic. A relay is a [follow-up](#open-decisions).
+### Relay forwarding
+
+For a session with players `1..N` and relay ports `R[1..N]`:
+
+- `addr[i][k]`: the source address observed when player `i`'s `BIND` reached
+  `R[k]`.
+- A datagram arriving at `R[k]` from `addr[i][k]` is player `i`'s packet for
+  player `k`. The server forwards it unchanged **from** `R[i]` **to**
+  `addr[k][i]`, so player `k` sees it coming from `server:R[i]`, exactly the
+  endpoint it configured for player `i`. GGPO's per-endpoint state machine is
+  satisfied without knowing a relay exists.
+- Datagrams from any other address are dropped, so the relay cannot be used to
+  reach arbitrary hosts or to amplify traffic: output never exceeds input, and
+  only to addresses that proved they hold the session token.
+- A session ends after 30 s with no traffic from any member, or 2 hours at
+  most; its ports return to the pool.
+
+```mermaid
+sequenceDiagram
+    participant P1 as Player 1<br/>GGPO
+    participant R as Relay<br/>R[1], R[2]
+    participant P2 as Player 2<br/>GGPO
+
+    P1->>R: BIND token, me=1<br/>to R[2]
+    P2->>R: BIND token, me=2<br/>to R[1]
+    R-->>P1: BOUND
+    R-->>P2: BOUND
+    P1->>R: GGPO packet<br/>to R[2]
+    R->>P2: same bytes<br/>from R[1]
+    P2->>R: GGPO packet<br/>to R[1]
+    R->>P1: same bytes<br/>from R[2]
+```
 
 ## Matchmaking protocol
 
 Small fixed-layout UDP datagrams, little-endian, versioned. Defined once in a
 shared header for the C++ client and mirrored in the server, with a shared test
-vector file that both sides' tests parse.
+vector file that both sides' tests parse. Version 2 replaces the unreleased
+version 1 (two-player hole punching).
 
 | Message | Direction | Fields |
 | --- | --- | --- |
-| `REGISTER` | client → server | magic `VWMM`, version, type, 64-bit client nonce, platform code, protocol build, padding to 64 bytes |
-| `WAITING` | server → client | magic, version, type, nonce echo, queue position |
-| `MATCH` | server → client | magic, version, type, nonce echo, session id, player number (1 or 2), peer public IPv4 and port, peer platform code |
-| `PUNCH` | client ↔ client | magic, version, type, session id, sender platform code, sender nonce |
-| `HELLO` | client ↔ client (direct mode) | magic, version, type, sender platform code, sender nonce |
-| `ERROR` | server → client | magic, version, type, nonce echo, code (version mismatch, rate limited, server full) |
+| `JOIN` | client → server port 7100 | magic `VWMM`, version, type, 64-bit client nonce, platform code, group size (2–4), lobby code (8 bytes, zero = public queue), padding to 64 bytes |
+| `WAITING` | server → client | magic, version, type, nonce echo, players joined, group size |
+| `MATCH` | server → client | magic, version, type, nonce echo, session token, player number, player count, per player: relay port and platform code |
+| `BIND` | client → relay port | magic, version, type, session token, sender player number, padding to `BOUND` size |
+| `BOUND` | relay port → client | magic, version, type, session token, sender player number |
+| `HELLO` | client ↔ client (direct `IP:PORT` mode only) | magic, version, type, sender nonce, sender platform code |
+| `ERROR` | server → client | magic, version, type, nonce echo, code (version mismatch, rate limited, server full, bad group size) |
 
 Rules:
 
-- Every server reply is no larger than the request it answers (`REGISTER` is
-  padded to 64 bytes), so the server cannot be used to amplify floods.
-- Clients resend `REGISTER` every second while waiting; the server forgets a
-  client after 10 s without one, and a matched session after 60 s.
-- Pairing is first come, first served: the earlier registrant is player 1.
+- Every reply is no larger than the request it answers (`JOIN` is padded to
+  64 bytes; `MATCH` for 4 players is under 64), so nothing amplifies floods.
+- Clients resend `JOIN` every second while waiting; the server forgets a
+  waiting client after 10 s without one.
+- Groups form first come, first served within the same lobby code and group
+  size; earlier joiners get lower player numbers.
 - The magic and version let GGPO's validator and the server reject each
   other's packets.
 
@@ -106,14 +160,17 @@ Rules:
 
 - **Language:** Python 3 `asyncio`, standard library only, matching the
   repository's existing Python test tooling.
-- **Location:** `services/matchmaking/` with `server.py`, `protocol.py`,
-  `tests/`, and a `Dockerfile` (`python:3-slim`, non-root user, read-only
-  filesystem, UDP 7100).
-- **State:** in memory only. Restarting the container drops waiting players,
-  who simply re-register.
-- **Limits:** per-source rate limit, maximum waiting clients, and no logging of
-  addresses beyond what is needed while a session is live.
-- **Health:** answers a `REGISTER` with an unknown version with `ERROR`, which
+- **Location:** `services/matchmaking/` with `protocol.py`, `matchmaker.py`
+  (lobbies), `relay.py` (port pool and forwarding), `server.py`, `tests/`, and
+  a `Dockerfile` (non-root user, read-only filesystem).
+- **Ports:** lobby on UDP 7100; relay ports from a configurable range
+  (default 7101–7499, so up to 99 four-player sessions at once).
+- **State:** in memory only. Restarting the container ends sessions; players
+  rejoin.
+- **Limits:** per-source rate limit on `JOIN`, maximum waiting clients,
+  maximum concurrent sessions, per-player forwarding rate cap well above
+  GGPO's needs, and no logging of addresses.
+- **Health:** answers a `JOIN` with an unknown version with `ERROR`, which
   doubles as an external health probe.
 
 ## Infrastructure
@@ -170,8 +227,8 @@ infra/terraform/
 ```
 
 - **Host module:** one always-free VM with the provider's container-ready
-  image; a security list or firewall allowing UDP 7100 from anywhere and SSH
-  only from `admin_cidr`; cloud-init that installs Docker and runs the server
+  image; a security list or firewall allowing UDP 7100 and the relay port
+  range from anywhere and SSH only from `admin_cidr`; cloud-init that installs Docker and runs the server
   image by digest with `--restart unless-stopped`, read-only and with dropped
   capabilities.
 - **DNS module:** keeps the DuckDNS name pointing at the VM's public IP. With
@@ -193,7 +250,7 @@ under `infra/`:
 | Check | Tool | What it proves |
 | --- | --- | --- |
 | Formatting and syntax | `terraform fmt -check`, `terraform validate` | The configuration parses with the pinned providers |
-| Plan assertions | `terraform test` with `mock_provider`, `command = plan` | The firewall opens exactly UDP 7100 publicly and SSH only from `admin_cidr`; the VM shape is in the free tier; cloud-init runs the requested image digest; cloud-init updates the configured DuckDNS name |
+| Plan assertions | `terraform test` with `mock_provider`, `command = plan` | The firewall opens exactly UDP 7100 and the relay range publicly and SSH only from `admin_cidr`; the VM shape is in the free tier; cloud-init runs the requested image digest; cloud-init updates the configured DuckDNS name |
 | State assertions | `terraform test` with `mock_provider`, `command = apply` | Applying against mocks produces state whose outputs (IP, FQDN, port) are wired correctly between modules, and the DuckDNS update in cloud-init targets the VM's IP and name from state |
 | Variable validation | `terraform test` with `expect_failures` | Invalid inputs are rejected: a non-digest image tag, a world-open `admin_cidr`, a port outside the allowed range |
 | Lint | `tflint` with the provider ruleset | Deprecated or invalid arguments |
@@ -209,12 +266,13 @@ New portable sources in `src/apps/vectorwar/`, shared by all frontends:
 | Source | Responsibility |
 | --- | --- |
 | `vw_udp.cpp` / `.h` | Minimal UDP socket for the pre-session exchange (POSIX and Winsock), bound to the same local port GGPO will use |
-| `vw_matchmaking.cpp` / `.h` | Resolve the server name, `REGISTER` / `WAITING` / `MATCH`, then `PUNCH` until the peer answers or 5 s pass |
+| `vw_matchmaking.cpp` / `.h` | Resolve the server name, `JOIN` / `WAITING` / `MATCH`, then `BIND` to every other player's relay port until each answers `BOUND` or 5 s pass |
 | `vw_hello.cpp` / `.h` | Direct mode: exchange `HELLO` with the given peer for up to 3 s to learn its platform and agree on player order |
 | `vw_platform_name.h` | Compile-time platform name: Windows, Linux, Android |
 
 Then the client closes its socket and calls the existing `VectorWar_Init` with
-the peer's public endpoint.
+`num_players` from `MATCH`, itself as the local player at its player number, and
+every remote player `k` at `server_ip:R[k]`.
 
 - **Player order in direct mode:** both peers exchange random nonces in
   `HELLO`; the higher nonce is player 1, so no one has to choose.
@@ -222,7 +280,8 @@ the peer's public endpoint.
   GGPO sees them.
 - **Command line:** every existing argument form is unchanged. One new form
   lets tests, scripts and the Android launcher use matchmaking:
-  `vectorwar --matchmaking HOST[:PORT] LOCAL_PORT`. The headless fixture gains
+  `vectorwar --matchmaking HOST[:PORT] PLAYERS [LOBBY] LOCAL_PORT`, with
+  `PLAYERS` from 2 to 4 and an optional lobby code. The headless fixture gains
   the same option for CI.
 - **Default server:** `GGPO_VECTORWAR_MATCHMAKING_HOST` (CMake cache variable,
   default the production name from D2) compiled into the binary and shown,
@@ -231,20 +290,20 @@ the peer's public endpoint.
 ## Start screen
 
 Shown only when Vector War is started with no arguments. **Every client gets
-the same choices**, direct `IP:PORT` or **Matchmaking**, with the same default
+the same choices**, direct `IP:PORT` or **Matchmaking** with a player count
+(2–4) and an optional lobby code to share with friends, with the same default
 server; only the toolkit differs. The `--matchmaking` command-line form works
 on every client as well, including the headless fixture.
 
 | Platform | Implementation |
 | --- | --- |
-| Windows | A Win32 dialog in `VectorWar.rc`: remote IP, remote port, local port, matchmaking server; **Connect**, **Matchmaking**, **Quit** |
+| Windows | A Win32 dialog in `VectorWar.rc`: remote IP, remote port, local port, matchmaking server, players, lobby code; **Connect**, **Matchmaking**, **Quit** |
 | Linux | An SDL form drawn in the game window with the embedded bitmap font: the same fields with SDL text input, keyboard and mouse |
-| Android | `LauncherActivity` gains the matchmaking server field and a **Matchmaking** button that passes `--matchmaking HOST LOCAL_PORT`; the existing fields keep working |
+| Android | `LauncherActivity` gains server, players and lobby fields and a **Matchmaking** button that passes `--matchmaking HOST PLAYERS LOBBY LOCAL_PORT`; the existing fields keep working |
 
-While matchmaking, the screen shows "Waiting for an opponent…", the queue
-position, and **Cancel**. A failure says what happened: server unreachable,
-version mismatch, or "could not reach your opponent (your network may block
-direct connections)".
+While matchmaking, the screen shows "Waiting for players… 2 of 4", and
+**Cancel**. A failure says what happened: server unreachable, version
+mismatch, or "could not reach the relay".
 
 ## Platform legend
 
@@ -263,12 +322,13 @@ direct connections)".
 | Layer | Test | Runs in |
 | --- | --- | --- |
 | Protocol | Shared test vectors parsed by the C++ client and the Python server; malformed, truncated and oversized datagrams rejected | CTest on every platform; server unit tests |
-| Server | Pairing order, expiry, rate limits, reply-never-larger-than-request, version mismatch | Python `unittest`, registered in CTest, plus container build smoke |
-| Client | `REGISTER` retries, `MATCH` handling, `PUNCH` timeout, `HELLO` ordering, hostname resolution, against a fake server on loopback | CTest on every platform |
+| Lobby | Grouping by lobby code and size, player numbering, expiry, rate limits, reply-never-larger-than-request, version mismatch | Python `unittest`, registered in CTest, plus container build smoke |
+| Relay | `BIND` latching per destination port, forwarding source and destination for 2–4 players, unbound and foreign sources dropped, output never larger than input, session expiry returns ports | Python `unittest`, including real UDP sockets on loopback |
+| Client | `JOIN` retries, `MATCH` handling, `BIND` timeout, `HELLO` ordering, hostname resolution, against a fake server on loopback | CTest on every platform |
 | Legend and start screen | Host contracts: legend rows and colors from a fixed player table; start screen fields map to the same `VectorWar_Init` arguments as the CLI | Existing GUI host contract tests (Win32, SDL dummy driver, Android emulator) |
-| NAT traversal | Linux network namespaces with `iptables` NAT: full-cone, port-restricted and symmetric routers; server in the "Internet" namespace; two headless Vector War peers with `--matchmaking` | New Linux CI job: full-cone and port-restricted must reach the frozen checksum; symmetric must fail fast with the clear error |
+| NAT traversal | Linux network namespaces with `iptables` NAT: full-cone, port-restricted and symmetric routers; server in the "Internet" namespace; 2 and 4 headless Vector War peers with `--matchmaking`, mixing router types | New Linux CI job: every combination, symmetric included, must reach the frozen checksum |
 | Impairment | The same topology with `tc netem` latency and loss | Scheduled, not required per change |
-| Real world | Two friends on different home networks, per the checklist in `PROGRESS.md` | Manual, before calling the feature done |
+| Real world | Two and four friends on different home networks and mobile data, per the checklist in `PROGRESS.md` | Manual, before calling the feature done |
 
 ## CI
 
@@ -312,7 +372,7 @@ terraform destroy
 - Developer Guide: "Play over the Internet" under Common to all platforms:
   start screen, matchmaking, the new `--matchmaking` form, when it cannot work,
   and the overlay-VPN workaround.
-- New `doc/architecture/Matchmaking.md`: protocol, server, NAT behavior, limits.
+- New `doc/architecture/Matchmaking.md`: protocol, lobby, relay forwarding, limits.
 - `infra/terraform/README.md`: prerequisites, one-time account setup, manual
   apply and destroy, cost guardrails.
 - Testing.md: the new tests in the platform and shared tables, and the
@@ -322,8 +382,8 @@ terraform destroy
 
 1. Server and protocol with tests (no cloud).
 2. Terraform with tests (no apply).
-3. Vector War client, CLI form, and NAT emulation in CI against a local
-   server container.
+3. Vector War client, CLI form, and NAT emulation in CI (every router type,
+   2 and 4 players) against a local server container.
 4. Start screens and legend.
 5. First manual apply; point the compiled default at the DuckDNS name.
 6. Friends trial; then release with the next Vector War packages.
@@ -334,6 +394,8 @@ terraform destroy
 | --- | --- | --- |
 | D1 | Cloud provider | Oracle Cloud Always Free |
 | D2 | DNS | **Decided:** DuckDNS subdomain (no domain owned) |
-| D3 | Server port | UDP 7100 |
-| D4 | Relay for symmetric NAT and mobile data | Not in this plan; follow-up using the same server and protocol (`RELAY` message type reserved) |
+| D3 | Server ports | UDP 7100 for lobbies; relay range 7101–7499 |
+| D4 | Relay or hole punching | **Decided (2026-11-12):** relay every matchmade session; works behind any router and for 2–4 players |
+| D6 | Direct hole punching to cut relay latency | Follow-up: try a direct path per pair and fall back to the relay |
+| D7 | Server-run simulation (authoritative host backend for desync detection, late join, replays) | Separate future plan; needs a new GGPO backend next to peer-to-peer |
 | D5 | Frame delay tuning from measured round-trip time | Not in this plan; follow-up |
