@@ -744,6 +744,13 @@ lightweight path. Compatibility workflows still report their check state, but
 skip build, emulator, and E2E matrices. Manual dispatch always runs the full
 suite.
 
+Pull-request runs of the compatibility and native E2E workflows share one
+concurrency group per PR: a new push cancels the superseded run, so runners
+only work on the latest commit. Cancelled E2E roles still run their
+`if: always()` cleanup. Runs on `master` and manual dispatches are never
+cancelled; release packaging, sanitizer qualification and the owner-approval
+check have no concurrency group.
+
 Branch protection requires two stable aggregate checks for the new platform
 coverage. `Complete Android compatibility` covers every Android build, native
 test, emulator, SDK, sanitizer, Vector War APK, and APK-smoke lane. `Complete
