@@ -1,3 +1,6 @@
+// This executable supplies its own main(). Without this, SDL's Android
+// headers rename main to SDL_main for SDLActivity and the link fails.
+#define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 #include <stdio.h>
 
