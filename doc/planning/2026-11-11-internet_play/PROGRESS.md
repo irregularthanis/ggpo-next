@@ -10,7 +10,10 @@ Status: Not started
 
 - [ ] M0-T01: Confirm the current always-free terms for D1 (VM shape,
   outbound allowance, region availability) and record them here.
-- [ ] M0-T02: Decide D2 (DNS) and reserve the name.
+- [x] M0-T02: D2 decided: DuckDNS subdomain (no domain owned). Reserve the
+  name and store the token as a deploy secret.
+- [ ] M0-T05: Check whether Oracle Container Instances fall inside the
+  always-free allowance; if so, run the server there instead of on a VM.
 - [ ] M0-T03: NAT mapping spike in Linux network namespaces: a mapping created
   by one socket survives closing it and GGPO binding the same port, for
   full-cone and port-restricted NAT; record the time window.
@@ -28,11 +31,12 @@ Status: Not started
 
 - [ ] M2-T01: `host` module: VM, firewall (UDP server port public, SSH from
   `admin_cidr`), cloud-init running the image by digest.
-- [ ] M2-T02: `dns` module: DNS-only A record.
+- [ ] M2-T02: `dns` module: DuckDNS update from cloud-init (boot and every
+  5 minutes), token from a secret.
 - [ ] M2-T03: `envs/prod` with remote state in free object storage and a
   committed provider lock file.
 - [ ] M2-T04: `terraform test` plan assertions (firewall, VM shape, image
-  digest, DNS record).
+  digest, DuckDNS update).
 - [ ] M2-T05: `terraform test` state assertions with mocked apply (outputs
   wired, DNS points at the VM IP from state).
 - [ ] M2-T06: Variable validation tests with `expect_failures`.

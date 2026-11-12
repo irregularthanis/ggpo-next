@@ -43,7 +43,7 @@ Facts from `4587549` that constrain the design:
 flowchart TB
     subgraph CLOUD["Free-tier cloud, created by Terraform"]
         direction TB
-        DNS["DNS record<br/>mm.example<br/>A → VM IP"]
+        DNS["DuckDNS name<br/>name.duckdns.org<br/>→ VM IP"]
         VM["Always-free VM<br/>firewall: UDP 7100,<br/>SSH from admin only"]
         CTR["Container<br/>matchmaking server<br/>image from GHCR"]
         DNS --> VM --> CTR
@@ -128,7 +128,17 @@ Rules:
 
 M0 confirms the chosen provider's current free-tier terms before any apply.
 
-### DNS (decision D2)
+**Why a VM and not a managed container service.** The server already runs as a
+container; the VM exists only to run it. Matchmaking and hole punching need a
+public UDP port, and the free managed container services (Cloud Run, Render,
+Koyeb) accept only HTTP or TCP, while those with UDP (Fly.io, Azure Container
+Instances, AWS Fargate) have no lasting free tier. Oracle Container Instances
+support UDP; if M0 confirms they fall inside the always-free allowance, the
+`host` module switches to them and nothing else changes.
+
+### DNS (decision D2: DuckDNS)
+
+Decided: no domain is owned, so the server uses a free DuckDNS subdomain.
 
 | Option | Cost | Notes |
 | --- | --- | --- |
@@ -151,8 +161,10 @@ infra/terraform/
   only from `admin_cidr`; cloud-init that installs Docker and runs the server
   image by digest with `--restart unless-stopped`, read-only and with dropped
   capabilities.
-- **DNS module:** one A record, DNS-only, short TTL, pointing at the VM's
-  public IP.
+- **DNS module:** keeps the DuckDNS name pointing at the VM's public IP. With
+  no official DuckDNS provider, the module renders the update URL and token
+  into cloud-init, which calls it at boot and every 5 minutes; Terraform outputs
+  the expected name and IP so tests can check them.
 - **Inputs:** image reference (digest), server port, DNS name, `admin_cidr`,
   SSH public key. **Outputs:** public IP, FQDN, server port.
 - **State backend:** the provider's free object storage through Terraform's S3
@@ -168,8 +180,8 @@ under `infra/`:
 | Check | Tool | What it proves |
 | --- | --- | --- |
 | Formatting and syntax | `terraform fmt -check`, `terraform validate` | The configuration parses with the pinned providers |
-| Plan assertions | `terraform test` with `mock_provider`, `command = plan` | The firewall opens exactly UDP 7100 publicly and SSH only from `admin_cidr`; the VM shape is in the free tier; cloud-init runs the requested image digest; the DNS record is DNS-only with the configured name |
-| State assertions | `terraform test` with `mock_provider`, `command = apply` | Applying against mocks produces state whose outputs (IP, FQDN, port) are wired correctly between modules, and the DNS record points at the VM's IP from state |
+| Plan assertions | `terraform test` with `mock_provider`, `command = plan` | The firewall opens exactly UDP 7100 publicly and SSH only from `admin_cidr`; the VM shape is in the free tier; cloud-init runs the requested image digest; cloud-init updates the configured DuckDNS name |
+| State assertions | `terraform test` with `mock_provider`, `command = apply` | Applying against mocks produces state whose outputs (IP, FQDN, port) are wired correctly between modules, and the DuckDNS update in cloud-init targets the VM's IP and name from state |
 | Variable validation | `terraform test` with `expect_failures` | Invalid inputs are rejected: a non-digest image tag, a world-open `admin_cidr`, a port outside the allowed range |
 | Lint | `tflint` with the provider ruleset | Deprecated or invalid arguments |
 
@@ -287,7 +299,7 @@ direct connections)".
 | ID | Decision | Default until decided |
 | --- | --- | --- |
 | D1 | Cloud provider | Oracle Cloud Always Free |
-| D2 | DNS: Cloudflare on an owned domain, or a free DuckDNS subdomain | DuckDNS, so no domain purchase is needed |
+| D2 | DNS | **Decided:** DuckDNS subdomain (no domain owned) |
 | D3 | Server port | UDP 7100 |
 | D4 | Relay for symmetric NAT and mobile data | Not in this plan; follow-up using the same server and protocol (`RELAY` message type reserved) |
 | D5 | Frame delay tuning from measured round-trip time | Not in this plan; follow-up |
