@@ -46,6 +46,9 @@ public:
    bool OpenAndBind(uint16 requested_port, int retries, uint16 *bound_port);
    IoResult Send(const void *data, int bytes, const UdpEndpoint &to);
    IoResult Receive(void *data, int capacity, int *bytes, UdpEndpoint *from);
+   // Native error code (errno or WSAGetLastError) from the most recent Send or
+   // Receive that returned IO_ERROR or IO_WOULD_BLOCK, for diagnostics only.
+   int LastError() const;
    void Close();
 
 private:

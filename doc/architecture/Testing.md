@@ -408,6 +408,7 @@ libraries, which is the default.
 | `timesync_contract` | [`timesync_test.cpp`](../../tests/unit/timesync_test.cpp) | Frame-advantage estimation and recommended waits |
 | `core_utilities_contract` | [`core_utilities_test.cpp`](../../tests/unit/core_utilities_test.cpp) | Ring buffer, static buffer and bit-vector encoding |
 | `protocol_contract` | [`protocol_test.cpp`](../../tests/unit/protocol_test.cpp) | Packet validation: exact sizes, truncated, trailing or unknown messages |
+| `udp_send_contract` | [`udp_send_test.cpp`](../../tests/unit/udp_send_test.cpp) | A failed UDP send (would block or error) is logged and dropped, never an assertion |
 | `public_api_contract` | [`public_api_contract_test.cpp`](../../tests/contract/public_api_contract_test.cpp) | All 16 public entry points: construction, lifecycle, null guards, config, logging |
 | `fake_platform_conformance` | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | The shared adapter conformance contract against the fake adapter |
 | `vectorwar_state_contract` | [`gamestate_contract_test.cpp`](../../tests/vectorwar/gamestate_contract_test.cpp) | Vector War simulation hits the canonical checkpoints over 180 frames |

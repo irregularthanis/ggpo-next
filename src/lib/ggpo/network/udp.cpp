@@ -45,9 +45,18 @@ Udp::SendTo(char *buffer, int len,
             const ggpo_platform::UdpEndpoint &destination)
 {
    const ggpo_platform::IoResult result = _socket.Send(buffer, len, destination);
-   ASSERT(result == ggpo_platform::IO_OK);
    char formatted[64];
    ggpo_platform::FormatUdpEndpoint(destination, formatted, ARRAY_SIZE(formatted));
+   if (result != ggpo_platform::IO_OK) {
+      // UDP may drop any datagram, and the protocol already retransmits sync
+      // requests, inputs and acks. A full send buffer or a transient error is
+      // therefore a lost packet, not a fatal condition.
+      Log("send of %d bytes to %s failed (%s, native error %d); dropping packet.\n",
+          len, formatted,
+          result == ggpo_platform::IO_WOULD_BLOCK ? "would block" : "error",
+          _socket.LastError());
+      return;
+   }
    Log("sent packet length %d to %s.\n", len, formatted);
 }
 
