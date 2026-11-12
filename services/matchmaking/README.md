@@ -8,8 +8,8 @@ at `server:relay_port`. See the
 
 | Path | Contents |
 | --- | --- |
-| [`matchmaking/protocol.py`](matchmaking/protocol.py) | Version-2 wire format: `JOIN`, `WAITING`, `MATCH`, `BIND`, `BOUND`, `HELLO`, `ERROR` |
-| [`matchmaking/matchmaker.py`](matchmaking/matchmaker.py) | Lobbies: groups of 2-4 by lobby code and size, expiry, rate limits |
+| [`matchmaking/protocol.py`](matchmaking/protocol.py) | Version-2 wire format: `JOIN`, `WAITING`, `MATCH`, `BIND`, `BOUND`, `HELLO`, `ERROR`; version 3 adds the hole-punching candidates `PEERS_REQUEST` and `PEERS` |
+| [`matchmaking/matchmaker.py`](matchmaking/matchmaker.py) | Lobbies: groups of 2-4 by lobby code and size, expiry, rate limits; hole-punching candidates per session |
 | [`matchmaking/relay.py`](matchmaking/relay.py) | Relay port pool, `BIND` latching, forwarding with source rewrite, caps, expiry |
 | [`matchmaking/server.py`](matchmaking/server.py) | `asyncio` UDP front end: lobby port plus one socket per relay port |
 | [`protocol_vectors.json`](protocol_vectors.json) | Encoded examples shared with the C++ client tests |
@@ -26,6 +26,12 @@ at `server:relay_port`. See the
 4. GGPO starts with each remote player `k` at `server:R[k]`. A packet from
    player `i` arriving at `R[k]` is forwarded unchanged from `R[i]` to player
    `k`, who therefore sees it from the endpoint it configured for player `i`.
+5. Version-3 clients then send `PEERS_REQUEST(token, me, LAN address)` to the
+   lobby port from the same socket and get `PEERS`: every member's public
+   address (as the server saw that member's request) and private LAN address.
+   They use these candidates to punch direct paths and keep the relay as the
+   fallback ([direct path negotiation](../../doc/planning/2026-11-11-internet_play/TECH_PLAN.md#direct-path-negotiation)).
+   A version-2 server never answers, and the client stays on the relay.
 
 ## Run locally
 
@@ -48,3 +54,7 @@ docker run --rm --network host --read-only ggpo-matchmaking
 - Waiting clients expire after 10 s without a `JOIN`; sessions after 30 s
   without traffic or 2 hours in total, and their ports return to the pool.
 - No player addresses are logged.
+- `PEERS` is exactly the size of `PEERS_REQUEST`; only members holding a live
+  session's token get an answer, and unknown tokens get none. Only RFC 1918
+  LAN addresses are passed on, so a member cannot aim the others' probes at an
+  arbitrary host. Candidates end with their relay session.

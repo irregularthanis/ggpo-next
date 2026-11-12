@@ -11,6 +11,7 @@ VECTORS = Path(__file__).resolve().parents[1] / "protocol_vectors.json"
 CONSTRUCTORS = {
     "JOIN": p.Join, "WAITING": p.Waiting, "MATCH": p.Match, "BIND": p.Bind,
     "BOUND": p.Bound, "HELLO": p.Hello, "ERROR": p.Error,
+    "PEERS_REQUEST": p.PeersRequest, "PEERS": p.Peers,
 }
 
 
@@ -23,6 +24,11 @@ def build(vector):
     for name in ("relay_ports", "platforms"):
         if name in fields:
             fields[name] = tuple(fields[name])
+    if "lan" in fields and vector["type"] == "PEERS_REQUEST":
+        fields["lan"] = tuple(fields["lan"])
+    for name in ("public", "lan"):
+        if name in fields and vector["type"] == "PEERS":
+            fields[name] = tuple(tuple(c) for c in fields[name])
     return CONSTRUCTORS[vector["type"]](**fields)
 
 
@@ -57,6 +63,48 @@ class Sizes(unittest.TestCase):
         four = p.encode(p.Match(1, 2, 1, (7101, 7102, 7103, 7104), (1, 2, 3, 0)))
         self.assertEqual(len(two), p.MATCH_SIZE)
         self.assertEqual(len(four), p.MATCH_SIZE)
+
+
+class HolePunchingCandidates(unittest.TestCase):
+    def test_request_and_reply_are_the_same_size(self):
+        request = p.encode(p.PeersRequest(1, 1, ("192.168.1.2", 7000)))
+        reply = p.encode(p.Peers(1, (("198.51.100.1", 1),) * 4, (("10.0.0.1", 2),) * 4))
+        self.assertEqual(len(request), p.PEERS_SIZE)
+        self.assertEqual(len(reply), p.PEERS_SIZE)
+
+    def test_version_three_only_for_candidate_messages(self):
+        request = bytearray(p.encode(p.PeersRequest(1, 1)))
+        self.assertEqual(request[4], p.PEERS_VERSION)
+        request[4] = p.VERSION
+        with self.assertRaises(p.ProtocolError):
+            p.decode(bytes(request))
+        join = bytearray(p.encode(p.Join(1, 1, 2)))
+        join[4] = p.PEERS_VERSION
+        with self.assertRaises(p.ProtocolError):
+            p.decode(bytes(join))
+
+    def test_padding_player_and_unused_slots_are_checked(self):
+        request = p.encode(p.PeersRequest(1, 2, ("192.168.1.2", 7000)))
+        for index in (len(request) - 1, 17, 26):
+            data = bytearray(request)
+            data[index] = 1
+            with self.subTest(index=index), self.assertRaises(p.ProtocolError):
+                p.decode(bytes(data))
+        bad_player = bytearray(request)
+        bad_player[16] = 5
+        with self.assertRaises(p.ProtocolError):
+            p.decode(bytes(bad_player))
+        reply = bytearray(p.encode(p.Peers(1, (("1.2.3.4", 1), ("5.6.7.8", 2)),
+                                           (("0.0.0.0", 0), ("0.0.0.0", 0)))))
+        reply[-1] = 1
+        with self.assertRaises(p.ProtocolError):
+            p.decode(bytes(reply))
+
+    def test_only_rfc1918_addresses_are_private_lan(self):
+        for ip in ("10.1.2.3", "172.16.0.1", "172.31.255.255", "192.168.50.1"):
+            self.assertTrue(p.is_private_lan(ip), ip)
+        for ip in ("100.64.0.1", "172.32.0.1", "8.8.8.8", "127.0.0.1", "169.254.1.1"):
+            self.assertFalse(p.is_private_lan(ip), ip)
 
 
 class LobbyCodes(unittest.TestCase):

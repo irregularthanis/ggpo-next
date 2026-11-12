@@ -112,8 +112,9 @@ Status: In progress
 
 ### M8: Direct path negotiation (depends: M5, M6)
 
-- [ ] M8-T01: Protocol v3: LAN candidate in `JOIN`, `PEERS` message, vectors;
-  v2 clients and servers keep relay-only behavior.
+- [x] M8-T01: Protocol v3: `PEERS_REQUEST` (LAN candidate) and `PEERS`,
+  shared vectors; v2 clients and servers keep relay-only behavior (server side;
+  the C++ client decodes the same vectors in M8-T02).
 - [ ] M8-T02: Path proxy between GGPO's loopback endpoints and one public
   socket; inbound from relay and validated direct addresses.
 - [ ] M8-T03: `PROBE`/`PROBE_ACK`/`KEEPALIVE` with SipHash MAC; unit tests

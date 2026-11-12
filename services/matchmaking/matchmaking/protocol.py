@@ -1,4 +1,4 @@
-"""Vector War matchmaking and relay wire protocol, version 2.
+"""Vector War matchmaking and relay wire protocol, versions 2 and 3.
 
 Every datagram starts with an 8-byte header: the magic ``VWMM``, the protocol
 version, the message type and two reserved zero bytes. Integers are
@@ -8,13 +8,21 @@ holds encoded examples that both sides' tests decode.
 No reply is ever larger than the request that caused it: ``JOIN`` is padded to
 64 bytes and ``MATCH`` is 44; ``BOUND`` is exactly the size of ``BIND``. The
 server therefore cannot amplify a spoofed flood.
+
+Version 3 adds only hole-punching candidates: ``PEERS_REQUEST`` and ``PEERS``
+carry version 3 in their header and are the same size, so the rule still
+holds. Every other message stays version 2; a version-2 server never answers
+a ``PEERS_REQUEST``, and the client then stays on the relay.
 """
+
+import ipaddress
 
 import struct
 from dataclasses import dataclass
 
 MAGIC = b"VWMM"
 VERSION = 2
+PEERS_VERSION = 3
 MAX_PLAYERS = 4
 
 HEADER = struct.Struct("<4sBBH")
@@ -26,6 +34,8 @@ BIND = 4
 BOUND = 5
 HELLO = 6
 ERROR = 7
+PEERS_REQUEST = 8
+PEERS = 9
 
 PLATFORM_UNKNOWN = 0
 PLATFORM_WINDOWS = 1
@@ -53,13 +63,36 @@ _MATCH_SLOT = struct.Struct("<HBB")       # relay port, platform, reserved (x MA
 _BIND_BODY = struct.Struct("<QB3x")       # session token, sender player
 _HELLO_BODY = struct.Struct("<QB3x")      # sender nonce, sender platform
 _ERROR_BODY = struct.Struct("<QB3x")      # nonce, error code
+_PEERS_REQUEST_BODY = struct.Struct("<QB3x4sH2x")  # token, sender player, LAN IPv4, LAN port
+_PEERS_BODY = struct.Struct("<QB3x")      # session token, player count
+_PEERS_SLOT = struct.Struct("<4sH4sH")    # public IPv4, port, LAN IPv4, port (x MAX_PLAYERS)
 
 MATCH_SIZE = HEADER.size + _MATCH_BODY.size + MAX_PLAYERS * _MATCH_SLOT.size
 BIND_SIZE = HEADER.size + _BIND_BODY.size
+PEERS_SIZE = HEADER.size + _PEERS_BODY.size + MAX_PLAYERS * _PEERS_SLOT.size
+NO_CANDIDATE = ("0.0.0.0", 0)
 
 
 class ProtocolError(ValueError):
-    """A datagram that is not a valid version-2 message."""
+    """A datagram that is not a valid protocol message."""
+
+
+def _pack_ip(address):
+    try:
+        return ipaddress.IPv4Address(address).packed
+    except ValueError:
+        raise ValueError(f"not an IPv4 address: {address!r}") from None
+
+
+def _unpack_ip(raw):
+    return str(ipaddress.IPv4Address(raw))
+
+
+def is_private_lan(address):
+    """True for RFC 1918 addresses, the only LAN candidates the server relays."""
+    ip = ipaddress.IPv4Address(address)
+    return any(ip in ipaddress.IPv4Network(net)
+               for net in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"))
 
 
 def normalize_lobby(code):
@@ -122,8 +155,27 @@ class Error:
     code: int
 
 
-def _header(message_type):
-    return HEADER.pack(MAGIC, VERSION, message_type, 0)
+@dataclass(frozen=True)
+class PeersRequest:
+    """Version 3: ask for every member's hole-punching candidates and report
+    this client's LAN address (``0.0.0.0``/0 when none). The server records
+    the request's source address as this player's public candidate."""
+    token: int
+    player: int
+    lan: tuple = NO_CANDIDATE
+
+
+@dataclass(frozen=True)
+class Peers:
+    """Version 3: public and LAN ``(ip, port)`` per player; unknown slots are
+    ``0.0.0.0``/0 until that player has sent its own request."""
+    token: int
+    public: tuple
+    lan: tuple
+
+
+def _header(message_type, version=VERSION):
+    return HEADER.pack(MAGIC, version, message_type, 0)
 
 
 def encode(message):
@@ -152,6 +204,19 @@ def encode(message):
         return _header(HELLO) + _HELLO_BODY.pack(message.nonce, message.platform)
     if isinstance(message, Error):
         return _header(ERROR) + _ERROR_BODY.pack(message.nonce, message.code)
+    if isinstance(message, PeersRequest):
+        ip, port = message.lan
+        data = _header(PEERS_REQUEST, PEERS_VERSION) + _PEERS_REQUEST_BODY.pack(
+            message.token, message.player, _pack_ip(ip), port)
+        return data + bytes(PEERS_SIZE - len(data))
+    if isinstance(message, Peers):
+        count = len(message.public)
+        if not 2 <= count <= MAX_PLAYERS or len(message.lan) != count:
+            raise ValueError("PEERS needs 2-4 players with public and LAN candidates")
+        slots = b"".join(_PEERS_SLOT.pack(_pack_ip(pub[0]), pub[1], _pack_ip(lan[0]), lan[1])
+                         for pub, lan in zip(message.public, message.lan))
+        slots += bytes((MAX_PLAYERS - count) * _PEERS_SLOT.size)
+        return _header(PEERS, PEERS_VERSION) + _PEERS_BODY.pack(message.token, count) + slots
     raise TypeError(f"not a protocol message: {message!r}")
 
 
@@ -168,10 +233,14 @@ def peek_header(data):
 
 
 def decode(data):
-    """Decode exact version-2 wire bytes; raise ``ProtocolError`` otherwise."""
+    """Decode exact wire bytes; raise ``ProtocolError`` otherwise.
+
+    ``PEERS_REQUEST`` and ``PEERS`` must carry version 3, every other message
+    version 2."""
     version, message_type = peek_header(data)
-    if version != VERSION:
-        raise ProtocolError(f"unsupported version {version}")
+    expected = PEERS_VERSION if message_type in (PEERS_REQUEST, PEERS) else VERSION
+    if version != expected:
+        raise ProtocolError(f"unsupported version {version} for type {message_type}")
     body = data[HEADER.size:]
 
     def exact(layout):
@@ -214,4 +283,28 @@ def decode(data):
         return Hello(*exact(_HELLO_BODY))
     if message_type == ERROR:
         return Error(*exact(_ERROR_BODY))
+    if message_type == PEERS_REQUEST:
+        if len(data) != PEERS_SIZE:
+            raise ProtocolError(f"PEERS_REQUEST must be {PEERS_SIZE} bytes")
+        token, player, lan_ip, lan_port = _PEERS_REQUEST_BODY.unpack_from(body)
+        if any(body[_PEERS_REQUEST_BODY.size:]) or any(body[9:12]) or any(body[18:20]):
+            raise ProtocolError("PEERS_REQUEST padding must be zero")
+        if not 1 <= player <= MAX_PLAYERS:
+            raise ProtocolError("invalid player number")
+        return PeersRequest(token, player, (_unpack_ip(lan_ip), lan_port))
+    if message_type == PEERS:
+        if len(data) != PEERS_SIZE:
+            raise ProtocolError(f"PEERS must be {PEERS_SIZE} bytes")
+        token, count = _PEERS_BODY.unpack_from(body)
+        if any(body[9:12]):
+            raise ProtocolError("PEERS reserved bytes must be zero")
+        if not 2 <= count <= MAX_PLAYERS:
+            raise ProtocolError("invalid player count")
+        slots = [_PEERS_SLOT.unpack_from(body, _PEERS_BODY.size + i * _PEERS_SLOT.size)
+                 for i in range(MAX_PLAYERS)]
+        if any(body[_PEERS_BODY.size + count * _PEERS_SLOT.size:]):
+            raise ProtocolError("unused PEERS slots must be zero")
+        return Peers(token,
+                     tuple((_unpack_ip(ip), port) for ip, port, _, _ in slots[:count]),
+                     tuple((_unpack_ip(ip), port) for _, _, ip, port in slots[:count]))
     raise ProtocolError(f"unknown message type {message_type}")

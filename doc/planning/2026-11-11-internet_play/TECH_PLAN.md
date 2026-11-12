@@ -186,10 +186,14 @@ needs it.
 | Public (server-reflexive) address of peer `k` | Server, as observed on its lobby port | Direct path across different routers |
 | LAN address of peer `k` | Sent by the peer in `JOIN` | Players on the same network, where routers often do not hairpin |
 
-Protocol v3 adds an optional LAN address to `JOIN` and a `PEERS` message with
-each member's public and LAN candidates, sent after `MATCH`. v2 clients and
-servers keep working on the relay only; a v3 client that receives no `PEERS`
-never leaves the relay.
+Protocol v3 adds `PEERS_REQUEST` (session token, player, LAN address) and
+`PEERS` (each member's public and LAN candidates). The client sends the request
+to the lobby port from its socket after `MATCH`; the server records the
+request's source as that member's public candidate and answers with the same
+size, keeping the no-amplification rule. `JOIN` and every other message stay
+version 2. Only RFC 1918 LAN addresses are relayed, so a member cannot aim the
+others' probes at an arbitrary host. v2 clients and servers keep working on the
+relay only; a v3 client that receives no `PEERS` never leaves the relay.
 
 #### Probes and authentication
 

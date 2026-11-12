@@ -68,6 +68,7 @@ class RelayPool:
         self.ports = tuple(ports)
         self._free = list(self.ports)
         self._by_port = {}
+        self._by_token = {}
         self._tokens = tokens or (lambda: secrets.randbits(64))
         self.sessions_created = 0
 
@@ -87,8 +88,13 @@ class RelayPool:
         session = Session(self._tokens(), ports, now)
         for port in ports:
             self._by_port[port] = session
+        self._by_token[session.token] = session
         self.sessions_created += 1
         return session
+
+    def session(self, token):
+        """The live session with this token, or ``None``."""
+        return self._by_token.get(token)
 
     def handle(self, port, data, source, now):
         """Return ``[(from_port, bytes, destination), ...]`` for one datagram."""
@@ -138,6 +144,7 @@ class RelayPool:
         ended = {id(s): s for s in self._by_port.values()
                  if now - s.last_activity > IDLE_EXPIRY_S or now - s.created > MAX_SESSION_S}
         for session in ended.values():
+            self._by_token.pop(session.token, None)
             for port in session.ports:
                 del self._by_port[port]
                 self._free.append(port)

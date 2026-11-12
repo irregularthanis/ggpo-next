@@ -6,6 +6,12 @@ full the relay allocates one port per player and every member receives a
 ``MATCH`` naming its player number, the session token, and every player's
 relay port and platform.
 
+After ``MATCH``, version-3 clients send ``PEERS_REQUEST`` from the same
+socket to learn every member's hole-punching candidates: the public address the
+request arrived from, and the private LAN address the client reported. Only
+members holding a live session's token are answered, and the reply is the
+request's size.
+
 ``Matchmaker.handle`` is pure apart from its own state and the relay pool: it
 takes one datagram, its source address and the current time, and returns the
 datagrams to send. ``server.py`` only moves bytes.
@@ -28,6 +34,12 @@ class _Client:
     nonce: int
     platform: int
     last_seen: float
+
+
+@dataclass
+class _Candidates:
+    public: list                     # player - 1 -> (ip, port) or None
+    lan: list
 
 
 @dataclass
@@ -60,6 +72,7 @@ class Matchmaker:
         self._member_of = {}            # address -> (lobby, size)
         self._assigned = {}             # address -> _Assignment
         self._buckets = {}              # source IP -> _TokenBucket
+        self._candidates = {}           # session token -> _Candidates
 
     @property
     def waiting_count(self):
@@ -72,6 +85,9 @@ class Matchmaker:
             version, message_type = protocol.peek_header(data)
         except protocol.ProtocolError:
             return []
+        if (message_type == protocol.PEERS_REQUEST and version == protocol.PEERS_VERSION
+                and len(data) == protocol.PEERS_SIZE):
+            return self._peers(data, address, now)
         # Only a full-size JOIN earns a reply, so no reply can exceed its request.
         if message_type != protocol.JOIN or len(data) != protocol.JOIN_SIZE:
             return []
@@ -119,6 +135,7 @@ class Matchmaker:
             return [(protocol.encode(protocol.Error(c.nonce, protocol.ERROR_SERVER_FULL)), a)
                     for a, c in members]
         platforms = tuple(client.platform for _, client in members)
+        self._candidates[session.token] = _Candidates([None] * len(members), [None] * len(members))
         replies = []
         for player, (address, client) in enumerate(members, start=1):
             self._leave(address)
@@ -127,6 +144,33 @@ class Matchmaker:
             self._assigned[address] = _Assignment(client.nonce, reply, now + MATCH_RESEND_S)
             replies.append((reply, address))
         return replies
+
+    def _peers(self, data, address, now):
+        try:
+            request = protocol.decode(data)
+        except protocol.ProtocolError:
+            return []
+        bucket = self._buckets.setdefault(address[0], _TokenBucket(now))
+        if not bucket.take(now):
+            return []
+        session = self._relay.session(request.token)
+        candidates = self._candidates.get(request.token)
+        # Unknown tokens and out-of-range players get no reply: no oracle.
+        if session is None or candidates is None or request.player > session.player_count:
+            return []
+        index = request.player - 1
+        candidates.public[index] = (address[0], address[1])
+        lan_ip, lan_port = request.lan
+        private = lan_port != 0 and protocol.is_private_lan(lan_ip)
+        # Only RFC 1918 LAN addresses are passed on, so a member cannot point
+        # the others' probes at an arbitrary host.
+        candidates.lan[index] = (lan_ip, lan_port) if private else None
+        none = protocol.NO_CANDIDATE
+        reply = protocol.Peers(
+            request.token,
+            tuple(c or none for c in candidates.public),
+            tuple(c or none for c in candidates.lan))
+        return [(protocol.encode(reply), address)]
 
     def _leave(self, address):
         key = self._member_of.pop(address, None)
@@ -147,3 +191,6 @@ class Matchmaker:
             del self._assigned[address]
         for ip in [ip for ip, b in self._buckets.items() if now - b.updated > WAITING_EXPIRY_S]:
             del self._buckets[ip]
+        # Candidates live exactly as long as their relay session.
+        for token in [t for t in self._candidates if self._relay.session(t) is None]:
+            del self._candidates[token]

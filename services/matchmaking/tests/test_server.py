@@ -97,5 +97,29 @@ class LoopbackServer(unittest.IsolatedAsyncioTestCase):
         await self.assert_mesh(await self.play(4, "K7Q2"))
 
 
+    async def test_members_exchange_hole_punching_candidates(self):
+        matches = await self.play(3)
+        for round_number in range(2):          # the second round sees everyone
+            replies = {}
+            for i, (sock, match) in matches.items():
+                lan = (f"192.168.1.{10 + i}", 7000 + i)
+                await self.send(sock, p.encode(p.PeersRequest(match.token, i, lan)), self.lobby)
+                reply, _ = await self.receive(sock)
+                self.assertEqual(len(reply), p.PEERS_SIZE)
+                replies[i] = p.decode(reply)
+        expected_public = tuple(sock.getsockname() for sock, _ in
+                                (matches[i] for i in sorted(matches)))
+        expected_lan = tuple((f"192.168.1.{10 + i}", 7000 + i) for i in sorted(matches))
+        for reply in replies.values():
+            self.assertEqual(reply.public, expected_public)
+            self.assertEqual(reply.lan, expected_lan)
+        # The public candidates are directly reachable here (no NAT): a direct
+        # datagram arrives from exactly the advertised candidate.
+        (sock_1, _), (sock_2, _) = matches[1], matches[2]
+        await self.send(sock_1, b"punch", expected_public[1])
+        data, source = await self.receive(sock_2)
+        self.assertEqual((data, source), (b"punch", expected_public[0]))
+
+
 if __name__ == "__main__":
     unittest.main()

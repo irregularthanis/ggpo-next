@@ -134,3 +134,59 @@ class Abuse(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class HolePunchingCandidates(unittest.TestCase):
+    """Version 3: every member learns the others' public and LAN candidates."""
+
+    def setUp(self):
+        self.relay = RelayPool(range(7101, 7121), tokens=lambda: 0xABCD)
+        self.m = mm.Matchmaker(self.relay)
+        self.m.handle(join(1), A, 0.0)
+        self.m.handle(join(2), B, 0.0)
+
+    def ask(self, player, address, lan=p.NO_CANDIDATE, token=0xABCD, now=1.0):
+        replies = self.m.handle(p.encode(p.PeersRequest(token, player, lan)), address, now)
+        return [p.decode(raw) for raw, to in replies if to == address]
+
+    def test_each_member_learns_the_others_candidates(self):
+        first = self.ask(1, A, ("192.168.1.10", 7000))
+        self.assertEqual(first, [p.Peers(0xABCD, (A, p.NO_CANDIDATE),
+                                         (("192.168.1.10", 7000), p.NO_CANDIDATE))])
+        second = self.ask(2, B, ("10.0.0.7", 7001))
+        self.assertEqual(second, [p.Peers(0xABCD, (A, B),
+                                          (("192.168.1.10", 7000), ("10.0.0.7", 7001)))])
+
+    def test_public_candidate_is_the_observed_source_address(self):
+        moved = ("198.51.100.10", 45555)              # e.g. a NAT rebinding
+        reply = self.ask(1, moved)[0]
+        self.assertEqual(reply.public[0], moved)
+
+    def test_non_private_lan_addresses_are_dropped(self):
+        for lan in (("8.8.8.8", 53), ("100.64.1.1", 7000), ("127.0.0.1", 7000)):
+            with self.subTest(lan=lan):
+                self.assertEqual(self.ask(1, A, lan)[0].lan[0], p.NO_CANDIDATE)
+
+    def test_unknown_token_or_player_gets_no_reply(self):
+        self.assertEqual(self.ask(1, A, token=0x1234), [])
+        self.assertEqual(self.ask(3, C), [])
+
+    def test_candidates_end_with_the_relay_session(self):
+        self.assertTrue(self.ask(1, A))
+        self.relay.expire(1000.0)
+        self.assertEqual(self.ask(1, A, now=1000.0), [])
+
+    def test_replies_are_request_sized_and_rate_limited(self):
+        request = p.encode(p.PeersRequest(0xABCD, 1))
+        answered = 0
+        for _ in range(int(mm.RATE_BURST) + 5):
+            replies = self.m.handle(request, A, 2.0)
+            for raw, _ in replies:
+                self.assertEqual(len(raw), len(request))
+            answered += len(replies)
+        self.assertLessEqual(answered, int(mm.RATE_BURST))
+
+    def test_version_two_peers_request_is_ignored(self):
+        data = bytearray(p.encode(p.PeersRequest(0xABCD, 1)))
+        data[4] = p.VERSION
+        self.assertEqual(self.m.handle(bytes(data), A, 1.0), [])

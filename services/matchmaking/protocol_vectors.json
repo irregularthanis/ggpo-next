@@ -1,5 +1,5 @@
 {
-  "description": "Vector War matchmaking and relay protocol version 2 test vectors. Decoded by the Python server tests and the C++ client tests; regenerate only for a new protocol version.",
+  "description": "Vector War matchmaking and relay protocol test vectors: version 2, plus the version-3 hole-punching messages PEERS_REQUEST and PEERS. Decoded by the Python server tests and the C++ client tests; regenerate only for a new protocol version.",
   "version": 2,
   "vectors": [
     {
@@ -109,6 +109,104 @@
         "code": 1
       },
       "hex": "56574d4d02070000efcdab896745230101000000"
+    },
+    {
+      "name": "peers_request_lan",
+      "type": "PEERS_REQUEST",
+      "fields": {
+        "token": 1234605616436508552,
+        "player": 2,
+        "lan": [
+          "192.168.1.20",
+          7000
+        ]
+      },
+      "hex": "56574d4d03080000887766554433221102000000c0a80114581b000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "peers_request_no_lan",
+      "type": "PEERS_REQUEST",
+      "fields": {
+        "token": 1234605616436508552,
+        "player": 1,
+        "lan": [
+          "0.0.0.0",
+          0
+        ]
+      },
+      "hex": "56574d4d03080000887766554433221101000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "peers_two_partial",
+      "type": "PEERS",
+      "fields": {
+        "token": 1234605616436508552,
+        "public": [
+          [
+            "198.51.100.10",
+            40001
+          ],
+          [
+            "0.0.0.0",
+            0
+          ]
+        ],
+        "lan": [
+          [
+            "192.168.1.10",
+            7000
+          ],
+          [
+            "0.0.0.0",
+            0
+          ]
+        ]
+      },
+      "hex": "56574d4d03090000887766554433221102000000c633640a419cc0a8010a581b000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "peers_four_full",
+      "type": "PEERS",
+      "fields": {
+        "token": 7,
+        "public": [
+          [
+            "198.51.100.10",
+            40001
+          ],
+          [
+            "203.0.113.20",
+            50002
+          ],
+          [
+            "192.0.2.30",
+            60003
+          ],
+          [
+            "192.0.2.40",
+            60004
+          ]
+        ],
+        "lan": [
+          [
+            "10.0.0.5",
+            7000
+          ],
+          [
+            "0.0.0.0",
+            0
+          ],
+          [
+            "172.16.4.2",
+            7001
+          ],
+          [
+            "192.168.0.9",
+            7002
+          ]
+        ]
+      },
+      "hex": "56574d4d03090000070000000000000004000000c633640a419c0a000005581bcb00711452c3000000000000c000021e63eaac100402591bc000022864eac0a800095a1b"
     }
   ]
 }
