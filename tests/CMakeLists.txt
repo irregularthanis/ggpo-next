@@ -533,6 +533,21 @@ if(TARGET VectorWarHeadless)
         TIMEOUT ${GGPO_PEER_CTEST_TIMEOUT}
         LABELS "native;network;sample"
     )
+    # Real sessions through matchmaking: hole punching (2 and 3 players, every
+    # pair direct) and relay fallback, reaching the frozen checksum. Native
+    # builds only: the server runs on the build host's loopback.
+    if(NOT CMAKE_CROSSCOMPILING)
+        add_test(NAME vectorwar_matchmaking_loopback
+            COMMAND ${PYTHON_EXECUTABLE}
+                    ${CMAKE_CURRENT_SOURCE_DIR}/vectorwar/run_matchmaking_loopback.py
+                    $<TARGET_FILE:VectorWarHeadless>
+                    ${PROJECT_SOURCE_DIR}/services/matchmaking
+        )
+        set_tests_properties(vectorwar_matchmaking_loopback PROPERTIES
+            TIMEOUT 300
+            LABELS "native;network;sample;matchmaking"
+        )
+    endif()
     add_test(NAME vectorwar_headless_negative_contracts
         COMMAND ${PYTHON_EXECUTABLE}
                 ${CMAKE_CURRENT_SOURCE_DIR}/vectorwar/headless_negative.py

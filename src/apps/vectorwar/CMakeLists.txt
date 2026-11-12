@@ -13,13 +13,31 @@ else()
 	target_compile_options(VectorWarCore PRIVATE -Wall -Wextra)
 endif()
 
+# Matchmaking client and path proxy (hole punching with relay fallback).
+set(GGPO_VECTORWAR_NET_ALL ${GGPO_EXAMPLES_VECTORWAR_NET_SRC} ${GGPO_EXAMPLES_VECTORWAR_NET_IO_SRC})
+add_library(VectorWarNet STATIC ${GGPO_VECTORWAR_NET_ALL})
+add_common_flags(VectorWarNet)
+target_include_directories(VectorWarNet PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/net)
+if(WIN32)
+	target_link_libraries(VectorWarNet PUBLIC ws2_32)
+else()
+	find_package(Threads REQUIRED)
+	target_link_libraries(VectorWarNet PUBLIC Threads::Threads)
+endif()
+if(MSVC)
+	target_compile_options(VectorWarNet PRIVATE "/W4")
+	target_compile_definitions(VectorWarNet PRIVATE _CRT_SECURE_NO_WARNINGS _WINSOCK_DEPRECATED_NO_WARNINGS)
+else()
+	target_compile_options(VectorWarNet PRIVATE -Wall -Wextra)
+endif()
+
 add_executable(VectorWarHeadless
 	headless_main.cpp
 	headless_host.cpp
 	headless_host.h
 )
 add_common_flags(VectorWarHeadless)
-target_link_libraries(VectorWarHeadless PRIVATE VectorWarCore)
+target_link_libraries(VectorWarHeadless PRIVATE VectorWarCore VectorWarNet)
 if(MSVC)
 	target_compile_options(VectorWarHeadless PRIVATE "/W4" "/WX")
 	target_compile_definitions(VectorWarHeadless PRIVATE _CRT_SECURE_NO_WARNINGS)
