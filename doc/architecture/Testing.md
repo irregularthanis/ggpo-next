@@ -432,7 +432,7 @@ libraries, which is the default.
 | `matchmaking_server_contract` | [`services/matchmaking/tests`](../../services/matchmaking/tests) | Lobby and relay server: protocol v2/v3 and shared vectors, lobbies, relay forwarding, hole-punching candidates, expiry, rate limits, real sockets on loopback |
 | `vectorwar_net_contract` | [`net_contract_test.cpp`](../../tests/vectorwar/net_contract_test.cpp), [`gen_net_vectors.py`](../../tests/vectorwar/gen_net_vectors.py) | Vector War's matchmaking codec against the server's shared vectors, SipHash, probe authentication, and the path selector on a fake clock |
 | `vectorwar_net_proxy_loopback` ² | [`run_proxy_loopback.py`](../../tests/vectorwar/run_proxy_loopback.py), [`net_proxy_tool.cpp`](../../tests/vectorwar/net_proxy_tool.cpp) | Real server and one path proxy per player: 2 and 3 players switch to direct with data flowing; relay-only stays on the relay; an unreachable server and a user cancel end matchmaking with a clear error |
-| `vectorwar_matchmaking_loopback` ¹ ² | [`run_matchmaking_loopback.py`](../../tests/vectorwar/run_matchmaking_loopback.py) | Real server and real Vector War sessions: 2, 3 and 4 players with every pair direct, 2 players relay-only; all group sizes reach their frozen checksums |
+| `vectorwar_matchmaking_loopback` ¹ ² | [`run_matchmaking_loopback.py`](../../tests/vectorwar/run_matchmaking_loopback.py) | Real server and real Vector War sessions: 2, 3 and 4 players with every pair direct, 2 players relay-only; every group converges and two players reach the portable frozen checksum |
 
 ¹ Needs the headless Vector War app, which MinGW does not build.
 ² Native builds only (Linux, Windows MSVC, MinGW): a cross-compiled Android test

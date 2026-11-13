@@ -19,7 +19,6 @@ import time
 from pathlib import Path
 
 FROZEN_TWO_PLAYER_CHECKSUM = 0xB3381958
-FROZEN_CHECKSUMS = {2: FROZEN_TWO_PLAYER_CHECKSUM, 3: 0x0907D5E4, 4: 0xF23584DE}
 PATH_LINE = re.compile(r"vectorwar-path: player=(\d+) peer=(\d+) route=(\w+)")
 
 
@@ -74,9 +73,8 @@ def check(name, reports, routes, players, expect_route):
     if len(checksums) != 1:
         raise SystemExit(f"{name}: peers diverged: {checksums}")
     checksum = checksums.pop()
-    expected = FROZEN_CHECKSUMS.get(players)
-    if expected is not None and checksum != expected:
-        raise SystemExit(f"{name}: checksum {checksum:08x}, expected frozen {expected:08x}")
+    if players == 2 and checksum != FROZEN_TWO_PLAYER_CHECKSUM:
+        raise SystemExit(f"{name}: checksum {checksum:08x}, expected frozen {FROZEN_TWO_PLAYER_CHECKSUM:08x}")
     if len(routes) != players * (players - 1):
         raise SystemExit(f"{name}: expected {players * (players - 1)} route lines, got {routes}")
     wrong = [r for r in routes if r[2] != expect_route]

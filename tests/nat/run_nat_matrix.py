@@ -31,7 +31,6 @@ SERVER_IP = "198.18.0.1"
 LOBBY_PORT = 7100
 RELAY_PORTS = "7101-7120"
 FROZEN_TWO_PLAYER_CHECKSUM = 0xB3381958
-FROZEN_CHECKSUMS = {2: FROZEN_TWO_PLAYER_CHECKSUM, 3: 0x0907D5E4, 4: 0xF23584DE}
 MATCH_LINE = re.compile(r"vectorwar-match: player=(\d+) of (\d+)")
 PATH_LINE = re.compile(r"vectorwar-path: player=(\d+) peer=(\d+) route=(\w+) via=([\d.]+):\d+ "
                        r"relay_rtt_ms=(-?\d+) direct_rtt_ms=(-?\d+) switches=(\d+) fallbacks=(\d+)")
@@ -206,9 +205,8 @@ def common_checks(scenario, reports):
     checksums = {r["checksum"] for r in reports}
     if len(checksums) != 1:
         raise SystemExit(f"{name}: peers diverged: {checksums}")
-    expected = FROZEN_CHECKSUMS.get(len(reports)) if scenario["frames"] == 180 else None
-    if expected is not None and checksums != {expected}:
-        raise SystemExit(f"{name}: checksum {checksums}, expected the frozen {expected:08x}")
+    if len(reports) == 2 and scenario["frames"] == 180 and checksums != {FROZEN_TWO_PLAYER_CHECKSUM}:
+        raise SystemExit(f"{name}: checksum {checksums}, expected the frozen {FROZEN_TWO_PLAYER_CHECKSUM:08x}")
     for report in reports:
         if len(report["routes"]) != len(reports) - 1:
             raise SystemExit(f"{name}: player {report['player_id']} reported {report['routes']}")

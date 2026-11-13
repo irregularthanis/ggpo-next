@@ -423,8 +423,8 @@ It matchmakes through `VectorWarNet`, binds GGPO on a free local port, runs the
 same session loop as the direct form, and prints one `vectorwar-path:` line per
 peer with its route and round-trip times. `vectorwar_matchmaking_loopback`
 plays 2, 3 and 4 players this way (every pair direct) and 2 players relay-only.
-The frozen frame-180 checksums are `b3381958`, `0907d5e4`, and `f23584de`
-respectively.
+Every peer in a group must agree; the portable two-player frame-180 oracle is
+the frozen checksum `b3381958`.
 
 ### Start screen
 

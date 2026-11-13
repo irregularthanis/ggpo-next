@@ -74,8 +74,9 @@ Status: In progress
   on the Win32 and SDL (Linux, Android) frontends through shared
   `matchmade.cpp`; headless `--matchmaking HOST:PORT PLAYERS LOBBY|- FRAMES
   RESULT.json [--relay-only]`; `vectorwar_matchmaking_loopback` plays 2, 3 and
-  4 players with every pair direct plus 2 players relay-only; every group size
-  has a frozen frame-180 checksum. Every existing argument form is unchanged.
+  4 players with every pair direct plus 2 players relay-only; every group
+  converges and the two-player checksum is frozen. Every existing argument
+  form is unchanged.
 - [ ] M3-T05: Codec, path-selector and proxy contracts plus real loopback
   server/session tests run through shared CTest registration. A portable
   fake-server client contract that can execute in cross-compiled Android
@@ -98,8 +99,8 @@ Status: In progress
   and the server (`tests/nat/run_nat_matrix.py`, `nat-traversal.yml`). Full
   cone is not emulated; port-restricted is the stricter case.
 - [ ] M5-T02: Implementation ready: 2-, 3- and 4-player sessions cover cone,
-  symmetric and mixed router topologies; frozen frame-180 checksums are
-  asserted. Awaiting the root-only NAT CI result.
+  symmetric and mixed router topologies; every group must agree and the
+  portable two-player checksum is frozen. Awaiting the root-only NAT CI result.
 - [ ] M5-T03: Implementation ready: `tc netem` applies 60 ± 15 ms delay, 2%
   loss and 1% reordering to a paced match; the NAT workflow also runs weekly.
   Awaiting the root-only NAT CI result.
@@ -168,6 +169,6 @@ For each session, record:
 | ID | Evidence | Result |
 |---|---|---|
 | M1-T01, M3-T01 | [`vw_net_protocol`](../../../src/apps/vectorwar/net/vw_net_protocol.cpp), [`vw_udp`](../../../src/apps/vectorwar/net/vw_udp.cpp), [`vectorwar_net_contract`](../../../tests/vectorwar/net_contract_test.cpp) | Implemented in the shared client and exercised by CTest |
-| M5-T02 (local) | `python3 tests/vectorwar/run_matchmaking_loopback.py ...` | 2/3/4-player real UDP sessions passed; frozen checksums `b3381958`, `0907d5e4`, `f23584de` |
+| M5-T02 (local) | `python3 tests/vectorwar/run_matchmaking_loopback.py ...` | 2/3/4-player real UDP sessions passed; every peer in each group agreed and the two-player checksum was `b3381958` |
 | M5-T02, M5-T03 | [`run_nat_matrix.py`](../../../tests/nat/run_nat_matrix.py), [`nat-traversal.yml`](../../../.github/workflows/nat-traversal.yml) | Four-player mixed NAT and paced `tc netem` scenarios implemented; hosted root-only result pending |
 | M8-T07 | [`MatchmadeFillLegend`](../../../src/apps/vectorwar/matchmade.cpp), [`ggpoutil_perfmon_update_paths`](../../../src/apps/vectorwar/ggpo_perfmon.cpp) | Proxy route/RTT snapshot connected to the Windows performance monitor; platform CI pending |
