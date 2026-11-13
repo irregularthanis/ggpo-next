@@ -86,6 +86,7 @@ Declared in the [root build file](../../CMakeLists.txt):
 | `GGPO_BUILD_SDK` | `ON` | Adds the GGPO library targets |
 | `GGPO_BUILD_VECTORWAR` | `ON` (except MinGW) | Adds the portable Vector War core and headless fixture |
 | `GGPO_BUILD_VECTORWAR_GUI` | `ON` | Adds the Win32, Linux SDL2, or Android SDL2 interactive frontend; disable for SDL-free headless builds |
+| `GGPO_VECTORWAR_MATCHMAKING_HOST` | empty | Server prefilled on the Vector War start screen (declared in [`src/apps/vectorwar/CMakeLists.txt`](../../src/apps/vectorwar/CMakeLists.txt)); the APK takes `-PmatchmakingHost=` |
 | `BUILD_SHARED_LIBS` | unset | Unset builds both libraries; `ON` builds only shared, `OFF` only static |
 | `GGPO_BUILD_SHARED` | both / from `BUILD_SHARED_LIBS` | Builds `GGPO_shared` (`GGPO.dll` + `GGPO.lib`, `libGGPO.so`) |
 | `GGPO_BUILD_STATIC` | both / from `BUILD_SHARED_LIBS` | Builds `GGPO_static` (`libGGPO.lib`, `libGGPO.a`) |

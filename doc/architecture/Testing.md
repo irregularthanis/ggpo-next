@@ -175,7 +175,7 @@ test below. DLL exports are checked in the [CI lane](#msvc-ci-lanes) with
 
 | Test | Code | What it tests |
 | --- | --- | --- |
-| `windows_vectorwar_gui_host_contract` | [`win32_host_contract_test.cpp`](../../tests/vectorwar/win32_host_contract_test.cpp) | Real hidden Win32 window: client bounds, GDI renderer, diagnostics |
+| `windows_vectorwar_gui_host_contract` | [`win32_host_contract_test.cpp`](../../tests/vectorwar/win32_host_contract_test.cpp) | Real hidden Win32 window: client bounds, GDI renderer, diagnostics, the start dialog driven with synthetic input, the compiled `.rc`, and the legend drawn by GDI |
 
 #### MSVC: run locally
 
@@ -286,7 +286,7 @@ are identical on LP64; see the
 | Test | Code | What it tests |
 | --- | --- | --- |
 | `linux_exports` | [`check_exports.py`](../../tests/baseline/linux/check_exports.py), [`exports.txt`](../../tests/baseline/linux/exports.txt) | The shared library exports exactly the frozen `ggpo_*` symbols (shared builds) |
-| `linux_vectorwar_gui_host_contract` | [`sdl_host_contract_test.cpp`](../../tests/vectorwar/sdl_host_contract_test.cpp) | SDL2 frontend with `SDL_VIDEODRIVER=dummy`: bounds, input, renderer |
+| `linux_vectorwar_gui_host_contract` | [`sdl_host_contract_test.cpp`](../../tests/vectorwar/sdl_host_contract_test.cpp) | SDL2 frontend with `SDL_VIDEODRIVER=dummy`: bounds, input, renderer, the start screen driven with synthetic input, and the legend swatch color read back |
 
 #### Linux: run locally
 
@@ -305,6 +305,11 @@ builds [`docker/linux/Dockerfile`](../../docker/linux/Dockerfile), then runs the
 GCC and Clang lanes inside that image, each building both libraries. Each lane runs CTest,
 installs the SDK, builds and executes external C11/C++98 consumers, and audits
 the installed Linux library.
+
+Those lanes build the library without Vector War, so each lane then configures
+a second tree with `GGPO_BUILD_VECTORWAR=ON` (SDL2 from the image) and runs
+`ctest -R 'gui_host_contract|legend_contract|start_form_contract'`; this is
+where `linux_vectorwar_gui_host_contract` runs in CI.
 
 [`sanitizer-qualification.yml`](../../.github/workflows/sanitizer-qualification.yml)
 runs manually and weekly. It uses the same image to instrument production GGPO,
@@ -335,7 +340,7 @@ packaged app.
 | Test | Code | What it tests |
 | --- | --- | --- |
 | `android_exports` | [`check_exports.py`](../../tests/baseline/linux/check_exports.py), [`exports.txt`](../../tests/baseline/linux/exports.txt) | The shared library exports exactly the frozen `ggpo_*` symbols (shared builds) |
-| `android_vectorwar_gui_host_contract` | [`sdl_host_contract_test.cpp`](../../tests/vectorwar/sdl_host_contract_test.cpp) | The APK's SDL2 frontend on the dummy driver: bounds, renderer, input, clock |
+| `android_vectorwar_gui_host_contract` | [`sdl_host_contract_test.cpp`](../../tests/vectorwar/sdl_host_contract_test.cpp) | The APK's SDL2 frontend on the dummy driver: bounds, renderer, input, clock, start screen and legend |
 
 #### Android: run locally
 
@@ -357,6 +362,12 @@ ctest --test-dir build/emu --output-on-failure --timeout 300
 builds all three ABIs, runs static fixtures natively on matching Linux runners,
 runs the full suite on API 21 and API 35 x86_64 emulators, and runs ASan+UBSan
 on an x86_64 emulator.
+
+The APK job also compiles the launcher's
+[`StartArgs.java`](../../src/apps/vectorwar/android/app/src/main/java/org/ggponext/vectorwar/StartArgs.java)
+with [`StartArgsTest.java`](../../tests/android/StartArgsTest.java) using plain
+`javac` and runs it on the JVM, so the Android form builds the same arguments
+as the C++ start-form model.
 
 #### Android: SDK audit and APK smoke
 
@@ -414,11 +425,13 @@ libraries, which is the default.
 | `fake_platform_conformance` | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | The shared adapter conformance contract against the fake adapter |
 | `vectorwar_state_contract` | [`gamestate_contract_test.cpp`](../../tests/vectorwar/gamestate_contract_test.cpp) | Vector War simulation hits the canonical checkpoints over 180 frames |
 | `vectorwar_gameplay_contract` | [`gameplay_determinism_test.cpp`](../../tests/vectorwar/gameplay_determinism_test.cpp) | Vector War starts and initialization are identical on every platform |
+| `vectorwar_legend_contract` | [`legend_contract_test.cpp`](../../tests/vectorwar/legend_contract_test.cpp) | Legend rows (`P2 Android direct`), platform numbering shared with the wire protocol, player colors and the bitmap font |
+| `vectorwar_start_form_contract` | [`start_form_contract_test.cpp`](../../tests/vectorwar/start_form_contract_test.cpp) | Start-screen fields become the same arguments as the command line, with one error message per bad field |
 | `vectorwar_headless_loopback` ¹ | [`run_headless_loopback.py`](../../tests/vectorwar/run_headless_loopback.py) | Two headless Vector War processes converge over UDP with rollback |
 | `vectorwar_headless_negative_contracts` ¹ | [`headless_negative.py`](../../tests/vectorwar/headless_negative.py) | The Vector War runner rejects controlled failures |
 | `matchmaking_server_contract` | [`services/matchmaking/tests`](../../services/matchmaking/tests) | Lobby and relay server: protocol v2/v3 and shared vectors, lobbies, relay forwarding, hole-punching candidates, expiry, rate limits, real sockets on loopback |
 | `vectorwar_net_contract` | [`net_contract_test.cpp`](../../tests/vectorwar/net_contract_test.cpp), [`gen_net_vectors.py`](../../tests/vectorwar/gen_net_vectors.py) | Vector War's matchmaking codec against the server's shared vectors, SipHash, probe authentication, and the path selector on a fake clock |
-| `vectorwar_net_proxy_loopback` ² | [`run_proxy_loopback.py`](../../tests/vectorwar/run_proxy_loopback.py), [`net_proxy_tool.cpp`](../../tests/vectorwar/net_proxy_tool.cpp) | Real server and one path proxy per player: 2 and 3 players switch to direct with data flowing; relay-only stays on the relay |
+| `vectorwar_net_proxy_loopback` ² | [`run_proxy_loopback.py`](../../tests/vectorwar/run_proxy_loopback.py), [`net_proxy_tool.cpp`](../../tests/vectorwar/net_proxy_tool.cpp) | Real server and one path proxy per player: 2 and 3 players switch to direct with data flowing; relay-only stays on the relay; an unreachable server and a user cancel end matchmaking with a clear error |
 | `vectorwar_matchmaking_loopback` ¹ ² | [`run_matchmaking_loopback.py`](../../tests/vectorwar/run_matchmaking_loopback.py) | Real server and real Vector War sessions: 2 and 3 players with every pair direct, 2 players relay-only; two players reach the frozen checksum |
 
 ¹ Needs the headless Vector War app, which MinGW does not build.
@@ -766,8 +779,29 @@ flowchart LR
   the C++ checks are generated from it at build time.
 - On loopback every pair can go direct, so the loopback tests prove the
   switch, data flow on both routes, and that the proxy changes nothing in the
-  game's result. Symmetric NAT staying on the relay and mid-match fallback need
-  NAT emulation (internet-play milestones M5 and M8).
+  game's result.
+- NAT behavior is a fourth layer, outside CTest:
+  [`nat-traversal.yml`](../../.github/workflows/nat-traversal.yml) runs
+  [`run_nat_matrix.py`](../../tests/nat/run_nat_matrix.py) on a hosted Linux
+  runner. Each player sits behind an emulated router in its own network
+  namespace (cone NAT is `MASQUERADE`, symmetric NAT adds `--random-fully`,
+  and the router drops unsolicited inbound UDP like a home router). Every
+  scenario must reach the expected checksum and route per pair:
+
+  | Scenario | Expected route |
+  | --- | --- |
+  | cone-cone | direct |
+  | symmetric-symmetric | relay |
+  | cone-symmetric | relay (recorded; one-sided symmetric is not punched) |
+  | same-lan (two players behind one router) | direct, over LAN addresses |
+  | three-players-mixed (cone, cone, symmetric) | cone pair direct, pairs with the symmetric player relay |
+  | direct-cut-mid-match (direct path dropped at 8 s) | falls back to the relay, match finishes |
+  | server-lost-while-direct (server killed at 8 s) | stays direct, match finishes |
+
+  Timed scenarios set `VW_HEADLESS_FRAME_MS=16` so the headless match lasts
+  long enough for the event. The aggregate check is `Complete NAT traversal
+  checks`. Run it locally only on a disposable Linux VM: it needs root and
+  creates namespaces.
 - The `Infrastructure` workflow runs Terraform `fmt`, `validate`, `terraform
   test` with mocked providers, `tflint`, the server tests and a multi-arch
   image smoke; its aggregate is `Complete infrastructure checks`.
@@ -795,7 +829,8 @@ check have no concurrency group.
 The `master` ruleset requires one stable aggregate check per workflow rather
 than individual lanes: `Complete Linux compatibility`, `Complete MinGW
 compatibility`, `Complete Windows compatibility`, `Complete Android
-compatibility`, and `Complete native E2E matrix`, plus `Fork owner approval`.
+compatibility`, `Complete native E2E matrix`, and `Complete NAT traversal
+checks`, plus `Fork owner approval`.
 Each aggregate covers every lane of its workflow. Individual matrix lanes cannot
 be required directly: a lane skipped on a documentation-only change never
 reports its expanded name, so the requirement would wait forever. Each aggregate
@@ -834,9 +869,12 @@ established by the frame, checksum, callback, and lifecycle assertions.
 ### Current limits and follow-ups
 
 - No spectator, disconnect/resume, or simulated loss automated session exists;
-  multi-player (3) sessions run only in the matchmaking loopback tests.
-- NAT emulation for hole punching (symmetric NAT, mid-match fallback) is still
-  to come; loopback tests cannot show it.
+  multi-player (3) sessions run only in the matchmaking loopback tests and the
+  NAT matrix; no 4-player NAT scenario exists yet.
+- The NAT matrix emulates cone and symmetric routers on clean links; it does
+  not inject loss or latency, and real carrier-grade NAT is untested.
+- The matchmaking server is not deployed yet, so no test reaches a public
+  server; every matchmaking test uses a server on the runner.
 - The automated matrix covers native Linux, Windows, MinGW, and Android peers,
   but not SteamOS hardware.
 - The clean cross-platform workflow does not inject latency or packet loss;
