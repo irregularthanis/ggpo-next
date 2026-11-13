@@ -234,8 +234,8 @@ Details: [`infra/terraform/README.md`](../../infra/terraform/README.md).
 | `matchmaking_server_contract` | Server protocol rules and vectors, lobby grouping, relay latching and forwarding for 2 and 4 players, candidate exchange and filtering, expiry, rate limits; real sockets on loopback |
 | `vectorwar_net_contract` | C++ codec against the shared vectors, the SipHash reference vector, probe authentication and tamper rejection, and every path-selector scenario on a fake clock |
 | `vectorwar_net_proxy_loopback` | Real server and one path proxy per player with a stand-in for GGPO: 2 and 3 players switch to direct with data flowing throughout; with direct disabled everything stays on the relay |
-| `vectorwar_matchmaking_loopback` | Real server and real Vector War sessions: 2 and 3 players with every pair direct, and 2 players relay-only; all converge, and two players reach the frozen checksum `b3381958` |
-| `NAT traversal` workflow ([`run_nat_matrix.py`](../../tests/nat/run_nat_matrix.py)) | Linux network namespaces with emulated routers: cone NAT is `MASQUERADE`, symmetric is `MASQUERADE --random-fully`, and routers drop unsolicited inbound UDP. Seven scenarios, listed below |
+| `vectorwar_matchmaking_loopback` | Real server and real Vector War sessions: 2, 3 and 4 players with every pair direct, and 2 players relay-only; frozen frame-180 checksums are `b3381958`, `0907d5e4`, and `f23584de` |
+| `NAT traversal` workflow ([`run_nat_matrix.py`](../../tests/nat/run_nat_matrix.py)) | Linux network namespaces with emulated routers: cone NAT is `MASQUERADE`, symmetric is `MASQUERADE --random-fully`, and routers drop unsolicited inbound UDP. Nine scenarios, listed below |
 | `Infrastructure` workflow | Terraform `fmt`, `validate`, `terraform test` with mocked providers, `tflint`, server tests, multi-arch image smoke |
 
 The two loopback tests run on every native platform (Linux, Windows MSVC,
@@ -251,18 +251,22 @@ server. See [Testing](Testing.md).
 | cone-symmetric | Recorded only; currently stays on the relay |
 | same-lan | Direct over the RFC1918 LAN candidate |
 | three-players-mixed | Cone pair direct, pairs with the symmetric player on the relay |
+| four-players-mixed | Four peers across two cone and two symmetric routers converge to frozen checksum `f23584de`; the cone pair is direct and restrictive pairs remain available through the relay |
+| impaired-cone-cone | A paced match under 60 ± 15 ms WAN delay, 2% loss, and 1% reordering stays direct and converges |
 | direct-cut-mid-match | Direct, then the router path is cut at 8 s: falls back to the relay (1 switch, 1 fallback) and both peers converge |
 | server-lost-while-direct | Server killed at 8 s while direct: the match finishes direct |
 
-The two timed scenarios set `VW_HEADLESS_FRAME_MS=16` so the 1200-frame match
-runs in real time (about 19 s); without it the headless loop is unpaced.
+Timed and impaired scenarios set `VW_HEADLESS_FRAME_MS=16` so route health,
+fallback and rollback are exercised against real elapsed time; without it the
+headless loop is unpaced. The workflow also runs weekly so impairment coverage
+does not depend on a networking-code change.
 
 ## Limits
 
-- The NAT matrix runs only on Linux in CI (it needs root for namespaces); no
-  4-player run and no `tc netem` impairment yet (M5-T02/T03).
+- The NAT matrix runs only on Linux in CI because namespaces and `tc netem`
+  require root; real carrier-grade and mobile networks remain manual trials.
 - IPv4 only, like GGPO's endpoints.
 - No port prediction for symmetric NAT; such pairs stay on the relay.
-- The route is shown in the legend, not yet in the performance monitor
-  (M8-T07). Peer platforms in direct play are not exchanged, so peers show
-  `unknown` there.
+- Peer platforms in direct play are not exchanged, so peers show `unknown`
+  there. Matchmade routes and RTTs are visible in the Windows performance
+  monitor; SDL frontends currently expose the route in the in-game legend.

@@ -28,8 +28,8 @@ Status: In progress
 
 ### M1: Protocol and server (depends: M0)
 
-- [ ] M1-T01: Protocol header, Python mirror, and shared test vectors.
-  Python side and `protocol_vectors.json` done; the C++ header lands with M3.
+- [x] M1-T01: Python and C++ protocol codecs consume the shared
+  `protocol_vectors.json` contract (`vw_net_protocol`, `vectorwar_net_contract`).
 - [x] M1-T02: `asyncio` server: pairing, expiry, rate limits, no amplification
   (two-player version 1, in #16).
 - [x] M1-T03: Server unit tests registered in CTest.
@@ -65,7 +65,7 @@ Status: In progress
 
 ### M3: Vector War client (depends: M1)
 
-- [ ] M3-T01: `vw_udp` (done: `src/apps/vectorwar/net/vw_udp`), `vw_platform_name`.
+- [x] M3-T01: Portable socket/thread layer (`vw_udp`) and platform identity.
 - [x] M3-T02: `vw_matchmaking`: resolve, join, match, bind to every relay
   port, hand off to GGPO on the same port with remote players at the relay.
 - [ ] M3-T03: `vw_hello` for direct mode: platform exchange and nonce-based
@@ -73,11 +73,13 @@ Status: In progress
 - [x] M3-T04: `--matchmaking HOST[:PORT] PLAYERS [LOBBY] LOCAL_PORT [--relay-only]`
   on the Win32 and SDL (Linux, Android) frontends through shared
   `matchmade.cpp`; headless `--matchmaking HOST:PORT PLAYERS LOBBY|- FRAMES
-  RESULT.json [--relay-only]`; `vectorwar_matchmaking_loopback` plays 2 and 3
-  players with every pair direct and relay-only, frozen checksum for 2. Every
-  existing argument form unchanged.
-- [ ] M3-T05: Client tests against a fake server on loopback, on every
-  platform.
+  RESULT.json [--relay-only]`; `vectorwar_matchmaking_loopback` plays 2, 3 and
+  4 players with every pair direct plus 2 players relay-only; every group size
+  has a frozen frame-180 checksum. Every existing argument form is unchanged.
+- [ ] M3-T05: Codec, path-selector and proxy contracts plus real loopback
+  server/session tests run through shared CTest registration. A portable
+  fake-server client contract that can execute in cross-compiled Android
+  remains open.
 
 ### M4: Start screen and legend on every client (depends: M3)
 
@@ -95,9 +97,12 @@ Status: In progress
 - [x] M5-T01: Namespace topology with port-restricted cone and symmetric NAT
   and the server (`tests/nat/run_nat_matrix.py`, `nat-traversal.yml`). Full
   cone is not emulated; port-restricted is the stricter case.
-- [ ] M5-T02 (2 and 3 players done; 4 open): 2- and 4-player sessions through every router type, symmetric
-  included, reach the frozen Vector War checksum.
-- [ ] M5-T03: Scheduled impairment run with `tc netem`.
+- [ ] M5-T02: Implementation ready: 2-, 3- and 4-player sessions cover cone,
+  symmetric and mixed router topologies; frozen frame-180 checksums are
+  asserted. Awaiting the root-only NAT CI result.
+- [ ] M5-T03: Implementation ready: `tc netem` applies 60 ± 15 ms delay, 2%
+  loss and 1% reordering to a paced match; the NAT workflow also runs weekly.
+  Awaiting the root-only NAT CI result.
 
 ### M6: First manual run and trial (depends: M2, M4, M5)
 
@@ -113,12 +118,13 @@ Status: In progress
 
 ### M7: Documentation (depends: M6)
 
-- [ ] M7-T01: Developer Guide "Play over the Internet".
+- [x] M7-T01: Developer Guide "Play Vector War over the Internet".
 - [x] M7-T02: `doc/architecture/Matchmaking.md` (kept current as the client
   and frontends land).
-- [ ] M7-T03: `infra/terraform/README.md`.
-- [ ] M7-T04: Testing.md tables and workflow (server, net, proxy and session
-  loopback tests and the infrastructure workflows listed; NAT emulation pending).
+- [x] M7-T03: `infra/terraform/README.md` covers local and workflow deployment,
+  credentials, teardown, tests, and cost guardrails.
+- [x] M7-T04: Testing.md and Matchmaking.md cover server, codec, proxy,
+  session, NAT, impairment, infrastructure and deployment qualification.
 
 ### M8: Direct path negotiation (depends: M5, M6)
 
@@ -128,7 +134,8 @@ Status: In progress
 - [x] M8-T02: Path proxy between GGPO's loopback endpoints and one public
   socket; inbound from relay and validated direct addresses; peer-reflexive
   candidates (`vw_path_proxy`; `vectorwar_net_proxy_loopback` with the real
-  server: 2 and 3 players go direct, relay-only mode stays on the relay).
+  server: 2 and 3 players go direct, relay-only mode stays on the relay; the
+  complete Vector War loopback additionally covers 4 players).
 - [x] M8-T03: `PROBE`/`PROBE_ACK`/`KEEPALIVE` with SipHash MAC; unit tests
   for authentication and rejection (`src/apps/vectorwar/net/vw_path_probe`).
 - [x] M8-T04: Per-peer path state machine with fake-clock tests (switch,
@@ -137,8 +144,9 @@ Status: In progress
   symmetric/CGNAT stays on relay; all reach the frozen checksum.
 - [x] M8-T06: Mid-match direct loss falls back without desync; relay loss
   while direct keeps the match running.
-- [ ] M8-T07 (legend done; performance monitor open): Path shown in the
-  performance monitor and legend; docs.
+- [ ] M8-T07: Implementation ready: path shown in the legend and, on Windows,
+  route plus direct/relay RTT shown in the performance monitor; docs. Awaiting
+  the Windows build and contract checks.
 - [ ] M8-T08: Second friends trial: relay vs direct round-trip time per pair.
 
 ## Friends trial checklist
@@ -159,4 +167,7 @@ For each session, record:
 
 | ID | Evidence | Result |
 |---|---|---|
-| | | |
+| M1-T01, M3-T01 | [`vw_net_protocol`](../../../src/apps/vectorwar/net/vw_net_protocol.cpp), [`vw_udp`](../../../src/apps/vectorwar/net/vw_udp.cpp), [`vectorwar_net_contract`](../../../tests/vectorwar/net_contract_test.cpp) | Implemented in the shared client and exercised by CTest |
+| M5-T02 (local) | `python3 tests/vectorwar/run_matchmaking_loopback.py ...` | 2/3/4-player real UDP sessions passed; frozen checksums `b3381958`, `0907d5e4`, `f23584de` |
+| M5-T02, M5-T03 | [`run_nat_matrix.py`](../../../tests/nat/run_nat_matrix.py), [`nat-traversal.yml`](../../../.github/workflows/nat-traversal.yml) | Four-player mixed NAT and paced `tc netem` scenarios implemented; hosted root-only result pending |
+| M8-T07 | [`MatchmadeFillLegend`](../../../src/apps/vectorwar/matchmade.cpp), [`ggpoutil_perfmon_update_paths`](../../../src/apps/vectorwar/ggpo_perfmon.cpp) | Proxy route/RTT snapshot connected to the Windows performance monitor; platform CI pending |

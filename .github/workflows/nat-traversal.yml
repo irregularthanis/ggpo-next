@@ -9,6 +9,10 @@ on:
   push:
     branches: [master]
   pull_request:
+  schedule:
+    # Re-run the latency/jitter/loss/reordering scenario weekly even when the
+    # networking code has not changed.
+    - cron: '23 7 * * 1'
   workflow_dispatch:
 
 concurrency:

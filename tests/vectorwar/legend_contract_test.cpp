@@ -40,6 +40,8 @@ int main()
    // Direct play: only the local platform is known; no routes.
    VwLegend legend;
    VwLegendInitDirect(&legend, 2, 2);
+   Expect(legend.relay_rtt_ms[0] == -1 && legend.direct_rtt_ms[0] == -1,
+          "route round-trip times start unknown");
    char local[48];
    snprintf(local, sizeof(local), "P2 %s (you)", VwPlatformName(VwLocalPlatform()));
    ExpectRow(legend, 0, "P1 unknown");

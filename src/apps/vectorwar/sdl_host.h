@@ -16,6 +16,7 @@ public:
    virtual void UpdatePerformanceMonitor(GGPOSession *session,
                                          GGPOPlayerHandle players[],
                                          int num_players);
+   virtual void UpdatePathMonitor(const VwLegend &legend);
    virtual void TogglePerformanceMonitor();
    virtual void ShutdownPerformanceMonitor();
 };

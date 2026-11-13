@@ -22,6 +22,8 @@ struct VwLegend {
    int local_player;                           /* 1-based; 0 = none */
    int platforms[VW_LEGEND_MAX_PLAYERS];       /* VwPlatform */
    int routes[VW_LEGEND_MAX_PLAYERS];          /* VwRoute; none for direct play */
+   int relay_rtt_ms[VW_LEGEND_MAX_PLAYERS];    /* -1 until measured */
+   int direct_rtt_ms[VW_LEGEND_MAX_PLAYERS];   /* -1 until measured */
 };
 
 /* The platform this binary was built for. */

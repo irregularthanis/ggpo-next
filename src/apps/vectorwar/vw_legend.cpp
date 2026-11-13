@@ -27,6 +27,10 @@ const char *VwPlatformName(int platform)
 void VwLegendInitDirect(VwLegend *legend, int num_players, int local_player)
 {
    memset(legend, 0, sizeof(*legend));
+   for (int i = 0; i < VW_LEGEND_MAX_PLAYERS; ++i) {
+      legend->relay_rtt_ms[i] = -1;
+      legend->direct_rtt_ms[i] = -1;
+   }
    if (num_players < 0) num_players = 0;
    if (num_players > VW_LEGEND_MAX_PLAYERS) num_players = VW_LEGEND_MAX_PLAYERS;
    legend->num_players = num_players;

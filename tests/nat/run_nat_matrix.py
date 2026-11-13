@@ -31,6 +31,7 @@ SERVER_IP = "198.18.0.1"
 LOBBY_PORT = 7100
 RELAY_PORTS = "7101-7120"
 FROZEN_TWO_PLAYER_CHECKSUM = 0xB3381958
+FROZEN_CHECKSUMS = {2: FROZEN_TWO_PLAYER_CHECKSUM, 3: 0x0907D5E4, 4: 0xF23584DE}
 MATCH_LINE = re.compile(r"vectorwar-match: player=(\d+) of (\d+)")
 PATH_LINE = re.compile(r"vectorwar-path: player=(\d+) peer=(\d+) route=(\w+) via=([\d.]+):\d+ "
                        r"relay_rtt_ms=(-?\d+) direct_rtt_ms=(-?\d+) switches=(\d+) fallbacks=(\d+)")
@@ -123,6 +124,13 @@ class Network:
                 ns(router, "iptables", "-I", "FORWARD", "-s", other_ip, "-j", "DROP")
                 ns(router, "iptables", "-I", "FORWARD", "-d", other_ip, "-j", "DROP")
 
+    def impair_wan(self, delay_ms, jitter_ms, loss_percent, reorder_percent):
+        """Apply deterministic WAN pressure without changing the NAT policy."""
+        for router, _, _ in self.routers:
+            ns(router, "tc", "qdisc", "replace", "dev", "wan0", "root", "netem",
+               "delay", f"{delay_ms}ms", f"{jitter_ms}ms", "distribution", "normal",
+               "loss", f"{loss_percent}%", "reorder", f"{reorder_percent}%")
+
     def close(self):
         for name in reversed(self.namespaces):
             for pid in run("ip", "netns", "pids", name, check=False).stdout.split():
@@ -141,6 +149,8 @@ def play(scenario, headless, services):
             network.add_router(index, kind)
             for slot in range(1, count + 1):
                 players.append((network.add_player(index, slot), index))
+        if scenario.get("netem"):
+            network.impair_wan(*scenario["netem"])
         server = subprocess.Popen(
             ["ip", "netns", "exec", network.server, sys.executable, "-m", "matchmaking",
              "--host", "0.0.0.0", "--port", str(LOBBY_PORT), "--relay-ports", RELAY_PORTS],
@@ -155,7 +165,7 @@ def play(scenario, headless, services):
                  f"{SERVER_IP}:{LOBBY_PORT}", str(len(players)), scenario["lobby"],
                  str(scenario["frames"]), str(result)],
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-                env=paced_env if scenario.get("event") else None)
+                env=paced_env if scenario.get("event") or scenario.get("paced") else None)
                 for (player, _), result in zip(players, results)]
             event = scenario.get("event")
             if event:
@@ -196,8 +206,9 @@ def common_checks(scenario, reports):
     checksums = {r["checksum"] for r in reports}
     if len(checksums) != 1:
         raise SystemExit(f"{name}: peers diverged: {checksums}")
-    if len(reports) == 2 and scenario["frames"] == 180 and checksums != {FROZEN_TWO_PLAYER_CHECKSUM}:
-        raise SystemExit(f"{name}: checksum {checksums}, expected the frozen {FROZEN_TWO_PLAYER_CHECKSUM:08x}")
+    expected = FROZEN_CHECKSUMS.get(len(reports)) if scenario["frames"] == 180 else None
+    if expected is not None and checksums != {expected}:
+        raise SystemExit(f"{name}: checksum {checksums}, expected the frozen {expected:08x}")
     for report in reports:
         if len(report["routes"]) != len(reports) - 1:
             raise SystemExit(f"{name}: player {report['player_id']} reported {report['routes']}")
@@ -258,6 +269,12 @@ SCENARIOS = [
      "check": expect_all("direct", via_lan)},
     {"name": "three-players-mixed", "sites": [("cone", 1), ("cone", 1), ("symmetric", 1)],
      "lobby": "MIX", "frames": 180, "check": cone_pair_direct},
+    {"name": "four-players-mixed",
+     "sites": [("cone", 1), ("cone", 1), ("symmetric", 1), ("symmetric", 1)],
+     "lobby": "FOUR", "frames": 180, "check": cone_pair_direct},
+    {"name": "impaired-cone-cone", "sites": [("cone", 1), ("cone", 1)],
+     "lobby": "LOSS", "frames": 600, "paced": True, "netem": (60, 15, 2, 1),
+     "check": expect_all("direct")},
     {"name": "direct-cut-mid-match", "sites": [("cone", 1), ("cone", 1)], "lobby": "CUT",
      "frames": 1200, "event": "cut-direct", "event_after_s": 8,
      "check": expect_all("relay", direct_then_fallback)},

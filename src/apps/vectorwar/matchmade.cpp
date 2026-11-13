@@ -185,7 +185,10 @@ MatchmadeFillLegend(MatchmadeSession *session, VwLegend *legend)
    for (int k = 1; k <= legend->num_players; ++k) {
       legend->platforms[k - 1] = match.platforms[k - 1];
       if (k == match.player) continue;
-      legend->routes[k - 1] = session->proxy.Status(k).direct ? kVwRouteDirect : kVwRouteRelay;
+      const vwnet::PathStatus status = session->proxy.Status(k);
+      legend->routes[k - 1] = status.direct ? kVwRouteDirect : kVwRouteRelay;
+      legend->relay_rtt_ms[k - 1] = status.relay_rtt_ms;
+      legend->direct_rtt_ms[k - 1] = status.direct_rtt_ms;
    }
 }
 

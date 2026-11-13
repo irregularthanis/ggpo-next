@@ -90,13 +90,13 @@ END
 // Dialog
 //
 
-IDD_PERFMON DIALOGEX 0, 0, 326, 257
+IDD_PERFMON DIALOGEX 0, 0, 326, 307
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION
 EXSTYLE WS_EX_PALETTEWINDOW
 CAPTION "Performance Monitor"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    PUSHBUTTON      "Close",IDC_CLOSE,269,233,50,14
+    PUSHBUTTON      "Close",IDC_CLOSE,269,283,50,14
     GROUPBOX        "Synchronization",IDC_STATIC,7,109,312,118
     LTEXT           "0 frames",IDC_FRAME_LAG,90,89,52,8
     LTEXT           "Local Status:",IDC_STATIC,17,201,68,8
@@ -106,8 +106,8 @@ BEGIN
     GROUPBOX        "Network",IDC_STATIC,7,7,312,96
     CONTROL         "",IDC_NETWORK_GRAPH,"Static",SS_OWNERDRAW | WS_BORDER,13,18,301,55,WS_EX_CLIENTEDGE
     CONTROL         "",IDC_FAIRNESS_GRAPH,"Static",SS_OWNERDRAW | WS_BORDER,13,122,302,73,WS_EX_CLIENTEDGE
-    LTEXT           "Process Id:",IDC_STATIC,7,242,38,8
-    LTEXT           "",IDC_PID,46,242,39,8
+    LTEXT           "Process Id:",IDC_STATIC,7,292,38,8
+    LTEXT           "",IDC_PID,46,292,39,8
     LTEXT           "Network Latency:",IDC_STATIC,15,79,68,8
     LTEXT           "Frame Latency:",IDC_STATIC,16,89,51,8
     LTEXT           "0 ms",IDC_NETWORK_LAG,90,79,40,8
@@ -115,6 +115,11 @@ BEGIN
     LTEXT           "0 kilobytes/sec",IDC_BANDWIDTH,240,78,69,8
     LTEXT           "Packet Loss Rate:",IDC_STATIC,160,89,58,8
     LTEXT           "0 %",IDC_PACKET_LOSS,240,89,52,8
+    GROUPBOX        "Matchmade paths",IDC_STATIC,7,229,312,48
+    LTEXT           "",IDC_PATH_1,15,239,296,8
+    LTEXT           "",IDC_PATH_2,15,249,296,8
+    LTEXT           "",IDC_PATH_3,15,259,296,8
+    LTEXT           "",IDC_PATH_4,15,269,296,8
 END
 
 // Start screen: shown when vectorwar.exe runs without arguments. The fields

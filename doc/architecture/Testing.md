@@ -432,7 +432,7 @@ libraries, which is the default.
 | `matchmaking_server_contract` | [`services/matchmaking/tests`](../../services/matchmaking/tests) | Lobby and relay server: protocol v2/v3 and shared vectors, lobbies, relay forwarding, hole-punching candidates, expiry, rate limits, real sockets on loopback |
 | `vectorwar_net_contract` | [`net_contract_test.cpp`](../../tests/vectorwar/net_contract_test.cpp), [`gen_net_vectors.py`](../../tests/vectorwar/gen_net_vectors.py) | Vector War's matchmaking codec against the server's shared vectors, SipHash, probe authentication, and the path selector on a fake clock |
 | `vectorwar_net_proxy_loopback` ² | [`run_proxy_loopback.py`](../../tests/vectorwar/run_proxy_loopback.py), [`net_proxy_tool.cpp`](../../tests/vectorwar/net_proxy_tool.cpp) | Real server and one path proxy per player: 2 and 3 players switch to direct with data flowing; relay-only stays on the relay; an unreachable server and a user cancel end matchmaking with a clear error |
-| `vectorwar_matchmaking_loopback` ¹ ² | [`run_matchmaking_loopback.py`](../../tests/vectorwar/run_matchmaking_loopback.py) | Real server and real Vector War sessions: 2 and 3 players with every pair direct, 2 players relay-only; two players reach the frozen checksum |
+| `vectorwar_matchmaking_loopback` ¹ ² | [`run_matchmaking_loopback.py`](../../tests/vectorwar/run_matchmaking_loopback.py) | Real server and real Vector War sessions: 2, 3 and 4 players with every pair direct, 2 players relay-only; all group sizes reach their frozen checksums |
 
 ¹ Needs the headless Vector War app, which MinGW does not build.
 ² Native builds only (Linux, Windows MSVC, MinGW): a cross-compiled Android test
@@ -868,17 +868,17 @@ established by the frame, checksum, callback, and lifecycle assertions.
 
 ### Current limits and follow-ups
 
-- No spectator, disconnect/resume, or simulated loss automated session exists;
-  multi-player (3) sessions run only in the matchmaking loopback tests and the
-  NAT matrix; no 4-player NAT scenario exists yet.
-- The NAT matrix emulates cone and symmetric routers on clean links; it does
-  not inject loss or latency, and real carrier-grade NAT is untested.
+- No spectator or disconnect/resume automated session exists. Matchmaking
+  loopback covers 2, 3 and 4 players; the NAT matrix covers mixed four-player
+  routing and a paced latency/jitter/loss/reordering scenario.
+- The NAT matrix models symmetric NAT but not a real carrier-grade provider;
+  public mobile and carrier-grade networks remain part of the friends trial.
 - The matchmaking server is not deployed yet, so no test reaches a public
   server; every matchmaking test uses a server on the runner.
 - The automated matrix covers native Linux, Windows, MinGW, and Android peers,
   but not SteamOS hardware.
-- The clean cross-platform workflow does not inject latency or packet loss;
-  deterministic impairment remains a follow-up after clean-run qualification.
+- The cross-platform E2E workflow remains a clean-link test; deterministic
+  impairment belongs to the Linux namespace NAT workflow.
 - No macOS adapter or build exists.
 - Android ASan+UBSan is scheduled on an x86_64 emulator; Linux Clang and MSVC
   sanitizer configurations remain in the same qualification workflow.

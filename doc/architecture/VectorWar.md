@@ -422,8 +422,9 @@ VectorWarHeadless --matchmaking HOST:PORT PLAYERS LOBBY|- FRAMES RESULT.json [--
 It matchmakes through `VectorWarNet`, binds GGPO on a free local port, runs the
 same session loop as the direct form, and prints one `vectorwar-path:` line per
 peer with its route and round-trip times. `vectorwar_matchmaking_loopback`
-plays 2 and 3 players this way (every pair direct) and 2 players relay-only;
-two players reach the frozen checksum `b3381958`.
+plays 2, 3 and 4 players this way (every pair direct) and 2 players relay-only.
+The frozen frame-180 checksums are `b3381958`, `0907d5e4`, and `f23584de`
+respectively.
 
 ### Start screen
 
@@ -463,6 +464,9 @@ and refresh every frame. Colors come from one table per renderer
 ([`vw_player_colors.h`](../../src/apps/vectorwar/vw_player_colors.h)) shared
 with the ships. The legend lives in `NonGameState`, so it never affects saved
 state or checksums ([`vw_legend.cpp`](../../src/apps/vectorwar/vw_legend.cpp)).
+On Windows the performance monitor uses the same proxy snapshot to show each
+remote player's active route, active RTT, and relay RTT; it does not infer the
+path from GGPO's aggregate ping.
 
 ## Interactive platform frontends
 

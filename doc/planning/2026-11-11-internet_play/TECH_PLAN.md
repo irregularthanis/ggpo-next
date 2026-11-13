@@ -500,28 +500,29 @@ The deploy workflow (`.github/workflows/deploy-matchmaking.yml`):
 
 ## Documentation
 
-- Developer Guide: "Play over the Internet" under Common to all platforms:
-  start screen, matchmaking, the new `--matchmaking` form, when it cannot work,
-  and the overlay-VPN workaround.
-- New `doc/architecture/Matchmaking.md`: protocol, lobby, relay forwarding, limits.
-- `infra/terraform/README.md`: prerequisites, one-time account setup, local
-  apply and destroy, the deploy workflow and its `matchmaking` environment,
-  cost guardrails.
-- Testing.md: the new tests in the platform and shared tables, and the
-  infrastructure workflow.
+- [Developer Guide](../../DeveloperGuide.md#play-vector-war-over-the-internet):
+  start screen, `--matchmaking`, relay-only diagnosis, visible routes, and
+  deployment references.
+- [Matchmaking architecture](../../architecture/Matchmaking.md): protocol,
+  relay forwarding, direct-path proxy, security, NAT outcomes, and tests.
+- [Terraform guide](../../../infra/terraform/README.md): prerequisites, local
+  and workflow deployment, teardown, credentials, and cost guardrails.
+- [Testing](../../architecture/Testing.md): server, codec, proxy, session, NAT,
+  impairment, infrastructure, and deployment qualification.
 
 ## Rollout
 
 1. Server and protocol with tests (no cloud).
 2. Terraform with tests (no apply).
 3. Vector War client, CLI form, and NAT emulation in CI (every router type,
-   2 and 4 players) against a local server container.
-4. Start screens and legend.
+   2 and 4 players) against a local server container. **Implemented.**
+4. Start screens, legend, and Windows route/RTT monitor. **Implemented.**
 5. First apply (deploy workflow or local); point the compiled default at the
    DuckDNS name.
 6. Friends trial; then release with the next Vector War packages.
 7. Direct path negotiation (D6): path proxy, protocol v3 candidates, NAT matrix
-   in CI, then a second friends trial comparing relay and direct latency.
+   and impairment in CI. **Implemented except for the real-network friends
+   trial comparing relay and direct latency.**
 
 ## Open decisions
 

@@ -374,6 +374,7 @@ VectorWar_DrawCurrentFrame()
 {
    if (renderer != NULL) {
       if (legend_source) legend_source(&ngs.legend, legend_context);
+      if (host) host->UpdatePathMonitor(ngs.legend);
       renderer->Draw(gs, ngs);
    }
 }

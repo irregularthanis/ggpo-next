@@ -30,6 +30,10 @@
 #define IDC_NETWORK_LAG                 211
 #define IDC_BANDWIDTH                   212
 #define IDC_PACKET_LOSS                 223
+#define IDC_PATH_1                      224
+#define IDC_PATH_2                      225
+#define IDC_PATH_3                      226
+#define IDC_PATH_4                      227
 
 #define IDD_START                       300
 #define IDC_START_LOCAL_PORT            301
