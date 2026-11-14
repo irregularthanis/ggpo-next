@@ -15,7 +15,7 @@ Status: In progress
 - [x] M0-T07: D6 decided (2026-11-12): UDP hole punching with the relay as a
   live fallback, per pair, implemented in Vector War's path proxy (M8).
 - [x] M0-T02: D2 decided: DuckDNS subdomain (no domain owned). Reserve the
-  name; the token stays on the maintainer's machine.
+  name; Actions reads the token from repository secrets.
 - [ ] M0-T05: Oracle Container Instances test (findings so far in the
   [technical plan](TECH_PLAN.md#provider-decision-d1)). With Terraform in the
   free account, create a 1 OCPU / 1 GB `CI.Standard.A1.Flex` instance with a
@@ -98,12 +98,12 @@ Status: In progress
 - [x] M5-T01: Namespace topology with port-restricted cone and symmetric NAT
   and the server (`tests/nat/run_nat_matrix.py`, `nat-traversal.yml`). Full
   cone is not emulated; port-restricted is the stricter case.
-- [ ] M5-T02: Implementation ready: 2-, 3- and 4-player sessions cover cone,
+- [x] M5-T02: 2-, 3- and 4-player sessions cover cone,
   symmetric and mixed router topologies; every group must agree and the
-  portable two-player checksum is frozen. Awaiting the root-only NAT CI result.
-- [ ] M5-T03: Implementation ready: `tc netem` applies 60 ± 15 ms delay, 2%
-  loss and 1% reordering to a paced match; the NAT workflow also runs weekly.
-  Awaiting the root-only NAT CI result.
+  portable two-player checksum is frozen.
+- [x] M5-T03: `tc netem` applies 60 ± 15 ms delay, 2% loss and 1% reordering
+  to a paced match; the selected direct or relay route is measured, gameplay
+  converges, and the NAT workflow also runs weekly.
 
 ### M6: First manual run and trial (depends: M2, M4, M5)
 
@@ -145,9 +145,9 @@ Status: In progress
   symmetric/CGNAT stays on relay; all reach the frozen checksum.
 - [x] M8-T06: Mid-match direct loss falls back without desync; relay loss
   while direct keeps the match running.
-- [ ] M8-T07: Implementation ready: path shown in the legend and, on Windows,
-  route plus direct/relay RTT shown in the performance monitor; docs. Awaiting
-  the Windows build and contract checks.
+- [x] M8-T07: Path shown in the legend and, on Windows, route plus direct/relay
+  RTT shown in the performance monitor; documentation and Windows contracts
+  passed.
 - [ ] M8-T08: Second friends trial: relay vs direct round-trip time per pair.
 
 ## Friends trial checklist
@@ -170,5 +170,5 @@ For each session, record:
 |---|---|---|
 | M1-T01, M3-T01 | [`vw_net_protocol`](../../../src/apps/vectorwar/net/vw_net_protocol.cpp), [`vw_udp`](../../../src/apps/vectorwar/net/vw_udp.cpp), [`vectorwar_net_contract`](../../../tests/vectorwar/net_contract_test.cpp) | Implemented in the shared client and exercised by CTest |
 | M5-T02 (local) | `python3 tests/vectorwar/run_matchmaking_loopback.py ...` | 2/3/4-player real UDP sessions passed; every peer in each group agreed and the two-player checksum was `b3381958` |
-| M5-T02, M5-T03 | [`run_nat_matrix.py`](../../../tests/nat/run_nat_matrix.py), [`nat-traversal.yml`](../../../.github/workflows/nat-traversal.yml) | Four-player mixed NAT and paced `tc netem` scenarios implemented; hosted root-only result pending |
-| M8-T07 | [`MatchmadeFillLegend`](../../../src/apps/vectorwar/matchmade.cpp), [`ggpoutil_perfmon_update_paths`](../../../src/apps/vectorwar/ggpo_perfmon.cpp) | Proxy route/RTT snapshot connected to the Windows performance monitor; platform CI pending |
+| M5-T02, M5-T03 | [NAT run `43611369802`](https://github.com/irregularthanis/ggpo-next/actions/runs/43611369802), [`run_nat_matrix.py`](../../../tests/nat/run_nat_matrix.py), [`nat-traversal.yml`](../../../.github/workflows/nat-traversal.yml) | PASS: 2–4 players, mixed NAT, fallback, server loss and paced impairment converged under the hosted root-only matrix |
+| M8-T07 | [Windows run `43611369777`](https://github.com/irregularthanis/ggpo-next/actions/runs/43611369777), [`MatchmadeFillLegend`](../../../src/apps/vectorwar/matchmade.cpp), [`ggpoutil_perfmon_update_paths`](../../../src/apps/vectorwar/ggpo_perfmon.cpp) | PASS: route/RTT display integration and Windows compatibility contracts |
