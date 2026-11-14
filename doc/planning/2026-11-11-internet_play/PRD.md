@@ -97,9 +97,9 @@ people play, which fits in a cloud free tier.
 - Two and four players on different networks (home routers and mobile data,
   no port forwarding) connect through Matchmaking and converge for a full
   session.
-- In CI, 2- and 4-player matchmade sessions converge to the frozen Vector War
-  checksum through every emulated router type: full-cone, port-restricted and
-  symmetric NAT.
+- In CI, 2–4-player matchmade sessions converge through port-restricted cone,
+  symmetric and same-LAN topologies; the portable two-player checksum remains
+  frozen.
 - `terraform test` passes in CI with mocked providers, and a fresh apply on an
   empty account (locally or from the deploy workflow) creates a server that
   answers at the configured DNS name; the workflow verifies both the DNS update
