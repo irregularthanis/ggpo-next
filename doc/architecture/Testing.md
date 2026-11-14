@@ -468,7 +468,7 @@ cannot reach the build host's loopback server.
 | Matchmaking server | Protocol, lobbies, relay, candidates, abuse limits | [`services/matchmaking/tests`](../../services/matchmaking/tests) | Python server, unit and real-socket loopback |
 | Hole punching | Codec vs shared vectors, probe authentication, path selection, proxy forwarding, real sessions direct and relay-only | [`tests/vectorwar`](../../tests/vectorwar/net_contract_test.cpp), [`src/apps/vectorwar/net`](../../src/apps/vectorwar/net) | `VectorWarNet` on every platform; loopback sessions on native platforms |
 | Start screen and legend | Fields map to the command-line arguments on every screen; dialog and SDL form driven by synthetic input; legend rows, platform numbering, colors (SDL swatch read back) and font | [`start_form_contract_test.cpp`](../../tests/vectorwar/start_form_contract_test.cpp), [`legend_contract_test.cpp`](../../tests/vectorwar/legend_contract_test.cpp), the GUI host contracts, [`StartArgsTest.java`](../../tests/android/StartArgsTest.java) | Portable tests everywhere; Win32 dialog on MSVC; SDL form on Linux (dummy driver) and the Android emulator; plain Java in the APK job |
-| NAT traversal | Cone pairs and same-LAN go direct, symmetric stays on the relay, mid-match direct loss falls back, server loss while direct keeps playing | [`nat-traversal.yml`](../../.github/workflows/nat-traversal.yml), [`run_nat_matrix.py`](../../tests/nat/run_nat_matrix.py) | Linux network namespaces with emulated NAT routers on a hosted runner |
+| NAT traversal | Two-to-four-player mixed NAT converges; cone and LAN paths can go direct, restrictive paths retain relay fallback, impairment selects a measured viable route, direct loss falls back, and server loss does not stop an established direct match | [`nat-traversal.yml`](../../.github/workflows/nat-traversal.yml), [`run_nat_matrix.py`](../../tests/nat/run_nat_matrix.py) | Linux network namespaces with emulated NAT routers and `tc netem` on a hosted runner |
 | Infrastructure | Terraform plan and state assertions, lint, server image | [`infrastructure.yml`](../../.github/workflows/infrastructure.yml), [`infra/terraform`](../../infra/terraform/README.md) | Mocked providers; no cloud account |
 | Cross-host | Linux, Windows, MinGW, and Android peers converge | [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml), [`tests/e2e`](../../tests/e2e) | Native hosted runners joined through ephemeral Tailscale nodes |
 
@@ -795,6 +795,8 @@ flowchart LR
   | cone-symmetric | relay (recorded; one-sided symmetric is not punched) |
   | same-lan (two players behind one router) | direct, over LAN addresses |
   | three-players-mixed (cone, cone, symmetric) | cone pair direct, pairs with the symmetric player relay |
+  | four-players-mixed (two cone, two symmetric) | cone pair direct; restrictive pairs remain available through the relay |
+  | impaired-cone-cone (delay, jitter, loss and reordering) | measured direct or relay path, match converges |
   | direct-cut-mid-match (direct path dropped at 8 s) | falls back to the relay, match finishes |
   | server-lost-while-direct (server killed at 8 s) | stays direct, match finishes |
 

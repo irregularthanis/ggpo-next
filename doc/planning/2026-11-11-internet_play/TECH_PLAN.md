@@ -444,8 +444,8 @@ mismatch, or "could not reach the relay".
 | Relay | `BIND` latching per destination port, forwarding source and destination for 2–4 players, unbound and foreign sources dropped, output never larger than input, session expiry returns ports | Python `unittest`, including real UDP sockets on loopback |
 | Client | `JOIN` retries, `MATCH` handling, `BIND` timeout, `HELLO` ordering, hostname resolution, against a fake server on loopback | CTest on every platform |
 | Legend and start screen | Host contracts: legend rows and colors from a fixed player table; start screen fields map to the same `VectorWar_Init` arguments as the CLI | Existing GUI host contract tests (Win32, SDL dummy driver, Android emulator) |
-| NAT traversal | Linux network namespaces with `iptables` NAT: full-cone, port-restricted and symmetric routers; server in the "Internet" namespace; 2 and 4 headless Vector War peers with `--matchmaking`, mixing router types | New Linux CI job: every combination, symmetric included, must reach the frozen checksum |
-| Impairment | The same topology with `tc netem` latency and loss | Scheduled, not required per change |
+| NAT traversal | Linux network namespaces with `iptables` NAT: port-restricted cone and symmetric routers; server in the "Internet" namespace; 2–4 headless Vector War peers with `--matchmaking`, including mixed router types | Dedicated NAT workflow: every scenario must converge; route-specific cases verify direct, relay and fallback behavior |
+| Impairment | The same topology with `tc netem` delay, jitter, loss and reordering | Required on networking changes and also scheduled weekly; the selected route must have an RTT measurement and the match must converge |
 | Real world | Two and four friends on different home networks and mobile data, per the checklist in `PROGRESS.md` | Manual, before calling the feature done |
 
 ## CI
@@ -454,14 +454,15 @@ mismatch, or "could not reach the relay".
   `terraform test`; server unit tests; container build. Aggregate check
   **Complete infrastructure checks**, added to the `master` ruleset like the
   other aggregates.
-- **Linux compatibility:** gains the NAT traversal job, covered by
-  `Complete Linux compatibility`.
+- **NAT traversal:** dedicated root-capable workflow covered by
+  `Complete NAT traversal checks`.
 - **Change classification:** `infra/**` and `services/**` count as code, so
   they never take the documentation fast path.
 - **Image publishing:** on `master`, build and push the server image to GHCR
   (free for public repositories), tagged by commit and recorded by digest.
-- **No deploy workflow.** CI only proves the Terraform code and builds the
-  image; it holds no cloud or DNS credentials.
+- **Manual deploy workflow:** `deploy-matchmaking.yml` reads repository
+  Actions settings, targets the optional `matchmaking` approval boundary, and
+  performs explicit `plan`, `apply` or `destroy`; it is never a required check.
 
 ## Operation
 
