@@ -121,7 +121,6 @@ class DeploymentRendezvous:
              "description": "Endpoint retired"},
         )
 
-    def delete_environment(self):
-        """Remove the transient environment after its deployment is inactive."""
-        environment = urllib.parse.quote(self.environment, safe="")
-        return self.transport.request("DELETE", f"/environments/{environment}")
+    def delete(self, deployment_id):
+        """Delete an inactive deployment and its transient environment."""
+        return self.transport.request("DELETE", f"/deployments/{deployment_id}")
