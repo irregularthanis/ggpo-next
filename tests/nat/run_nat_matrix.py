@@ -256,6 +256,17 @@ def record_only(scenario, reports):
     pass
 
 
+def measured_route(scenario, reports):
+    """Require each selected path to have a corresponding RTT measurement."""
+    for report, route in all_routes(reports):
+        rtt = route[f"{route['route']}_rtt_ms"]
+        if rtt < 0:
+            raise SystemExit(
+                f"{scenario['name']}: P{report['player_id']}->P{route['peer']} "
+                f"selected an unmeasured {route['route']} path: {route}"
+            )
+
+
 SCENARIOS = [
     {"name": "cone-cone", "sites": [("cone", 1), ("cone", 1)], "lobby": "CC", "frames": 180,
      "check": expect_all("direct")},
@@ -272,7 +283,7 @@ SCENARIOS = [
      "lobby": "FOUR", "frames": 180, "check": cone_pair_direct},
     {"name": "impaired-cone-cone", "sites": [("cone", 1), ("cone", 1)],
      "lobby": "LOSS", "frames": 600, "paced": True, "netem": (60, 15, 2, 1),
-     "check": expect_all("direct")},
+     "check": measured_route},
     {"name": "direct-cut-mid-match", "sites": [("cone", 1), ("cone", 1)], "lobby": "CUT",
      "frames": 1200, "event": "cut-direct", "event_after_s": 8,
      "check": expect_all("relay", direct_then_fallback)},

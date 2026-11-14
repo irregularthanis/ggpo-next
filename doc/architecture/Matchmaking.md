@@ -252,7 +252,7 @@ server. See [Testing](Testing.md).
 | same-lan | Direct over the RFC1918 LAN candidate |
 | three-players-mixed | Cone pair direct, pairs with the symmetric player on the relay |
 | four-players-mixed | Four peers across two cone and two symmetric routers converge to one checksum; the cone pair is direct and restrictive pairs remain available through the relay |
-| impaired-cone-cone | A paced match under 60 ± 15 ms WAN delay, 2% loss, and 1% reordering stays direct and converges |
+| impaired-cone-cone | A paced match under 60 ± 15 ms WAN delay, 2% loss, and 1% reordering selects a measured direct or relay path and converges |
 | direct-cut-mid-match | Direct, then the router path is cut at 8 s: falls back to the relay (1 switch, 1 fallback) and both peers converge |
 | server-lost-while-direct | Server killed at 8 s while direct: the match finishes direct |
 
