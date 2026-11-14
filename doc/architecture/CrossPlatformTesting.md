@@ -85,7 +85,7 @@ flowchart TB
 | Deterministic convergence | Both peers match an independent canonical oracle | Detects prediction, rollback, serialization, or input divergence |
 | Lifecycle | One running event, clean close, zero unexpected disconnects | Detects incomplete sessions hidden by a matching checksum |
 | Completeness | Final manifest requires every declared ordered platform/fixture scenario | Prevents a partial matrix from appearing successful |
-| Cleanup | Firewall removal, process cancellation, Deployment retirement, and ephemeral logout run unconditionally | Keeps failed CI runs from leaving durable test infrastructure |
+| Cleanup | Firewall removal, process cancellation, Deployment retirement/deletion, and ephemeral logout run unconditionally | Keeps failed CI runs from leaving durable test infrastructure |
 
 A pass does not certify Internet matchmaking, NAT traversal, performance,
 spectators, more than two players, or arbitrary application determinism.
@@ -213,10 +213,10 @@ summarizes all scenarios. Because each mixed pair also runs in reverse order
 | Native peer fixture | Starts GGPO, submits deterministic inputs, pumps transport, publishes state, and records results | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp) |
 | Test simulation | Implements save/load/free/advance callbacks and canonical state hashing | [`smoke_session.cpp`](../../tests/smoke/smoke_session.cpp) |
 | Result oracle | Independently computes expected state and validates schema 2 | [`result_schema.py`](../../tests/e2e/result_schema.py) |
-| Role-1 agent | Publishes the endpoint, serves authenticated control, and retires the Deployment | [`host_agent.py`](../../tests/e2e/host_agent.py) |
+| Role-1 agent | Publishes the endpoint, serves authenticated control, then retires and deletes the Deployment | [`host_agent.py`](../../tests/e2e/host_agent.py) |
 | Peer supervisor | Restricts paths and operations and owns the child process lifecycle | [`peer_agent.py`](../../tests/e2e/peer_agent.py) |
 | Role-2 coordinator | Discovers role 1, starts both peers, confirms state, and writes the scenario report | [`execute_pair.py`](../../tests/e2e/execute_pair.py) |
-| Rendezvous | Publishes, discovers, and retires an exact run-scoped GitHub Deployment | [`rendezvous.py`](../../tests/e2e/rendezvous.py) |
+| Rendezvous | Publishes, discovers, retires, and deletes an exact run-scoped GitHub Deployment | [`rendezvous.py`](../../tests/e2e/rendezvous.py) |
 | Control authentication | Derives run-bound keys and verifies HMAC plus monotonic nonces | [`control.py`](../../tests/e2e/control.py) |
 | Final verifier | Rejects missing, duplicate, or non-passing scenario reports | [`validate_manifest.py`](../../tests/e2e/validate_manifest.py) |
 
@@ -260,8 +260,9 @@ never uses runner hostnames or public IPs:
 4. Role 2 passes its own tailnet address over the control channel, and both
    peers are launched with each other's tailnet address on UDP `24872–24873`.
    Windows jobs open only those ports in the firewall for the run.
-5. Cleanup removes the firewall rules, cancels processes, retires the
-   Deployment, and logs the ephemeral node out, including on failure.
+5. Cleanup removes the firewall rules, cancels processes, marks the Deployment
+   inactive, deletes it and its transient environment, and logs the ephemeral
+   node out, including on failure.
 
 The control plane never carries GGPO input packets. It starts peers, observes
 state, releases finalization, collects results, and requests cleanup. Production

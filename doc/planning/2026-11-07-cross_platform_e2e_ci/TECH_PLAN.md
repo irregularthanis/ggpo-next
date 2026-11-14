@@ -51,7 +51,7 @@ flowchart TD
     Windows --> Validate
 ```
 
-The rendezvous environment is `ggpo-e2e-<run_id>-<attempt>`. Linux publishes only its Tailscale IPv4, control port, repository, SHA, run ID, and attempt in a transient Deployment payload. Windows polls that exact environment with a bounded deadline. Linux marks it inactive during unconditional cleanup.
+The rendezvous environment is `ggpo-e2e-<run_id>-<attempt>-<scenario>`. Role 1 publishes only its Tailscale IPv4, control port, repository, SHA, run ID, attempt, and scenario in a transient Deployment payload. Role 2 polls that exact environment with a bounded deadline. Role 1 marks the Deployment inactive and deletes it during unconditional cleanup; GitHub then removes the transient environment.
 
 Control requests contain `session_id`, monotonically increasing nonce, operation, arguments, and HMAC. Both jobs derive the HMAC key from `GGPO_E2E_SESSION_SECRET` plus repository/SHA/run/attempt. Agents allow only prepare, launch-peer, status, finalize, collect, cancel, and shutdown; executable/result paths must remain under the downloaded workspace.
 

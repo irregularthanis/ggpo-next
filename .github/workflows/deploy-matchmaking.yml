@@ -60,7 +60,7 @@ jobs:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
           terraform_wrapper: false
 
-      - name: Check that the environment is configured
+      - name: Check that repository deployment settings are configured
         env:
           REQUIRED: >-
             OCI_REGION=${{ secrets.OCI_REGION != '' }}
@@ -80,7 +80,7 @@ jobs:
         run: |
           missing=$(printf '%s\n' $REQUIRED | sed -n 's/=false$//p')
           if [ -n "$missing" ]; then
-            echo "::error::Missing in the 'matchmaking' environment: $(echo $missing)"
+            echo "::error::Missing repository secrets or variables: $(echo $missing)"
             exit 1
           fi
 

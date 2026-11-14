@@ -72,8 +72,9 @@ never race on the state. By default it deploys the current `:latest` image
 pinned by its digest; the `container_image` input overrides that. The GHCR
 package must be public, because the VM pulls it without credentials.
 
-Configure a GitHub **environment** named `matchmaking` (Settings → Environments)
-with the values from the one-time setup above:
+Configure the following repository Actions settings under **Settings → Secrets
+and variables → Actions**. Secrets belong under **Secrets** and variables under
+**Variables**:
 
 | Kind | Name | Value |
 | --- | --- | --- |
@@ -92,11 +93,14 @@ with the values from the one-time setup above:
 | Variable | `DUCKDNS_SUBDOMAIN` | Subdomain without `.duckdns.org` |
 | Secret | `DUCKDNS_TOKEN` | DuckDNS account token |
 
-The workflow checks that all of them are set before touching Terraform, writes
+The workflow checks that all values are set before touching Terraform, writes
 the OCI key and backend settings only for the run, and deletes them at the end.
 State lives in the same bucket as local runs, so you can apply from Actions and
-destroy locally, or the other way round. Optionally add yourself as a required
-reviewer on the environment to confirm each run.
+destroy locally, or the other way round.
+
+The job still targets the `matchmaking` GitHub environment as a deployment
+boundary. It does not require environment-scoped values; optionally configure
+required reviewers there to approve each deployment.
 
 ## Tests
 

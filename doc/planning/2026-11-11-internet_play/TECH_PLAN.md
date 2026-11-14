@@ -478,9 +478,11 @@ The deploy workflow (`.github/workflows/deploy-matchmaking.yml`):
 - runs only on manual dispatch; it is never a required check and never runs for
   pushes or pull requests, so it blocks nothing;
 - is serialized, so `apply` and `destroy` never race on the state;
-- reads credentials from the `matchmaking` GitHub environment, checks that all
-  are set, and keeps the OCI key and backend settings on the runner only for
-  the run;
+- reads credentials from repository Actions secrets and variables, checks that
+  all are set, and keeps the OCI key and backend settings on the runner only
+  for the run;
+- targets the `matchmaking` environment as an optional approval boundary,
+  without requiring environment-scoped secrets or variables;
 - deploys `:latest` pinned by digest unless a digest is given;
 - after `apply`, waits until the DuckDNS name resolves to the new VM (the VM
   updates its own record) and the lobby answers a version probe, then prints
@@ -489,8 +491,8 @@ The deploy workflow (`.github/workflows/deploy-matchmaking.yml`):
   released IP that may be reassigned.
 
 - Local runs keep credentials on the maintainer's machine (environment
-  variables or a git-ignored `terraform.tfvars`); the workflow keeps them in
-  the GitHub environment.
+  variables or a git-ignored `terraform.tfvars`); the workflow reads them from
+  repository Actions secrets and variables.
 - State lives in the free object storage backend so a later `destroy` works
   from any machine; it is never committed.
 - The DuckDNS name stays reserved while the server is destroyed (its record
