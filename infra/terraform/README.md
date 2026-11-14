@@ -2,10 +2,10 @@
 
 Terraform for the Vector War lobby and relay server: one always-free Oracle
 Cloud Ampere A1 VM that runs the server container, and a free DuckDNS name
-pointing at it. You bring it up before friends play and destroy it afterwards,
-locally or with the manual **Deploy matchmaking server** workflow. Automatic CI
-never creates real infrastructure; it only runs the tests below against mocked
-providers.
+pointing at it. Trusted pull requests validate a real plan; infrastructure or
+server changes merged to `master` apply automatically and verify DuckDNS plus
+the lobby endpoint. The manual **Deploy matchmaking server** workflow remains
+available for explicit plan, apply and destroy operations.
 
 Plan and decisions: [internet play technical plan](../../doc/planning/2026-11-11-internet_play/TECH_PLAN.md).
 
@@ -66,11 +66,19 @@ does the same from the Actions tab: **Run workflow** and pick an action.
 | `plan` | Shows what `apply` would change, without changing anything |
 | `destroy` | Tears everything down and clears the DuckDNS record, so the name stops resolving to an IP that may be reassigned |
 
-It is manual only: never a required check and never run by pushes or pull
-requests, so it blocks nothing. Runs are serialized, so `apply` and `destroy`
-never race on the state. By default it deploys the current `:latest` image
-pinned by its digest; the `container_image` input overrides that. The GHCR
-package must be public, because the VM pulls it without credentials.
+The same deployment workflow is reusable: the Infrastructure workflow calls
+`plan` for repository-owner pull requests and `apply` after matching changes
+merge to `master`. Direct manual runs expose `plan`, `apply` and `destroy`.
+Runs are serialized, so operations never race on the state. By default it
+deploys the current `:latest` image pinned by its digest; the
+`container_image` input overrides that. The GHCR package must be public,
+because the VM pulls it without credentials.
+
+Infrastructure CI is path-filtered to Terraform, matchmaking-server and
+workflow changes; documentation-only changes do not start it. Pull requests
+from forks or non-owner branches never receive credentials and run only the
+mocked validation lanes. Manual dispatch of **Infrastructure** reruns those
+validation lanes without applying anything.
 
 Configure the following repository Actions settings under **Settings → Secrets
 and variables → Actions**. Secrets belong under **Secrets** and variables under

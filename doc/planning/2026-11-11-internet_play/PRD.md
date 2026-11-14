@@ -41,9 +41,9 @@ people play, which fits in a cloud free tier.
 - The Terraform code is covered by unit tests that run without cloud
   credentials, asserting the planned resources and their attributes, and by
   tests of the resulting state.
-- Automatic CI never creates real infrastructure. The server is applied and
-  destroyed at will, from a maintainer's machine or with one click on the
-  manual, non-blocking **Deploy matchmaking server** workflow.
+- Trusted pull requests produce a real plan without applying it. Matching
+  changes merged to `master` apply automatically and verify DNS plus lobby
+  health; maintainers can still plan, apply or destroy manually.
 - The server keeps its own DuckDNS record current after every boot; destroying
   it clears the record.
 - The matchmaking server is a container image built and tested in CI and

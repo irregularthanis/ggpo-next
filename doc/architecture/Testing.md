@@ -469,7 +469,7 @@ cannot reach the build host's loopback server.
 | Hole punching | Codec vs shared vectors, probe authentication, path selection, proxy forwarding, real sessions direct and relay-only | [`tests/vectorwar`](../../tests/vectorwar/net_contract_test.cpp), [`src/apps/vectorwar/net`](../../src/apps/vectorwar/net) | `VectorWarNet` on every platform; loopback sessions on native platforms |
 | Start screen and legend | Fields map to the command-line arguments on every screen; dialog and SDL form driven by synthetic input; legend rows, platform numbering, colors (SDL swatch read back) and font | [`start_form_contract_test.cpp`](../../tests/vectorwar/start_form_contract_test.cpp), [`legend_contract_test.cpp`](../../tests/vectorwar/legend_contract_test.cpp), the GUI host contracts, [`StartArgsTest.java`](../../tests/android/StartArgsTest.java) | Portable tests everywhere; Win32 dialog on MSVC; SDL form on Linux (dummy driver) and the Android emulator; plain Java in the APK job |
 | NAT traversal | Two-to-four-player mixed NAT converges; cone and LAN paths can go direct, restrictive paths retain relay fallback, impairment selects a measured viable route, direct loss falls back, and server loss does not stop an established direct match | [`nat-traversal.yml`](../../.github/workflows/nat-traversal.yml), [`run_nat_matrix.py`](../../tests/nat/run_nat_matrix.py) | Linux network namespaces with emulated NAT routers and `tc netem` on a hosted runner |
-| Infrastructure | Terraform plan and state assertions, lint, server image | [`infrastructure.yml`](../../.github/workflows/infrastructure.yml), [`infra/terraform`](../../infra/terraform/README.md) | Mocked providers; no cloud account |
+| Infrastructure | Terraform plan/state assertions, lint and server image on every relevant PR; trusted owner PRs add a real remote-state plan; matching `master` merges apply and verify DNS plus lobby health | [`infrastructure.yml`](../../.github/workflows/infrastructure.yml), [`deploy-matchmaking.yml`](../../.github/workflows/deploy-matchmaking.yml), [`infra/terraform`](../../infra/terraform/README.md) | Mocked providers for all PRs; repository secrets and the `matchmaking` approval boundary for real-cloud gates |
 | Cross-host | Linux, Windows, MinGW, and Android peers converge | [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml), [`tests/e2e`](../../tests/e2e) | Native hosted runners joined through ephemeral Tailscale nodes |
 
 ### Shared contracts
@@ -804,12 +804,13 @@ flowchart LR
   long enough for the event. The aggregate check is `Complete NAT traversal
   checks`. Run it locally only on a disposable Linux VM: it needs root and
   creates namespaces.
-- The `Infrastructure` workflow runs Terraform `fmt`, `validate`, `terraform
-  test` with mocked providers, `tflint`, the server tests and a multi-arch
-  image smoke; its aggregate is `Complete infrastructure checks`.
-- The **Deploy matchmaking server** workflow is manual only and never a
-  required check; after `apply` it verifies the server's own DuckDNS update and
-  a lobby answer.
+- The path-filtered `Infrastructure` workflow runs Terraform `fmt`, `validate`,
+  mocked `terraform test`, `tflint`, server tests and a multi-arch image smoke.
+  Trusted owner pull requests then run a real plan; matching `master` merges
+  apply and verify DuckDNS plus a lobby answer. Its aggregate is
+  `Complete infrastructure checks`.
+- **Deploy matchmaking server** remains manually dispatchable for explicit
+  `plan`, `apply` and `destroy`; `destroy` also clears the DuckDNS record.
 
 Design and safety rules: [Matchmaking](Matchmaking.md).
 

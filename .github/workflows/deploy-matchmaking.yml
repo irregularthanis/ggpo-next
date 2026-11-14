@@ -1,15 +1,25 @@
 name: Deploy matchmaking server
 
-# Manual only: bring the Oracle Cloud matchmaking server up or down, or show a
-# plan. Never a required check and never triggered by pushes or pull requests,
-# so it cannot block anything. Credentials live in the "matchmaking" GitHub
-# environment (see infra/terraform/README.md, "Deploy from GitHub Actions").
+# Bring the Oracle Cloud matchmaking server up or down, or show a plan. The
+# infrastructure workflow reuses this implementation for trusted PR plans and
+# master applies; maintainers can also dispatch it directly.
 #
 # The VM keeps its own DuckDNS record current (at boot and every 5 minutes);
 # after apply this workflow waits until the name resolves to the VM and the
 # server answers on the lobby port.
 
 on:
+  workflow_call:
+    inputs:
+      action:
+        description: "apply, plan or destroy"
+        type: string
+        required: true
+      container_image:
+        description: "Optional image pinned by digest"
+        type: string
+        required: false
+        default: ""
   workflow_dispatch:
     inputs:
       action:

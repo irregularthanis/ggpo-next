@@ -1,13 +1,29 @@
 name: Infrastructure
 
-# Tests the matchmaking server and its Terraform. Nothing here touches a cloud
-# account: Terraform runs only against mocked providers, and real apply and
-# destroy are done by hand (infra/terraform/README.md).
+# Qualifies the matchmaking server and Terraform. Pull requests validate and,
+# for trusted repository-owner branches, produce a real plan. A successful
+# master merge applies that exact revision and verifies DNS/server health.
 
 on:
   push:
     branches: [master]
+    paths:
+      - "infra/terraform/**"
+      - "!infra/terraform/**/*.md"
+      - "services/matchmaking/**"
+      - "!services/matchmaking/**/*.md"
+      - ".github/workflows/infrastructure.yml"
+      - ".github/workflows/deploy-matchmaking.yml"
+      - ".github/workflows/classify-changes.yml"
   pull_request:
+    paths:
+      - "infra/terraform/**"
+      - "!infra/terraform/**/*.md"
+      - "services/matchmaking/**"
+      - "!services/matchmaking/**/*.md"
+      - ".github/workflows/infrastructure.yml"
+      - ".github/workflows/deploy-matchmaking.yml"
+      - ".github/workflows/classify-changes.yml"
   workflow_dispatch:
 
 # A newer push to the same pull request supersedes this run, so cancel it and
@@ -18,6 +34,7 @@ concurrency:
 
 permissions:
   contents: read
+  packages: read
 
 env:
   TERRAFORM_VERSION: "1.9.8"
@@ -159,9 +176,8 @@ jobs:
           echo "container_image = \"ghcr.io/${{ github.repository_owner }}/ggpo-matchmaking@${{ steps.publish.outputs.digest }}\"" \
             | tee -a "$GITHUB_STEP_SUMMARY"
 
-  final-report:
-    # One stable required check for the whole workflow.
-    name: Complete infrastructure checks
+  validation:
+    name: Validate infrastructure and server
     if: always()
     needs: [changes, terraform, tflint, server, image]
     runs-on: ubuntu-24.04
@@ -185,3 +201,63 @@ jobs:
           test "$TFLINT" = success
           test "$SERVER" = success
           test "$IMAGE" = success
+
+  plan:
+    name: Plan real infrastructure
+    needs: [changes, validation]
+    if: >-
+      github.event_name == 'pull_request' &&
+      needs.changes.outputs.code == 'true' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == github.repository_owner &&
+      needs.validation.result == 'success'
+    uses: ./.github/workflows/deploy-matchmaking.yml
+    with:
+      action: plan
+    secrets: inherit
+
+  apply:
+    name: Apply real infrastructure
+    needs: [changes, validation]
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/master' &&
+      needs.changes.outputs.code == 'true' &&
+      needs.validation.result == 'success'
+    uses: ./.github/workflows/deploy-matchmaking.yml
+    with:
+      action: apply
+    secrets: inherit
+
+  final-report:
+    # Keep one stable required check over validation and the event-specific
+    # real-cloud gate. Manual dispatch performs validation only.
+    name: Complete infrastructure checks
+    if: always()
+    needs: [changes, validation, plan, apply]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require the appropriate qualification path
+        env:
+          EVENT: ${{ github.event_name }}
+          ACTOR: ${{ github.actor }}
+          OWNER: ${{ github.repository_owner }}
+          CODE_CHANGED: ${{ needs.changes.outputs.code }}
+          VALIDATION: ${{ needs.validation.result }}
+          PLAN: ${{ needs.plan.result }}
+          APPLY: ${{ needs.apply.result }}
+          SAME_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+        run: |
+          test "$VALIDATION" = success
+          if test "$CODE_CHANGED" != true || test "$EVENT" = workflow_dispatch; then
+            exit 0
+          fi
+          if test "$EVENT" = pull_request; then
+            if test "$SAME_REPOSITORY" = true && test "$ACTOR" = "$OWNER"; then
+              test "$PLAN" = success
+            else
+              test "$PLAN" = skipped
+            fi
+          elif test "$EVENT" = push; then
+            test "$APPLY" = success
+          fi

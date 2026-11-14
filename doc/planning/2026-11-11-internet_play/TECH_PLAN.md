@@ -460,9 +460,13 @@ mismatch, or "could not reach the relay".
   they never take the documentation fast path.
 - **Image publishing:** on `master`, build and push the server image to GHCR
   (free for public repositories), tagged by commit and recorded by digest.
-- **Manual deploy workflow:** `deploy-matchmaking.yml` reads repository
-  Actions settings, targets the optional `matchmaking` approval boundary, and
-  performs explicit `plan`, `apply` or `destroy`; it is never a required check.
+- **Real-cloud qualification:** the path-filtered Infrastructure workflow
+  reuses `deploy-matchmaking.yml`; trusted owner PRs run `plan`, and matching
+  `master` merges run `apply` plus DNS/lobby health checks. Fork and non-owner
+  PRs never receive deployment credentials.
+- **Manual deployment:** `deploy-matchmaking.yml` also exposes explicit
+  `plan`, `apply` and `destroy`, serialized with automatic operations through
+  the same remote state and `matchmaking` approval boundary.
 
 ## Operation
 
@@ -474,10 +478,10 @@ destroyed afterwards, either way:
 | One click | Actions → **Deploy matchmaking server** → Run workflow → `apply`, `plan` or `destroy` |
 | Local | `terraform -chdir=infra/terraform/envs/prod init -backend-config=backend.hcl`, then `apply` / `destroy` |
 
-The deploy workflow (`.github/workflows/deploy-matchmaking.yml`):
+The reusable deploy workflow (`.github/workflows/deploy-matchmaking.yml`):
 
-- runs only on manual dispatch; it is never a required check and never runs for
-  pushes or pull requests, so it blocks nothing;
+- runs as a real plan for trusted repository-owner PRs, applies after matching
+  changes merge to `master`, and remains directly dispatchable;
 - is serialized, so `apply` and `destroy` never race on the state;
 - reads credentials from repository Actions secrets and variables, checks that
   all are set, and keeps the OCI key and backend settings on the runner only
