@@ -40,6 +40,7 @@ The GGPO Network Library Developer Guide is for developers who are integrating t
   - [Floating-point determinism](#floating-point-determinism)
   - [Deployment and license](#deployment-and-license)
   - [Run the standalone Vector War sample](#run-the-standalone-vector-war-sample)
+  - [Play Vector War over the Internet](#play-vector-war-over-the-internet)
   - [Upgrading from 0.3.0](#upgrading-from-030)
 - [Game State and Inputs](#game-state-and-inputs)
 - [Using State and Inputs for Synchronization](#using-state-and-inputs-for-synchronization)
@@ -715,6 +716,40 @@ Escape exits. The Android launcher accepts the same local port, player count,
 and peer endpoints; touch controls map to the same steering, fire, and bomb
 inputs. Vector War is not built with MinGW. The sample archives include the
 license and the detailed [Vector War architecture guide](architecture/VectorWar.md).
+
+### Play Vector War over the Internet
+
+Vector War supports direct `IP:PORT` play and matchmade Internet play. Run the
+GUI without arguments and choose **Matchmaking**, then enter the same server,
+player count (2–4), and optional lobby code on every device. The server places
+players in the lobby, starts every peer pair on its relay, and the clients then
+try an authenticated direct UDP path while keeping the relay available.
+
+The equivalent desktop command is:
+
+```text
+VectorWar --matchmaking HOST[:PORT] PLAYERS [LOBBY] LOCAL_PORT [--relay-only]
+```
+
+- `HOST` is the matchmaking server; the default UDP port is `7100`.
+- `PLAYERS` is `2`, `3`, or `4`.
+- `LOBBY` is an optional shared code of up to eight letters or digits.
+- `LOCAL_PORT` is the public UDP port; use `0` to choose one automatically.
+- `--relay-only` disables direct-path negotiation for diagnosis or comparison.
+
+The in-game legend reports each peer's platform and active path. On Windows,
+press `P` to open the performance monitor, which also reports the active route,
+active RTT, and relay RTT per remote player. A match can contain both direct
+and relayed pairs, and a failed direct route falls back to the relay without
+changing GGPO's session.
+
+Operators can deploy or remove the reference server with the manual
+[`Deploy matchmaking server`](../.github/workflows/deploy-matchmaking.yml)
+workflow or follow the [Terraform instructions](../infra/terraform/README.md).
+Applications integrating GGPO do not inherit this service automatically: it is
+Vector War sample infrastructure, implemented outside GGPO's API and protocol.
+See [Matchmaking, relay and hole punching](architecture/Matchmaking.md) for the
+packet flow, compatibility rules, security boundaries, and tests.
 
 ### Upgrading from 0.3.0
 

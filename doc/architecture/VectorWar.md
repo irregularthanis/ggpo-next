@@ -16,6 +16,7 @@
 - [9. Spectators](#9-spectators)
 - [10. Shutdown](#10-shutdown)
 - [Headless application contract](#headless-application-contract)
+- [Internet play](#internet-play)
 - [End-to-end two-player example](#end-to-end-two-player-example)
 - [What the sample demonstrates](#what-the-sample-demonstrates)
 - [Sample limitations](#sample-limitations)
@@ -323,7 +324,9 @@ thrust, brake, left/right rotation, fire, and an unused bomb bit.
 [`GDIRenderer`](../../src/apps/vectorwar/gdi_renderer.cpp) draws ships, bullets,
 connection status, checksums, and text into the Win32 window. On Linux,
 [`SDLVectorWarRenderer`](../../src/apps/vectorwar/sdl_renderer.cpp) draws the
-same scene into an SDL window.
+same scene into an SDL window. Both draw the player [legend](#legend); SDL
+text uses an embedded public-domain 8x8 font
+([`vw_bitmap_font.h`](../../src/apps/vectorwar/vw_bitmap_font.h)).
 
 `VectorWar_AdvanceFrame` computes a checksum after each simulation step and stores
 it in `ngs` for display. This displayed checksum is diagnostic state; the saved
@@ -387,6 +390,83 @@ the frozen Vector War oracle, then the coordinator permits clean shutdown.
 Runner address discovery (ephemeral Tailscale nodes and a run-scoped GitHub
 Deployment record) is described in
 [Native cross-platform qualification](CrossPlatformTesting.md#address-discovery).
+
+## Internet play
+
+Besides direct `IP:PORT` play, Vector War can join a lobby on the matchmaking
+server and play 2 to 4 players across routers, using hole punching with the
+relay as a live fallback. GGPO is unchanged: a path proxy owns the public
+socket and GGPO sees each remote player at a loopback endpoint. The design,
+protocol and safety rules are in [Matchmaking](Matchmaking.md).
+
+Every frontend accepts it on the command line (Windows, Linux and Android,
+where Android passes the same words through the launcher's arguments):
+
+```text
+VectorWar --matchmaking HOST[:PORT] PLAYERS [LOBBY] LOCAL_PORT [--relay-only]
+```
+
+`HOST` is the server (port 7100 by default), `PLAYERS` the group size 2-4,
+`LOBBY` an optional code of up to 8 letters or digits shared by friends, and
+`LOCAL_PORT` the public UDP port (0 picks any). The window opens once the group
+is complete. All frontends share
+[`matchmade.cpp`](../../src/apps/vectorwar/matchmade.cpp): resolve, matchmake,
+start the path proxy, and build GGPO's player list.
+
+The headless fixture exposes it for tests:
+
+```text
+VectorWarHeadless --matchmaking HOST:PORT PLAYERS LOBBY|- FRAMES RESULT.json [--relay-only]
+```
+
+It matchmakes through `VectorWarNet`, binds GGPO on a free local port, runs the
+same session loop as the direct form, and prints one `vectorwar-path:` line per
+peer with its route and round-trip times. `vectorwar_matchmaking_loopback`
+plays 2, 3 and 4 players this way (every pair direct) and 2 players relay-only.
+Every peer in a group must agree; the portable two-player frame-180 oracle is
+the frozen checksum `b3381958`.
+
+### Start screen
+
+Run without arguments, every client shows the same start screen: direct
+`IP:PORT` (two players; you choose player 1 or 2) or **Matchmaking** with a
+server, 2 to 4 players and an optional lobby code. The local UDP port is shared
+by both.
+
+| Platform | Start screen |
+| --- | --- |
+| Windows | The `IDD_START` dialog in [`VectorWar.rc`](../../src/apps/vectorwar/VectorWar.rc), driven by [`win32_start_dialog.cpp`](../../src/apps/vectorwar/win32_start_dialog.cpp) |
+| Linux | An SDL form drawn with the embedded 8x8 font, [`sdl_start_screen.cpp`](../../src/apps/vectorwar/sdl_start_screen.cpp); Tab, Enter, Esc and the mouse |
+| Android | [`LauncherActivity`](../../src/apps/vectorwar/android/app/src/main/java/org/ggponext/vectorwar/LauncherActivity.java): the direct fields as before, plus server, players, lobby and **Matchmaking** |
+
+Each screen turns its fields into the command-line arguments
+([`vw_start_form.cpp`](../../src/apps/vectorwar/vw_start_form.cpp); on Android
+[`StartArgs.java`](../../src/apps/vectorwar/android/app/src/main/java/org/ggponext/vectorwar/StartArgs.java)),
+so a start-screen session starts exactly like the command line. While the
+lobby fills the screen shows "Waiting for players... 2 of 4" and **Cancel**
+(Esc; Back on Android). Failures say what happened: "matchmaking server
+unreachable" (no answer within 5 s), "the server speaks another protocol
+version", "could not reach the relay". In the SDL frontend `--matchmaking`
+from the command line or the Android launcher shows the same progress screen,
+and on Android a failure stays on screen until Back.
+
+The default server is a build setting, empty until the server's DuckDNS name
+is chosen: `-DGGPO_VECTORWAR_MATCHMAKING_HOST=name.duckdns.org` (CMake) or
+`-PmatchmakingHost=name.duckdns.org` (the APK).
+
+### Legend
+
+A legend in the top-left corner has one row per player: a swatch in that
+player's ship color, then `P1 Windows (you)`, `P2 Android direct`,
+`P3 Linux relay`. Platforms come from `MATCH`; in direct play only your own
+platform is known and peers show `unknown`. Routes come from the path proxy
+and refresh every frame. Colors come from one table per renderer
+([`vw_player_colors.h`](../../src/apps/vectorwar/vw_player_colors.h)) shared
+with the ships. The legend lives in `NonGameState`, so it never affects saved
+state or checksums ([`vw_legend.cpp`](../../src/apps/vectorwar/vw_legend.cpp)).
+On Windows the performance monitor uses the same proxy snapshot to show each
+remote player's active route, active RTT, and relay RTT; it does not infer the
+path from GGPO's aggregate ping.
 
 ## Interactive platform frontends
 
@@ -474,7 +554,8 @@ For frame 120:
   Other traces still require their own cross-platform qualification.
 - Raw `memcpy` serialization is not versioned and is unsuitable for pointers or
   dynamic containers.
-- The sample uses a full peer mesh rather than an authoritative server.
+- The sample uses a full peer mesh rather than an authoritative server; the
+  matchmaking server only groups and relays players.
 - Automated tests cover the application core, native GUI lifecycle, and two
   native processes exchanging scripted inputs over loopback UDP.
 

@@ -57,5 +57,6 @@ HeadlessVectorWarHost::SleepMs(unsigned int milliseconds) const
 
 void HeadlessVectorWarHost::InitializePerformanceMonitor() { }
 void HeadlessVectorWarHost::UpdatePerformanceMonitor(GGPOSession *, GGPOPlayerHandle [], int) { }
+void HeadlessVectorWarHost::UpdatePathMonitor(const VwLegend &) { }
 void HeadlessVectorWarHost::TogglePerformanceMonitor() { }
 void HeadlessVectorWarHost::ShutdownPerformanceMonitor() { }

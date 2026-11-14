@@ -1,5 +1,6 @@
 #include "headless_host.h"
 #include "vectorwar.h"
+#include "matchmade.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -99,11 +100,138 @@ WriteResult(const char *path, int player, int frame, unsigned int checksum,
    return true;
 }
 
+/* Play one session to target_frames and write the result; shared by the direct
+ * and the matchmaking forms. A matchmade session's routes are reported. */
+static int
+RunSession(HeadlessVectorWarHost *host, int local_player, unsigned short local_port,
+           GGPOPlayer *players, int num_players, int target_frames,
+           const char *result_path, MatchmadeSession *matchmade)
+{
+   VectorWar_Init(host, local_port, num_players, players, 0);
+   const unsigned int start = host->NowMs();
+   while (VectorWar_RunningEventCount() == 0 && host->NowMs() - start < 15000) {
+      VectorWar_Idle(1);
+      host->SleepMs(1);
+   }
+   /* Let player 1 predict several frames before player 2 starts submitting
+    * authoritative input. This makes rollback part of the fixture contract. */
+   if (local_player == 2) {
+      host->SleepMs(50);
+   }
+   /* VW_HEADLESS_FRAME_MS paces the loop (e.g. 16 for real time) so timed
+    * network events land mid-match; unset keeps the unpaced default. */
+   const char *pace = getenv("VW_HEADLESS_FRAME_MS");
+   const int frame_ms = (pace && atoi(pace) > 0 && atoi(pace) <= 100) ? atoi(pace) : 1;
+   while (VectorWar_FrameNumber() < target_frames && host->NowMs() - start < 45000) {
+      VectorWar_RunFrame();
+      VectorWar_Idle(1);
+      host->SleepMs(frame_ms);
+   }
+   if (VectorWar_FrameNumber() != target_frames ||
+       VectorWar_RunningEventCount() != 1) {
+      fprintf(stderr, "incomplete Vector War session: frame=%d running=%d\n",
+              VectorWar_FrameNumber(), VectorWar_RunningEventCount());
+      VectorWar_Exit();
+      return 1;
+   }
+
+   const char *ready_path = getenv("GGPO_SMOKE_READY_FILE");
+   const char *finalize_path = getenv("GGPO_SMOKE_FINALIZE_FILE");
+   if (ready_path || finalize_path) {
+      if (!ready_path || !finalize_path) {
+         fprintf(stderr, "incomplete completion-barrier configuration\n");
+         return 1;
+      }
+      const unsigned int barrier_start = host->NowMs();
+      while (!MarkerExists(finalize_path)) {
+         VectorWar_Idle(1);
+         if (!WriteState(ready_path, VectorWar_FrameNumber(),
+                         VectorWar_StateChecksum())) return 1;
+         host->SleepMs(1);
+         if (host->NowMs() - barrier_start > 15000) {
+            fprintf(stderr, "timed out waiting for completion barrier\n");
+            return 1;
+         }
+      }
+   } else {
+      /* Local loopback has no coordinator, so give late authoritative input
+       * time to complete rollback before collecting either result. */
+      for (int settle = 0; settle < 1000; ++settle) {
+         VectorWar_Idle(1);
+         host->SleepMs(1);
+      }
+   }
+
+   const int frame = VectorWar_FrameNumber();
+   const unsigned int checksum = VectorWar_StateChecksum();
+   const int saves = VectorWar_SaveCount();
+   const int loads = VectorWar_LoadCount();
+   int replay_frames = VectorWar_ReplayFrameCount();
+   const int running_events = VectorWar_RunningEventCount();
+   const int unexpected_disconnects = VectorWar_UnexpectedDisconnectCount();
+   VectorWar_Exit();
+   MatchmadeReportPaths(matchmade);
+   if (!WriteResult(result_path, local_player, frame, checksum, saves, loads,
+                    replay_frames, running_events, unexpected_disconnects,
+                    true)) {
+      return 1;
+   }
+   printf("vectorwar-headless: player=%d frame=%d checksum=%08x loads=%d replay=%d\n",
+          local_player, frame, checksum, loads, replay_frames);
+   return 0;
+}
+
+/* --matchmaking HOST:PORT PLAYERS LOBBY|- FRAMES RESULT.json [--relay-only]:
+ * join a lobby, then play through the path proxy (hole punching with relay
+ * fallback). GGPO sees every remote player at a loopback endpoint. */
+static int
+MatchmakingMain(int argc, char **argv)
+{
+   if (argc != 7 && !(argc == 8 && strcmp(argv[7], "--relay-only") == 0)) {
+      fprintf(stderr, "usage: %s --matchmaking HOST:PORT PLAYERS LOBBY|- FRAMES RESULT.json [--relay-only]\n",
+              argv[0]);
+      return 2;
+   }
+   /* Reuse the frontends' parser: HOST[:PORT] PLAYERS LOBBY LOCAL_PORT. */
+   char any_port[] = "0";
+   char *fields[5] = { argv[2], argv[3], argv[4], any_port, NULL };
+   int count = 4;
+   char relay_only[] = "--relay-only";
+   if (argc == 8) fields[count++] = relay_only;
+   MatchmadeArgs args;
+   const int target_frames = atoi(argv[5]);
+   if (!ParseMatchmakingArgs(count, fields, 0, &args) || target_frames <= 0) {
+      fprintf(stderr, "invalid Vector War matchmaking arguments\n");
+      return 2;
+   }
+   GGPOPlayer players[GGPO_MAX_PLAYERS];
+   int num_players = 0, local_player = 0;
+   unsigned short ggpo_port = 0;
+   char error[160];
+   MatchmadeSession *session = MatchmadeStart(args, players, &num_players, &ggpo_port,
+                                              &local_player, error, sizeof(error));
+   if (!session) {
+      fprintf(stderr, "matchmaking failed: %s\n", error);
+      return 1;
+   }
+   HeadlessVectorWarHost host(local_player);
+   const int code = RunSession(&host, local_player, ggpo_port, players, num_players,
+                               target_frames, argv[6], session);
+   MatchmadeStop(session);
+   return code;
+}
+
 int
 main(int argc, char **argv)
 {
+   if (argc >= 2 && strcmp(argv[1], "--matchmaking") == 0) {
+      return MatchmakingMain(argc, argv);
+   }
    if (argc != 6 && argc != 7) {
-      fprintf(stderr, "usage: %s PLAYER LOCAL_PORT REMOTE_PORT FRAMES RESULT.json [REMOTE_IP]\n", argv[0]);
+      fprintf(stderr,
+              "usage: %s PLAYER LOCAL_PORT REMOTE_PORT FRAMES RESULT.json [REMOTE_IP]\n"
+              "       %s --matchmaking HOST:PORT PLAYERS LOBBY|- FRAMES RESULT.json [--relay-only]\n",
+              argv[0], argv[0]);
       return 2;
    }
    const int local_player = atoi(argv[1]);
@@ -168,77 +296,10 @@ main(int argc, char **argv)
       }
    }
 
-   VectorWar_Init(&host, (unsigned short)local_port, 2, players, 0);
-   const unsigned int start = host.NowMs();
-   while (VectorWar_RunningEventCount() == 0 && host.NowMs() - start < 15000) {
-      VectorWar_Idle(1);
-      host.SleepMs(1);
-   }
-   /* Let player 1 predict several frames before player 2 starts submitting
-    * authoritative input. This makes rollback part of the fixture contract. */
-   if (local_player == 2) {
-      host.SleepMs(50);
-   }
-   while (VectorWar_FrameNumber() < target_frames && host.NowMs() - start < 45000) {
-      VectorWar_RunFrame();
-      VectorWar_Idle(1);
-      host.SleepMs(1);
-   }
-   if (VectorWar_FrameNumber() != target_frames ||
-       VectorWar_RunningEventCount() != 1) {
-      fprintf(stderr, "incomplete Vector War session: frame=%d running=%d\n",
-              VectorWar_FrameNumber(), VectorWar_RunningEventCount());
-      VectorWar_Exit();
-#if defined(_WIN32)
-      WSACleanup();
-#endif
-      return 1;
-   }
-
-   const char *ready_path = getenv("GGPO_SMOKE_READY_FILE");
-   const char *finalize_path = getenv("GGPO_SMOKE_FINALIZE_FILE");
-   if (ready_path || finalize_path) {
-      if (!ready_path || !finalize_path) {
-         fprintf(stderr, "incomplete completion-barrier configuration\n");
-         return 1;
-      }
-      const unsigned int barrier_start = host.NowMs();
-      while (!MarkerExists(finalize_path)) {
-         VectorWar_Idle(1);
-         if (!WriteState(ready_path, VectorWar_FrameNumber(),
-                         VectorWar_StateChecksum())) return 1;
-         host.SleepMs(1);
-         if (host.NowMs() - barrier_start > 15000) {
-            fprintf(stderr, "timed out waiting for completion barrier\n");
-            return 1;
-         }
-      }
-   } else {
-      /* Local loopback has no coordinator, so give late authoritative input
-       * time to complete rollback before collecting either result. */
-      for (int settle = 0; settle < 1000; ++settle) {
-         VectorWar_Idle(1);
-         host.SleepMs(1);
-      }
-   }
-
-   const int frame = VectorWar_FrameNumber();
-   const unsigned int checksum = VectorWar_StateChecksum();
-   const int saves = VectorWar_SaveCount();
-   const int loads = VectorWar_LoadCount();
-   int replay_frames = VectorWar_ReplayFrameCount();
-   const int running_events = VectorWar_RunningEventCount();
-   const int unexpected_disconnects = VectorWar_UnexpectedDisconnectCount();
-   VectorWar_Exit();
+   const int code = RunSession(&host, local_player, (unsigned short)local_port, players, 2,
+                               target_frames, argv[5], NULL);
 #if defined(_WIN32)
    WSACleanup();
 #endif
-   if (!WriteResult(argv[5], local_player, frame, checksum, saves, loads,
-                    replay_frames, running_events, unexpected_disconnects,
-                    true)) {
-      return 1;
-   }
-   printf("vectorwar-headless: player=%d frame=%d checksum=%08x loads=%d replay=%d\n",
-          local_player, frame, checksum, loads, replay_frames);
-   return 0;
+   return code;
 }

@@ -30,7 +30,10 @@ integration is [Vector War](../../src/apps/vectorwar/vectorwar.cpp).
 - It does not make a simulation deterministic. The application must provide a
   deterministic, serializable, fixed-step simulation.
 - It is not a matchmaking, relay, NAT-traversal, authentication, or encryption
-  service. The current transport sends GGPO protocol messages over UDP.
+  service. The current transport sends GGPO protocol messages over UDP. The
+  Vector War sample shows one way to add internet play around an unchanged
+  GGPO: a lobby and relay server plus hole punching with relay fallback
+  ([Matchmaking](Matchmaking.md)).
 
 See the existing [Developer Guide](../DeveloperGuide.md) for integration advice.
 

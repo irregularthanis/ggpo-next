@@ -22,6 +22,8 @@ class FakeTransport:
             return list(self.deployments)
         if method == "POST" and "/statuses" in path:
             return {"state": payload["state"]}
+        if method == "DELETE" and path.startswith("/deployments/"):
+            return None
         raise AssertionError((method, path, payload))
 
 
@@ -39,6 +41,11 @@ class RendezvousTests(unittest.TestCase):
                                                    poll_seconds=0)
         self.assertEqual((found_id, found), (deployment_id, record))
         self.assertEqual(self.rendezvous.retire(deployment_id)["state"], "inactive")
+        self.assertIsNone(self.rendezvous.delete(deployment_id))
+        self.assertEqual(
+            self.transport.calls[-1],
+            ("DELETE", "/deployments/1", None),
+        )
 
     def test_each_scenario_has_an_isolated_deployment_environment(self):
         other = DeploymentRendezvous(

@@ -8,6 +8,9 @@ def sdlDir = project.findProperty('sdlDir') ?: System.getenv('SDL2_SOURCE_DIR')
 if (!sdlDir) {
     throw new GradleException('Set -PsdlDir=<SDL2 source tree> or SDL2_SOURCE_DIR (see doc/DeveloperGuide.md)')
 }
+// Default matchmaking server on the launcher and in the native build
+// (-PmatchmakingHost=name.duckdns.org); empty: the player types one in.
+def matchmakingHost = project.findProperty('matchmakingHost') ?: ''
 // Optional explicit NDK; its version must be declared alongside the path.
 def ndkDir = System.getenv('ANDROID_NDK_HOME') ?: System.getenv('ANDROID_NDK_LATEST_HOME')
 def ndkRevision = null
@@ -31,12 +34,14 @@ android {
         targetSdk 35
         versionCode 1
         versionName '1.0'
+        resValue 'string', 'matchmaking_host', matchmakingHost
         externalNativeBuild {
             cmake {
                 // The repository's root CMake build: GGPO, VectorWarCore and the
                 // SDL2 frontend, exactly as on the other platforms.
                 arguments '-DGGPO_BUILD_VECTORWAR=ON', '-DBUILD_TESTING=OFF',
-                          "-DGGPO_ANDROID_SDL2_SOURCE_DIR=${sdlDir}"
+                          "-DGGPO_ANDROID_SDL2_SOURCE_DIR=${sdlDir}",
+                          "-DGGPO_VECTORWAR_MATCHMAKING_HOST=${matchmakingHost}"
                 targets 'VectorWarAndroid'
             }
         }

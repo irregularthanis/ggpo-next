@@ -5,12 +5,38 @@ add_library(VectorWarCore STATIC
 )
 
 add_common_flags(VectorWarCore)
-target_link_libraries(VectorWarCore PUBLIC GGPO::GGPO)
+# VectorWarNet: matchmaking client and path proxy (see matchmade.h).
+target_link_libraries(VectorWarCore PUBLIC GGPO::GGPO VectorWarNet)
 target_include_directories(VectorWarCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+# Shown, editable, on every start screen; empty until the server's DuckDNS name
+# is chosen (see doc/architecture/Matchmaking.md).
+set(GGPO_VECTORWAR_MATCHMAKING_HOST "" CACHE STRING
+	"Default matchmaking server (HOST[:PORT]) on the Vector War start screen")
+target_compile_definitions(VectorWarCore PRIVATE
+	"VW_DEFAULT_MATCHMAKING_HOST=\"${GGPO_VECTORWAR_MATCHMAKING_HOST}\"")
 if(MSVC)
+	target_compile_definitions(VectorWarCore PRIVATE _CRT_SECURE_NO_WARNINGS)
 	target_compile_options(VectorWarCore PRIVATE "/W4" "/WX")
 else()
 	target_compile_options(VectorWarCore PRIVATE -Wall -Wextra)
+endif()
+
+# Matchmaking client and path proxy (hole punching with relay fallback).
+set(GGPO_VECTORWAR_NET_ALL ${GGPO_EXAMPLES_VECTORWAR_NET_SRC} ${GGPO_EXAMPLES_VECTORWAR_NET_IO_SRC})
+add_library(VectorWarNet STATIC ${GGPO_VECTORWAR_NET_ALL})
+add_common_flags(VectorWarNet)
+target_include_directories(VectorWarNet PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/net)
+if(WIN32)
+	target_link_libraries(VectorWarNet PUBLIC ws2_32)
+else()
+	find_package(Threads REQUIRED)
+	target_link_libraries(VectorWarNet PUBLIC Threads::Threads)
+endif()
+if(MSVC)
+	target_compile_options(VectorWarNet PRIVATE "/W4")
+	target_compile_definitions(VectorWarNet PRIVATE _CRT_SECURE_NO_WARNINGS _WINSOCK_DEPRECATED_NO_WARNINGS)
+else()
+	target_compile_options(VectorWarNet PRIVATE -Wall -Wextra)
 endif()
 
 add_executable(VectorWarHeadless
@@ -19,7 +45,7 @@ add_executable(VectorWarHeadless
 	headless_host.h
 )
 add_common_flags(VectorWarHeadless)
-target_link_libraries(VectorWarHeadless PRIVATE VectorWarCore)
+target_link_libraries(VectorWarHeadless PRIVATE VectorWarCore VectorWarNet)
 if(MSVC)
 	target_compile_options(VectorWarHeadless PRIVATE "/W4" "/WX")
 	target_compile_definitions(VectorWarHeadless PRIVATE _CRT_SECURE_NO_WARNINGS)

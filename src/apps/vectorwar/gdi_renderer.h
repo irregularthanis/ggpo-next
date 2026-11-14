@@ -22,6 +22,7 @@ protected:
    void RenderChecksum(HDC hdc, int y, NonGameState::ChecksumInfo &info);
    void DrawShip(HDC hdc, int which, GameState &gamestate);
    void DrawConnectState(HDC hdc, Ship &ship, PlayerConnectionInfo &info);
+   void DrawLegend(HDC hdc, const VwLegend &legend);
    void CreateGDIFont(HDC hdc);
 
    HFONT          _font;

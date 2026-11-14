@@ -30,6 +30,21 @@
 #define IDC_NETWORK_LAG                 211
 #define IDC_BANDWIDTH                   212
 #define IDC_PACKET_LOSS                 223
+#define IDC_PATH_1                      224
+#define IDC_PATH_2                      225
+#define IDC_PATH_3                      226
+#define IDC_PATH_4                      227
+
+#define IDD_START                       300
+#define IDC_START_LOCAL_PORT            301
+#define IDC_START_PLAYER_NUMBER         302
+#define IDC_START_REMOTE                303
+#define IDC_START_SERVER                304
+#define IDC_START_PLAYERS               305
+#define IDC_START_LOBBY                 306
+#define IDC_START_STATUS                307
+#define IDC_START_CONNECT               308
+#define IDC_START_MATCHMAKING           309
 
 // Next default values for new objects
 //

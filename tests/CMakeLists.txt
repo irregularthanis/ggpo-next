@@ -12,6 +12,13 @@ add_test(NAME cross_host_orchestration_contract
             ${CMAKE_CURRENT_SOURCE_DIR}/e2e/test_orchestration.py
 )
 
+# Vector War matchmaking server: protocol vectors, pairing rules, loopback UDP.
+add_test(NAME matchmaking_server_contract
+    COMMAND ${PYTHON_EXECUTABLE} -m unittest discover -s tests -t .
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/services/matchmaking
+)
+set_tests_properties(matchmaking_server_contract PROPERTIES LABELS "portable;matchmaking")
+
 # Prove the run-scoped Deployment record fails closed on stale/duplicate data.
 add_test(NAME cross_host_rendezvous_contract
     COMMAND ${PYTHON_EXECUTABLE}
@@ -361,6 +368,98 @@ set_tests_properties(vectorwar_state_contract PROPERTIES
 
 # Shared gameplay layer: exact cardinal initialization must be bit-stable on
 # every supported compiler before networking or platform services participate.
+# Vector War networking: matchmaking codec checked against the server's
+# shared protocol vectors, SipHash, hole-punching probes and the path selector.
+include(${PROJECT_SOURCE_DIR}/src/apps/vectorwar/CMakeSources.cmake)
+set(GGPO_VECTORWAR_NET_SOURCES)
+foreach(source ${GGPO_EXAMPLES_VECTORWAR_NET_SRC})
+    list(APPEND GGPO_VECTORWAR_NET_SOURCES "${PROJECT_SOURCE_DIR}/src/apps/vectorwar/${source}")
+endforeach()
+set(GGPO_NET_VECTORS_JSON ${PROJECT_SOURCE_DIR}/services/matchmaking/protocol_vectors.json)
+set(GGPO_NET_VECTORS_INC ${CMAKE_CURRENT_BINARY_DIR}/vectorwar/net_vectors.inc)
+add_custom_command(
+    OUTPUT ${GGPO_NET_VECTORS_INC}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/vectorwar
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/vectorwar/gen_net_vectors.py
+            ${GGPO_NET_VECTORS_JSON} ${GGPO_NET_VECTORS_INC}
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/vectorwar/gen_net_vectors.py ${GGPO_NET_VECTORS_JSON}
+    COMMENT "Generating Vector War protocol vector checks"
+)
+add_executable(ggpo_vectorwar_net_contract
+    vectorwar/net_contract_test.cpp
+    ${GGPO_NET_VECTORS_INC}
+    ${GGPO_VECTORWAR_NET_SOURCES}
+)
+ggpo_configure_static_test(ggpo_vectorwar_net_contract)
+target_include_directories(ggpo_vectorwar_net_contract PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/net
+    ${CMAKE_CURRENT_BINARY_DIR}/vectorwar
+)
+add_test(NAME vectorwar_net_contract COMMAND ggpo_vectorwar_net_contract)
+set_tests_properties(vectorwar_net_contract PROPERTIES
+    LABELS "portable;sample;matchmaking")
+
+# The in-game legend: row text, platform numbering, colors and the font.
+add_executable(ggpo_vectorwar_legend_contract
+    vectorwar/legend_contract_test.cpp
+    ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/vw_legend.cpp
+)
+ggpo_configure_static_test(ggpo_vectorwar_legend_contract)
+target_include_directories(ggpo_vectorwar_legend_contract PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/apps/vectorwar
+    ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/net
+)
+add_test(NAME vectorwar_legend_contract COMMAND ggpo_vectorwar_legend_contract)
+set_tests_properties(vectorwar_legend_contract PROPERTIES
+    LABELS "portable;sample;legend")
+
+# The start screen's fields map to the command-line arguments.
+add_executable(ggpo_vectorwar_start_form_contract
+    vectorwar/start_form_contract_test.cpp
+    ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/vw_start_form.cpp
+)
+ggpo_configure_static_test(ggpo_vectorwar_start_form_contract)
+target_include_directories(ggpo_vectorwar_start_form_contract PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/apps/vectorwar
+)
+if(MSVC)
+    target_compile_definitions(ggpo_vectorwar_start_form_contract PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+add_test(NAME vectorwar_start_form_contract COMMAND ggpo_vectorwar_start_form_contract)
+set_tests_properties(vectorwar_start_form_contract PROPERTIES
+    LABELS "portable;sample;start-screen")
+
+# Hole punching with relay fallback end to end on loopback: the real server
+# and one path proxy per player with a stand-in for GGPO. Native builds only:
+# a cross-compiled tool cannot reach the host's loopback server.
+if(NOT CMAKE_CROSSCOMPILING)
+    set(GGPO_VECTORWAR_NET_IO_SOURCES)
+    foreach(source ${GGPO_EXAMPLES_VECTORWAR_NET_IO_SRC})
+        list(APPEND GGPO_VECTORWAR_NET_IO_SOURCES "${PROJECT_SOURCE_DIR}/src/apps/vectorwar/${source}")
+    endforeach()
+    add_executable(ggpo_vectorwar_net_proxy_tool
+        vectorwar/net_proxy_tool.cpp
+        ${GGPO_VECTORWAR_NET_SOURCES}
+        ${GGPO_VECTORWAR_NET_IO_SOURCES}
+    )
+    ggpo_configure_static_test(ggpo_vectorwar_net_proxy_tool)
+    target_include_directories(ggpo_vectorwar_net_proxy_tool PRIVATE
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/net)
+    if(WIN32)
+        target_link_libraries(ggpo_vectorwar_net_proxy_tool PRIVATE ws2_32)
+    else()
+        find_package(Threads REQUIRED)
+        target_link_libraries(ggpo_vectorwar_net_proxy_tool PRIVATE Threads::Threads)
+    endif()
+    add_test(NAME vectorwar_net_proxy_loopback
+        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/vectorwar/run_proxy_loopback.py
+                $<TARGET_FILE:ggpo_vectorwar_net_proxy_tool>
+                ${PROJECT_SOURCE_DIR}/services/matchmaking)
+    set_tests_properties(vectorwar_net_proxy_loopback PROPERTIES
+        TIMEOUT 120
+        LABELS "native;network;sample;matchmaking")
+endif()
+
 add_executable(ggpo_vectorwar_gameplay_contract
     vectorwar/gameplay_determinism_test.cpp
     ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/gamestate.cpp
@@ -398,10 +497,15 @@ if(MSVC)
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/win32_host.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/gdi_renderer.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/ggpo_perfmon.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/gamestate.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/vw_legend.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/vw_start_form.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/win32_start_dialog.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/VectorWar.rc
     )
     ggpo_configure_test(ggpo_vectorwar_win32_host_contract)
     target_compile_definitions(ggpo_vectorwar_win32_host_contract PRIVATE
-        _UNICODE UNICODE)
+        _UNICODE UNICODE _CRT_SECURE_NO_WARNINGS)
     target_include_directories(ggpo_vectorwar_win32_host_contract PRIVATE
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar
     )
@@ -417,6 +521,10 @@ elseif(TARGET VectorWar)
         vectorwar/sdl_host_contract_test.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_host.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_renderer.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_start_screen.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/gamestate.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/vw_legend.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/vw_start_form.cpp
     )
     ggpo_configure_test(ggpo_vectorwar_sdl_host_contract)
     target_include_directories(ggpo_vectorwar_sdl_host_contract PRIVATE
@@ -437,6 +545,10 @@ elseif(TARGET VectorWarAndroid)
         vectorwar/sdl_host_contract_test.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_host.cpp
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_renderer.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/sdl_start_screen.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/gamestate.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/vw_legend.cpp
+        ${PROJECT_SOURCE_DIR}/src/apps/vectorwar/vw_start_form.cpp
     )
     ggpo_configure_test(ggpo_vectorwar_sdl_host_contract)
     target_include_directories(ggpo_vectorwar_sdl_host_contract PRIVATE
@@ -464,6 +576,21 @@ if(TARGET VectorWarHeadless)
         TIMEOUT ${GGPO_PEER_CTEST_TIMEOUT}
         LABELS "native;network;sample"
     )
+    # Real sessions through matchmaking: hole punching (2 and 3 players, every
+    # pair direct) and relay fallback, reaching the frozen checksum. Native
+    # builds only: the server runs on the build host's loopback.
+    if(NOT CMAKE_CROSSCOMPILING)
+        add_test(NAME vectorwar_matchmaking_loopback
+            COMMAND ${PYTHON_EXECUTABLE}
+                    ${CMAKE_CURRENT_SOURCE_DIR}/vectorwar/run_matchmaking_loopback.py
+                    $<TARGET_FILE:VectorWarHeadless>
+                    ${PROJECT_SOURCE_DIR}/services/matchmaking
+        )
+        set_tests_properties(vectorwar_matchmaking_loopback PROPERTIES
+            TIMEOUT 300
+            LABELS "native;network;sample;matchmaking"
+        )
+    endif()
     add_test(NAME vectorwar_headless_negative_contracts
         COMMAND ${PYTHON_EXECUTABLE}
                 ${CMAKE_CURRENT_SOURCE_DIR}/vectorwar/headless_negative.py
@@ -478,6 +605,9 @@ endif()
 # Export every portable contract target so the root test-on-build target builds
 # the executables before invoking CTest on multi-config generators such as MSVC.
 set(GGPO_PORTABLE_TEST_TARGETS
+    ggpo_vectorwar_net_contract
+    ggpo_vectorwar_legend_contract
+    ggpo_vectorwar_start_form_contract
 	ggpo_vectorwar_state_contract
     ggpo_vectorwar_gameplay_contract
     ggpo_vectorwar_native_host_contract
@@ -499,6 +629,9 @@ if(TARGET ggpo_vectorwar_win32_host_contract)
 endif()
 if(GGPO_STATIC_RUNTIME_TEST_TARGETS)
     list(APPEND GGPO_PORTABLE_TEST_TARGETS ${GGPO_STATIC_RUNTIME_TEST_TARGETS})
+endif()
+if(TARGET ggpo_vectorwar_net_proxy_tool)
+    list(APPEND GGPO_PORTABLE_TEST_TARGETS ggpo_vectorwar_net_proxy_tool)
 endif()
 if(TARGET ggpo_vectorwar_sdl_host_contract)
     list(APPEND GGPO_PORTABLE_TEST_TARGETS ggpo_vectorwar_sdl_host_contract)

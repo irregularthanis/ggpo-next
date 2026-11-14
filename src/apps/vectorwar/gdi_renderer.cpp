@@ -3,6 +3,7 @@
 #include <math.h>
 #include "vectorwar.h"
 #include "gdi_renderer.h"
+#include "vw_player_colors.h"
 
 #define  PROGRESS_BAR_WIDTH        100
 #define  PROGRESS_BAR_TOP_OFFSET    22
@@ -18,11 +19,11 @@ GDIRenderer::GDIRenderer(HWND hwnd) :
    CreateGDIFont(hdc);
    ReleaseDC(_hwnd, hdc);
 
-   _shipColors[0] = RGB(255, 0, 0);
-   _shipColors[1] = RGB(0, 255, 0);
-   _shipColors[2] = RGB(0, 0, 255);
-   _shipColors[3] = RGB(128, 128, 128);
-   
+   for (int i = 0; i < 4; i++) {
+      const unsigned char *color = VwPlayerColor(kVwColorsGdi, i);
+      _shipColors[i] = RGB(color[0], color[1], color[2]);
+   }
+
    for (int i = 0; i < 4; i++) {
       _shipPens[i] = CreatePen(PS_SOLID, 1, _shipColors[i]);
    }
@@ -66,9 +67,26 @@ GDIRenderer::Draw(GameState &gs, NonGameState &ngs)
    RenderChecksum(hdc, 40, ngs.periodic);
    SetTextColor(hdc, RGB(128, 128, 128));
    RenderChecksum(hdc, 56, ngs.now);
+   DrawLegend(hdc, ngs.legend);
 
    //SwapBuffers(hdc);
    ReleaseDC(_hwnd, hdc);
+}
+
+void
+GDIRenderer::DrawLegend(HDC hdc, const VwLegend &legend)
+{
+   char row[48];
+   SetTextAlign(hdc, TA_TOP | TA_LEFT);
+   SetTextColor(hdc, RGB(200, 200, 200));
+   for (int index = 0; VwLegendRow(legend, index, row, sizeof(row)); ++index) {
+      const int y = _rc.top + 28 + index * 16;
+      RECT swatch = { _rc.left + 12, y + 3, _rc.left + 22, y + 13 };
+      HBRUSH brush = CreateSolidBrush(_shipColors[index]);
+      FillRect(hdc, &swatch, brush);
+      DeleteObject(brush);
+      TextOutA(hdc, _rc.left + 28, y, row, (int)strlen(row));
+   }
 }
 
 void

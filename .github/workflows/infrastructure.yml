@@ -1,0 +1,263 @@
+name: Infrastructure
+
+# Qualifies the matchmaking server and Terraform. Pull requests validate and,
+# for trusted repository-owner branches, produce a real plan. A successful
+# master merge applies that exact revision and verifies DNS/server health.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "infra/terraform/**"
+      - "!infra/terraform/**/*.md"
+      - "services/matchmaking/**"
+      - "!services/matchmaking/**/*.md"
+      - ".github/workflows/infrastructure.yml"
+      - ".github/workflows/deploy-matchmaking.yml"
+      - ".github/workflows/classify-changes.yml"
+  pull_request:
+    paths:
+      - "infra/terraform/**"
+      - "!infra/terraform/**/*.md"
+      - "services/matchmaking/**"
+      - "!services/matchmaking/**/*.md"
+      - ".github/workflows/infrastructure.yml"
+      - ".github/workflows/deploy-matchmaking.yml"
+      - ".github/workflows/classify-changes.yml"
+  workflow_dispatch:
+
+# A newer push to the same pull request supersedes this run, so cancel it and
+# free the runners. Runs on master pushes and manual dispatches always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  TERRAFORM_VERSION: "1.9.8"
+  TFLINT_VERSION: "v0.53.0"
+
+jobs:
+  changes:
+    uses: ./.github/workflows/classify-changes.yml
+    with:
+      base: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+      force: ${{ github.event_name == 'workflow_dispatch' }}
+
+  terraform:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    name: Terraform unit tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+      - name: Check formatting
+        working-directory: infra/terraform
+        run: terraform fmt -check -recursive -diff
+      - name: Validate and test each configuration with mocked providers
+        working-directory: infra/terraform
+        run: |
+          set -euo pipefail
+          for dir in modules/duckdns modules/host envs/prod; do
+            echo "::group::$dir"
+            terraform -chdir="$dir" init -backend=false -input=false
+            terraform -chdir="$dir" validate
+            terraform -chdir="$dir" test
+            echo "::endgroup::"
+          done
+      - name: Lock file is committed and current
+        working-directory: infra/terraform/envs/prod
+        run: git diff --exit-code -- .terraform.lock.hcl
+
+  tflint:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    name: Terraform lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: ${{ env.TFLINT_VERSION }}
+      - name: Lint every configuration
+        working-directory: infra/terraform
+        run: |
+          set -euo pipefail
+          tflint --init --config "$PWD/.tflint.hcl"
+          tflint --recursive --config "$PWD/.tflint.hcl" --format compact
+
+  server:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    name: Matchmaking server tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Unit and loopback tests
+        working-directory: services/matchmaking
+        run: python -m unittest discover -s tests -t . -v
+
+  image:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    name: Matchmaking server image
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Build for amd64 and arm64
+        uses: docker/build-push-action@v6
+        with:
+          context: services/matchmaking
+          platforms: linux/amd64,linux/arm64
+          tags: ggpo-matchmaking:ci
+          outputs: type=cacheonly
+      - name: Smoke test the image answers a version probe (lobby) and binds the relay range
+        run: |
+          set -euo pipefail
+          docker buildx build --load -t ggpo-matchmaking:smoke services/matchmaking
+          docker run -d --name mm --read-only --cap-drop ALL -p 17100:7100/udp ggpo-matchmaking:smoke
+          trap 'docker logs mm; docker rm -f mm' EXIT
+          python3 - <<'PY'
+          import socket, struct, time
+          probe = b"VWMM" + bytes([99, 1, 0, 0]) + struct.pack("<Q", 7) + bytes(48)
+          s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+          s.settimeout(1)
+          for attempt in range(20):
+              s.sendto(probe, ("127.0.0.1", 17100))
+              try:
+                  reply = s.recv(64)
+                  break
+              except socket.timeout:
+                  time.sleep(0.5)
+          else:
+              raise SystemExit("server did not answer")
+          # ERROR (type 7) with code 1 (version mismatch).
+          assert reply[:4] == b"VWMM" and reply[5] == 7 and reply[16] == 1, reply.hex()
+          print("version probe answered with ERROR(version mismatch)")
+          PY
+          docker logs mm 2>&1 | grep -q "399 relay ports"
+          echo "server bound the default relay range (399 ports)"
+      - name: Log in to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish to GHCR (master only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        id: publish
+        uses: docker/build-push-action@v6
+        with:
+          context: services/matchmaking
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/ggpo-matchmaking:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/ggpo-matchmaking:latest
+      - name: Record the digest to deploy
+        if: steps.publish.outcome == 'success'
+        run: |
+          echo "container_image = \"ghcr.io/${{ github.repository_owner }}/ggpo-matchmaking@${{ steps.publish.outputs.digest }}\"" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+  validation:
+    name: Validate infrastructure and server
+    if: always()
+    needs: [changes, terraform, tflint, server, image]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every infrastructure lane
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          CODE_CHANGED: ${{ needs.changes.outputs.code }}
+          TERRAFORM: ${{ needs.terraform.result }}
+          TFLINT: ${{ needs.tflint.result }}
+          SERVER: ${{ needs.server.result }}
+          IMAGE: ${{ needs.image.result }}
+        run: |
+          # A failed classifier must not look like a documentation-only change.
+          test "$CHANGES" = success
+          if test "$CODE_CHANGED" != true; then
+            echo "Documentation-only change: infrastructure checks are not required."
+            exit 0
+          fi
+          test "$TERRAFORM" = success
+          test "$TFLINT" = success
+          test "$SERVER" = success
+          test "$IMAGE" = success
+
+  plan:
+    name: Plan real infrastructure
+    needs: [changes, validation]
+    if: >-
+      github.event_name == 'pull_request' &&
+      needs.changes.outputs.code == 'true' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == github.repository_owner &&
+      needs.validation.result == 'success'
+    uses: ./.github/workflows/deploy-matchmaking.yml
+    with:
+      action: plan
+    secrets: inherit
+
+  apply:
+    name: Apply real infrastructure
+    needs: [changes, validation]
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/master' &&
+      needs.changes.outputs.code == 'true' &&
+      needs.validation.result == 'success'
+    uses: ./.github/workflows/deploy-matchmaking.yml
+    with:
+      action: apply
+    secrets: inherit
+
+  final-report:
+    # Keep one stable required check over validation and the event-specific
+    # real-cloud gate. Manual dispatch performs validation only.
+    name: Complete infrastructure checks
+    if: always()
+    needs: [changes, validation, plan, apply]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require the appropriate qualification path
+        env:
+          EVENT: ${{ github.event_name }}
+          ACTOR: ${{ github.actor }}
+          OWNER: ${{ github.repository_owner }}
+          CODE_CHANGED: ${{ needs.changes.outputs.code }}
+          VALIDATION: ${{ needs.validation.result }}
+          PLAN: ${{ needs.plan.result }}
+          APPLY: ${{ needs.apply.result }}
+          SAME_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+        run: |
+          test "$VALIDATION" = success
+          if test "$CODE_CHANGED" != true || test "$EVENT" = workflow_dispatch; then
+            exit 0
+          fi
+          if test "$EVENT" = pull_request; then
+            if test "$SAME_REPOSITORY" = true && test "$ACTOR" = "$OWNER"; then
+              test "$PLAN" = success
+            else
+              test "$PLAN" = skipped
+            fi
+          elif test "$EVENT" = push; then
+            test "$APPLY" = success
+          fi

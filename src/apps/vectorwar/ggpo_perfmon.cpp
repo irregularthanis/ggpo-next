@@ -234,3 +234,27 @@ ggpoutil_perfmon_update(GGPOSession *ggpo, GGPOPlayerHandle players[], int num_p
    }
 }
 
+void
+ggpoutil_perfmon_update_paths(const VwLegend &legend)
+{
+   if (!_dialog) return;
+   const int controls[] = { IDC_PATH_1, IDC_PATH_2, IDC_PATH_3, IDC_PATH_4 };
+   for (int i = 0; i < VW_LEGEND_MAX_PLAYERS; ++i) {
+      char text[96] = "";
+      if (i < legend.num_players && i + 1 != legend.local_player) {
+         const bool direct = legend.routes[i] == kVwRouteDirect;
+         const int active_rtt = direct ? legend.direct_rtt_ms[i] : legend.relay_rtt_ms[i];
+         if (active_rtt >= 0) {
+            sprintf_s(text, ARRAYSIZE(text), "P%d %s: %s, %d ms (relay %d ms)",
+                      i + 1, VwPlatformName(legend.platforms[i]),
+                      direct ? "direct" : "relay", active_rtt, legend.relay_rtt_ms[i]);
+         } else {
+            sprintf_s(text, ARRAYSIZE(text), "P%d %s: %s, measuring...",
+                      i + 1, VwPlatformName(legend.platforms[i]),
+                      direct ? "direct" : "relay");
+         }
+      }
+      SetWindowTextA(GetDlgItem(_dialog, controls[i]), text);
+   }
+}
+

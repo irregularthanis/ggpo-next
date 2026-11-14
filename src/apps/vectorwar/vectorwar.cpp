@@ -20,6 +20,15 @@ static int load_count = 0;
 static int replay_frame_count = 0;
 static int running_event_count = 0;
 static int unexpected_disconnect_count = 0;
+static void (*legend_source)(VwLegend *legend, void *context) = NULL;
+static void *legend_context = NULL;
+
+void
+VectorWar_SetLegendSource(void (*source)(VwLegend *legend, void *context), void *context)
+{
+   legend_source = source;
+   legend_context = context;
+}
 
 /* 
  * Simple checksum function stolen from wikipedia:
@@ -276,6 +285,13 @@ VectorWar_Init(VectorWarHost *application_host, unsigned short localport,
    }
    (void)result;
 
+   int local_number = 0;
+   for (i = 0; i < num_players; i++) {
+      if (players[i].type == GGPO_PLAYERTYPE_LOCAL) local_number = players[i].player_num;
+   }
+   VwLegendInitDirect(&ngs.legend, num_players, local_number);
+   VectorWar_SetLegendSource(NULL, NULL);
+
    host->InitializePerformanceMonitor();
    if (renderer) {
       renderer->SetStatusText("Connecting to peers.");
@@ -299,6 +315,8 @@ VectorWar_InitSpectator(VectorWarHost *application_host, unsigned short localpor
    // Initialize the game state
    gs.Init(host->GetGameBounds(), num_players);
    ngs.num_players = num_players;
+   VwLegendInitDirect(&ngs.legend, num_players, 0);
+   VectorWar_SetLegendSource(NULL, NULL);
 
    // Fill in a ggpo callbacks structure to pass to start_session.
    GGPOSessionCallbacks cb;
@@ -355,6 +373,8 @@ void
 VectorWar_DrawCurrentFrame()
 {
    if (renderer != NULL) {
+      if (legend_source) legend_source(&ngs.legend, legend_context);
+      if (host) host->UpdatePathMonitor(ngs.legend);
       renderer->Draw(gs, ngs);
    }
 }
