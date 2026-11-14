@@ -29,7 +29,8 @@ class GitHubTransport:
         )
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                return json.loads(response.read().decode("utf-8"))
+                body = response.read().decode("utf-8")
+                return json.loads(body) if body else None
         except urllib.error.HTTPError as error:
             body = error.read().decode("utf-8", errors="replace")
             raise RuntimeError(f"GitHub API {method} {path} failed: {error.code} {body}") from error
@@ -119,3 +120,8 @@ class DeploymentRendezvous:
             {"state": "inactive", "environment": self.environment,
              "description": "Endpoint retired"},
         )
+
+    def delete_environment(self):
+        """Remove the transient environment after its deployment is inactive."""
+        environment = urllib.parse.quote(self.environment, safe="")
+        return self.transport.request("DELETE", f"/environments/{environment}")

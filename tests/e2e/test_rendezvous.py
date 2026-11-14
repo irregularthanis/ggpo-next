@@ -22,6 +22,8 @@ class FakeTransport:
             return list(self.deployments)
         if method == "POST" and "/statuses" in path:
             return {"state": payload["state"]}
+        if method == "DELETE" and path.startswith("/environments/"):
+            return None
         raise AssertionError((method, path, payload))
 
 
@@ -39,6 +41,21 @@ class RendezvousTests(unittest.TestCase):
                                                    poll_seconds=0)
         self.assertEqual((found_id, found), (deployment_id, record))
         self.assertEqual(self.rendezvous.retire(deployment_id)["state"], "inactive")
+        self.assertIsNone(self.rendezvous.delete_environment())
+        self.assertEqual(
+            self.transport.calls[-1],
+            ("DELETE", "/environments/ggpo-e2e-42-1-linux-windows", None),
+        )
+
+    def test_environment_name_is_url_encoded_for_deletion(self):
+        rendezvous = DeploymentRendezvous(
+            self.transport, "owner/repo", "abc123", "42", "1", "linux/windows",
+        )
+        rendezvous.delete_environment()
+        self.assertEqual(
+            self.transport.calls[-1],
+            ("DELETE", "/environments/ggpo-e2e-42-1-linux-windows", None),
+        )
 
     def test_each_scenario_has_an_isolated_deployment_environment(self):
         other = DeploymentRendezvous(
