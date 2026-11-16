@@ -54,28 +54,28 @@ platforms meet again in the cross-platform E2E matrix.
 
 ```mermaid
 flowchart TB
-    subgraph COMMON["Common to all platforms"]
+    subgraph COMMON["Common to all<br/>platforms"]
         direction TB
-        CORE["Portable core, API<br/>and protocol contracts"]
-        CONF["One platform<br/>conformance source"]
-        FIX["SyncTest, peer loopback,<br/>negative contracts,<br/>Vector War fixtures"]
-        LAYOUT["Frozen public layout,<br/>packet layout,<br/>16-symbol exports"]
-        CONS["Installed C11 / C++98<br/>consumers, shared<br/>and static"]
+        CORE["Portable core,<br/>API and protocol<br/>contracts"]
+        CONF["One platform<br/>conformance<br/>source"]
+        FIX["SyncTest,<br/>peer loopback,<br/>negative<br/>contracts,<br/>Vector War<br/>fixtures"]
+        LAYOUT["Frozen public<br/>layout,<br/>packet layout,<br/>16-symbol<br/>exports"]
+        CONS["Installed C11 /<br/>C++98 consumers,<br/>shared and<br/>static"]
     end
 
     subgraph WIN["Windows adapter"]
         direction TB
-        MSVC["MSVC<br/>x64, Win32, Debug<br/>frozen baseline<br/>MSVC ASan"]
-        MINGW["MinGW-w64<br/>x64, x86<br/>runtime imports<br/>toolchain isolation"]
+        MSVC["MSVC<br/>x64, Win32,<br/>Debug<br/>frozen baseline<br/>MSVC ASan"]
+        MINGW["MinGW-w64<br/>x64, x86<br/>runtime imports<br/>toolchain<br/>isolation"]
     end
 
     subgraph POSIX["POSIX adapter"]
         direction TB
-        LINUX["Linux<br/>GCC, Clang<br/>packages, ABI ceiling<br/>ASan + UBSan"]
-        ANDROID["Android<br/>3 ABIs, API 21 / 35<br/>SDK audit, APK smoke<br/>ASan + UBSan"]
+        LINUX["Linux<br/>GCC, Clang<br/>packages,<br/>ABI ceiling<br/>ASan + UBSan"]
+        ANDROID["Android<br/>3 ABIs,<br/>API 21 / 35<br/>SDK audit,<br/>APK smoke<br/>ASan + UBSan"]
     end
 
-    E2E["Cross-platform E2E<br/>every ordered pair<br/>over UDP"]
+    E2E["Cross-platform<br/>E2E<br/>every ordered<br/>pair<br/>over UDP"]
 
     COMMON --> WIN
     COMMON --> POSIX
@@ -101,20 +101,20 @@ sequence; only the tools in each box differ.
 flowchart TB
     subgraph B["1. Build"]
         direction TB
-        B1["Configure and compile<br/>GGPO, shared + static"]
-        B2["Public header<br/>C11 and C++98<br/>portability gates"]
+        B1["Configure and<br/>compile GGPO,<br/>shared + static"]
+        B2["Public header<br/>C11 and C++98<br/>portability<br/>gates"]
     end
 
     subgraph L["2. Library"]
         direction TB
-        L1["Frozen public and<br/>packet layouts"]
+        L1["Frozen public<br/>and packet<br/>layouts"]
         L2["Export manifest,<br/>dependencies,<br/>ABI ceiling"]
-        L3["Installed SDK:<br/>consumers for every<br/>linkage"]
+        L3["Installed SDK:<br/>consumers for<br/>every linkage"]
     end
 
-    subgraph R["3. Run, in process"]
+    subgraph R["3. Run,<br/>in process"]
         direction TB
-        R1["Portable core:<br/>queues, sync,<br/>time sync, protocol"]
+        R1["Portable core:<br/>queues, sync,<br/>time sync,<br/>protocol"]
         R2["Public API<br/>contract, all<br/>16 entry points"]
         R3["Platform<br/>conformance,<br/>fake and native"]
         R4["SyncTest:<br/>save, load,<br/>replay"]
@@ -129,8 +129,8 @@ flowchart TB
 
     subgraph A["5. Application"]
         direction TB
-        A1["Vector War<br/>simulation and<br/>gameplay contracts"]
-        A2["Native host<br/>contracts: Win32,<br/>SDL2, Android"]
+        A1["Vector War<br/>simulation and<br/>gameplay<br/>contracts"]
+        A2["Native host<br/>contracts:<br/>Win32, SDL2,<br/>Android"]
         A3["Headless Vector<br/>War loopback<br/>and E2E"]
         A4["APK smoke<br/>on API 21 / 35"]
     end
@@ -495,11 +495,11 @@ adapter-specific.
 ```mermaid
 flowchart TD
     Configure["Configure build<br/>tests enabled"]
-    Build["Build GGPO and<br/>registered fixtures"]
-    Portable["Shared portable<br/>core, API and<br/>protocol contracts"]
-    Conformance["Same platform<br/>conformance source<br/>fake and native"]
-    Native["Native SyncTest,<br/>negative cases and<br/>two-process loopback"]
-    Layout["Platform ABI,<br/>exports, dependencies<br/>and packet layout"]
+    Build["Build GGPO and<br/>registered<br/>fixtures"]
+    Portable["Shared portable<br/>core, API and<br/>protocol<br/>contracts"]
+    Conformance["Same platform<br/>conformance<br/>source<br/>fake and native"]
+    Native["Native SyncTest,<br/>negative cases<br/>and two-process<br/>loopback"]
+    Layout["Platform ABI,<br/>exports,<br/>dependencies and<br/>packet layout"]
     Consumers["Install SDK;<br/>compile and link<br/>C11 and C++98<br/>consumers"]
     Capture["Capture<br/>exports,<br/>layouts,<br/>hashes<br/>and<br/>environment"]
     Noise{"Repeated<br/>timing<br/>requested?"}
