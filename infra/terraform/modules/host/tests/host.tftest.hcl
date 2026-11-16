@@ -84,6 +84,10 @@ run "cloud_init_runs_the_pinned_image_on_the_host_network" {
     error_message = "The container must run read-only, without capabilities, on the host network."
   }
   assert {
+    condition     = strcontains(base64decode(oci_core_instance.server.metadata["user_data"]), "ssh_pwauth: false")
+    error_message = "Password SSH must stay disabled; administration uses the configured public key."
+  }
+  assert {
     condition     = strcontains(base64decode(oci_core_instance.server.metadata["user_data"]), "iptables -I INPUT 1 -p udp --dport 7100 -j ACCEPT")
     error_message = "cloud-init must open the server port in the image's iptables rules."
   }
@@ -134,10 +138,25 @@ run "rejects_tag_without_digest" {
   expect_failures = [var.container_image]
 }
 
-run "rejects_world_open_ssh" {
-  command = plan
+run "allows_explicit_world_open_key_only_ssh" {
+  command = apply
   variables {
     admin_cidr = "0.0.0.0/0"
+  }
+
+  assert {
+    condition = length([
+      for rule in oci_core_security_list.server.ingress_security_rules : rule
+      if rule.protocol == "6" && rule.source == "0.0.0.0/0" && try(one(rule.tcp_options).min, 0) == 22 && try(one(rule.tcp_options).max, 0) == 22
+    ]) == 1
+    error_message = "An explicit world-open admin_cidr must produce exactly one SSH rule; cloud-init separately disables password authentication."
+  }
+}
+
+run "rejects_invalid_admin_cidr" {
+  command = plan
+  variables {
+    admin_cidr = "not-a-cidr"
   }
   expect_failures = [var.admin_cidr]
 }

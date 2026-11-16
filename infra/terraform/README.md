@@ -11,7 +11,7 @@ Plan and decisions: [internet play technical plan](../../doc/planning/2026-11-11
 
 | Path | Contents |
 | --- | --- |
-| [`modules/host`](modules/host) | Network, firewall (public UDP lobby port and relay range, SSH from `admin_cidr` only), VM, and cloud-init that runs the container |
+| [`modules/host`](modules/host) | Network, firewall (public UDP lobby port and relay range, key-only SSH from `admin_cidr`), VM, and cloud-init that runs the container |
 | [`modules/duckdns`](modules/duckdns) | No cloud resources: renders the cloud-init part that keeps the DuckDNS name pointing at the VM |
 | [`envs/prod`](envs/prod) | Provider, remote state, variables and wiring; the directory you apply from |
 
@@ -102,7 +102,7 @@ and variables → Actions**. Secrets belong under **Secrets** and variables unde
 | Variable | `STATE_NAMESPACE` | Object Storage namespace |
 | Secret | `STATE_ACCESS_KEY_ID` | Customer Secret Key ID (S3-compatible API) |
 | Secret | `STATE_SECRET_ACCESS_KEY` | Customer Secret Key secret |
-| Secret | `ADMIN_CIDR` | Your public IP as `x.x.x.x/32` (SSH only) |
+| Secret | `ADMIN_CIDR` | IPv4 CIDR allowed to reach key-only SSH; prefer your public IP as `x.x.x.x/32`, while `0.0.0.0/0` explicitly permits every source |
 | Secret | `SSH_PUBLIC_KEY` | Public key for SSH |
 | Variable | `DUCKDNS_SUBDOMAIN` | Subdomain without `.duckdns.org` |
 | Secret | `DUCKDNS_TOKEN` | DuckDNS account token |
@@ -133,7 +133,7 @@ tflint --recursive --config "$PWD/.tflint.hcl"
 
 | Test file | What it proves |
 | --- | --- |
-| [`modules/host/tests/host.tftest.hcl`](modules/host/tests/host.tftest.hcl) | Only the UDP lobby port and relay range are open to the internet and SSH only to `admin_cidr`; a relay range containing the lobby port, or larger than 1000 ports, is rejected; the VM is the always-free A1 shape; cloud-init runs the image by digest with the relay range, read-only on the host network, opens both in iptables, and merges extra parts; after a mocked apply, the instance, subnet, route and outputs are wired in state; bad inputs are rejected |
+| [`modules/host/tests/host.tftest.hcl`](modules/host/tests/host.tftest.hcl) | The UDP lobby and relay range are public and key-only SSH follows `admin_cidr`, including an explicitly requested `0.0.0.0/0`; malformed CIDRs, a relay range containing the lobby port, and ranges larger than 1000 ports are rejected; the VM is the always-free A1 shape; cloud-init runs the image by digest with the relay range, read-only on the host network, opens both in iptables, and merges extra parts; after a mocked apply, the instance, subnet, route and outputs are wired in state |
 | [`modules/duckdns/tests/duckdns.tftest.hcl`](modules/duckdns/tests/duckdns.tftest.hcl) | The update URL names the subdomain and lets DuckDNS use the server's own IP; refresh at boot and every 5 minutes; the token file is root-only; bad names and tokens are rejected |
 | [`envs/prod/tests/prod.tftest.hcl`](envs/prod/tests/prod.tftest.hcl) | After a mocked apply, state exposes the `name:port` Vector War uses, the relay range and the instance IP, including with a custom port |
 

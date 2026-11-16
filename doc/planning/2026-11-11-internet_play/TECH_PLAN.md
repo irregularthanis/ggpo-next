@@ -344,7 +344,7 @@ infra/terraform/
 
 - **Host module:** one always-free VM with the provider's container-ready
   image; a security list or firewall allowing UDP 7100 and the relay port
-  range from anywhere and SSH only from `admin_cidr`; cloud-init that installs Docker and runs the server
+  range from anywhere and key-only SSH from `admin_cidr`; cloud-init that installs Docker and runs the server
   image by digest with `--restart unless-stopped`, read-only and with dropped
   capabilities.
 - **DNS module:** keeps the DuckDNS name pointing at the VM's public IP. With
@@ -369,7 +369,7 @@ under `infra/`:
 | Formatting and syntax | `terraform fmt -check`, `terraform validate` | The configuration parses with the pinned providers |
 | Plan assertions | `terraform test` with `mock_provider`, `command = plan` | The firewall opens exactly UDP 7100 and the relay range publicly and SSH only from `admin_cidr`; the VM shape is in the free tier; cloud-init runs the requested image digest; cloud-init updates the configured DuckDNS name |
 | State assertions | `terraform test` with `mock_provider`, `command = apply` | Applying against mocks produces state whose outputs (IP, FQDN, port) are wired correctly between modules, and the DuckDNS update in cloud-init targets the VM's IP and name from state |
-| Variable validation | `terraform test` with `expect_failures` | Invalid inputs are rejected: a non-digest image tag, a world-open `admin_cidr`, a port outside the allowed range |
+| Variable validation | `terraform test` with `expect_failures` | Invalid inputs are rejected: a non-digest image tag, malformed `admin_cidr`, or port outside the allowed range; an explicitly selected `0.0.0.0/0` CIDR is preserved and covered as key-only SSH |
 | Lint | `tflint` with the provider ruleset | Deprecated or invalid arguments |
 
 Automatic CI (pushes and pull requests) never creates, changes or destroys real

@@ -46,11 +46,11 @@ variable "relay_port_range" {
 }
 
 variable "admin_cidr" {
-  description = "Only source allowed to reach SSH, e.g. your home IP as x.x.x.x/32."
+  description = "Source allowed to reach key-only SSH; use x.x.x.x/32 when possible, or 0.0.0.0/0 for global access."
   type        = string
   validation {
-    condition     = can(cidrhost(var.admin_cidr, 0)) && tonumber(split("/", var.admin_cidr)[1]) >= 16
-    error_message = "admin_cidr must be a valid IPv4 CIDR no wider than /16 (never 0.0.0.0/0)."
+    condition     = can(cidrhost(var.admin_cidr, 0)) && !strcontains(var.admin_cidr, ":")
+    error_message = "admin_cidr must be a valid IPv4 CIDR."
   }
 }
 

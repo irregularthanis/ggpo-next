@@ -35,7 +35,7 @@ variable "relay_port_range" {
 }
 
 variable "admin_cidr" {
-  description = "Your public IP as x.x.x.x/32; the only SSH source allowed."
+  description = "IPv4 CIDR allowed to reach key-only SSH; prefer your public IP as x.x.x.x/32."
   type        = string
 }
 

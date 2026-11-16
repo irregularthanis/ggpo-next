@@ -85,7 +85,7 @@ resource "oci_core_security_list" "server" {
     }
   }
 
-  # Administration: SSH only from the maintainer.
+  # Administration: key-only SSH from the explicitly configured CIDR.
   ingress_security_rules {
     protocol    = "6"
     source      = var.admin_cidr
