@@ -108,10 +108,13 @@ Status: In progress
 ### M6: First manual run and trial (depends: M2, M4, M5)
 
 - [x] M6-T00: Reusable **Deploy matchmaking server** workflow (`apply`, `plan`,
-  `destroy`); trusted owner PRs run a real plan, matching `master` merges apply
-  and verify DuckDNS plus lobby health, and manual destroy clears the record.
-- [ ] M6-T01: First `terraform apply` (deploy workflow or local); record the plan and outputs;
-  `terraform destroy` afterwards leaves nothing billable.
+  `destroy`); trusted owner PRs plan with a non-deployable placeholder digest
+  while separately building and smoke-testing the candidate image. Matching
+  `master` merges publish and apply the real digest, verify DuckDNS plus lobby
+  health, leave the service deployed, and manual destroy clears the record.
+- [ ] M6-T01: First `terraform apply` (deploy workflow or local); record the
+  plan and outputs, verify the service, and leave it deployed. Use the manual
+  `destroy` action only when intentionally taking the service down.
 - [ ] M6-T02: Set the compiled default server to the DuckDNS name.
 - [ ] M6-T03: Friends trial (checklist below), every platform pair in both
   player orders.

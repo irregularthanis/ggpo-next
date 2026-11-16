@@ -461,17 +461,19 @@ mismatch, or "could not reach the relay".
 - **Image publishing:** on `master`, build and push the server image to GHCR
   (free for public repositories), tagged by commit and recorded by digest.
 - **Real-cloud qualification:** the path-filtered Infrastructure workflow
-  reuses `deploy-matchmaking.yml`; trusted owner PRs run `plan`, and matching
-  `master` merges run `apply` plus DNS/lobby health checks. Fork and non-owner
-  PRs never receive deployment credentials.
+  reuses `deploy-matchmaking.yml`; trusted owner PRs run `plan` with a
+  non-deployable placeholder image digest while the image lane builds and
+  smoke-tests the candidate. Matching `master` merges publish the image and
+  run `apply` with its real digest plus DNS/lobby health checks. Fork and
+  non-owner PRs never receive deployment credentials.
 - **Manual deployment:** `deploy-matchmaking.yml` also exposes explicit
   `plan`, `apply` and `destroy`, serialized with automatic operations through
   the same remote state and `matchmaking` approval boundary.
 
 ## Operation
 
-The server is not always on. It is created when friends want to play and
-destroyed afterwards, either way:
+The server remains deployed after a successful merge. Maintainers can inspect
+changes or explicitly tear it down either way:
 
 | Way | How |
 | --- | --- |
@@ -488,7 +490,9 @@ The reusable deploy workflow (`.github/workflows/deploy-matchmaking.yml`):
   for the run;
 - targets the `matchmaking` environment as an optional approval boundary,
   without requiring environment-scoped secrets or variables;
-- deploys `:latest` pinned by digest unless a digest is given;
+- uses a non-deployable placeholder digest only for pull-request planning;
+- on `master`, deploys `:latest` pinned by its resolved digest unless a digest
+  is explicitly given;
 - after `apply`, waits until the DuckDNS name resolves to the new VM (the VM
   updates its own record) and the lobby answers a version probe, then prints
   the server address;

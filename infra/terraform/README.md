@@ -74,6 +74,12 @@ deploys the current `:latest` image pinned by its digest; the
 `container_image` input overrides that. The GHCR package must be public,
 because the VM pulls it without credentials.
 
+Pull-request plans use a non-deployable placeholder digest. The image lane
+separately builds and smoke-tests the candidate, while the plan qualifies the
+cloud resources without requiring an image published only after merge. On
+`master`, CI publishes the tested image and resolves its real digest before
+applying Terraform.
+
 Infrastructure CI is path-filtered to Terraform, matchmaking-server and
 workflow changes; documentation-only changes do not start it. Pull requests
 from forks or non-owner branches never receive credentials and run only the

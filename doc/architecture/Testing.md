@@ -806,9 +806,11 @@ flowchart LR
   creates namespaces.
 - The path-filtered `Infrastructure` workflow runs Terraform `fmt`, `validate`,
   mocked `terraform test`, `tflint`, server tests and a multi-arch image smoke.
-  Trusted owner pull requests then run a real plan; matching `master` merges
-  apply and verify DuckDNS plus a lobby answer. Its aggregate is
-  `Complete infrastructure checks`.
+  Trusted owner pull requests then run a real cloud plan with a non-deployable
+  placeholder image digest; the separate image lane builds and smoke-tests the
+  candidate. Matching `master` merges publish the image, resolve its real
+  digest, apply Terraform, and verify DuckDNS plus a lobby answer. Its
+  aggregate is `Complete infrastructure checks`.
 - **Deploy matchmaking server** remains manually dispatchable for explicit
   `plan`, `apply` and `destroy`; `destroy` also clears the DuckDNS record.
 

@@ -214,6 +214,12 @@ jobs:
     uses: ./.github/workflows/deploy-matchmaking.yml
     with:
       action: plan
+      # A pull request has no published server image yet. The image job above
+      # builds and smoke-tests the candidate; this placeholder lets Terraform
+      # qualify every cloud resource without creating a bootstrap dependency
+      # on the post-merge GHCR publication. Master resolves the real digest
+      # before apply.
+      container_image: ghcr.io/${{ github.repository_owner }}/ggpo-matchmaking@sha256:0000000000000000000000000000000000000000000000000000000000000000
     secrets: inherit
 
   apply:
