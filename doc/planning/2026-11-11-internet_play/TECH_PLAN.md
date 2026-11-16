@@ -464,8 +464,13 @@ mismatch, or "could not reach the relay".
   reuses `deploy-matchmaking.yml`; trusted owner PRs run `plan` with a
   non-deployable placeholder image digest while the image lane builds and
   smoke-tests the candidate. Matching `master` merges publish the image and
-  run `apply` with its real digest plus DNS/lobby health checks. Fork and
-  non-owner PRs never receive deployment credentials.
+  run `apply` with its real digest plus DNS/lobby health checks, followed by a
+  required Linux/MinGW/Android three-player forced-relay match through DuckDNS.
+  Fork and non-owner PRs never receive deployment credentials.
+- **Undeployed server:** standalone public-game runs default to `optional` and
+  exit successfully with a clear skip before builds or gameplay when DNS or
+  the lobby probe is unavailable. Post-apply runs use `required`; after peers
+  start, every error is a failure in either mode.
 - **Manual deployment:** `deploy-matchmaking.yml` also exposes explicit
   `plan`, `apply` and `destroy`, serialized with automatic operations through
   the same remote state and `matchmaking` approval boundary.

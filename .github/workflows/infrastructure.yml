@@ -14,6 +14,7 @@ on:
       - "!services/matchmaking/**/*.md"
       - ".github/workflows/infrastructure.yml"
       - ".github/workflows/deploy-matchmaking.yml"
+      - ".github/workflows/public-three-platform-game.yml"
       - ".github/workflows/classify-changes.yml"
   pull_request:
     paths:
@@ -23,6 +24,7 @@ on:
       - "!services/matchmaking/**/*.md"
       - ".github/workflows/infrastructure.yml"
       - ".github/workflows/deploy-matchmaking.yml"
+      - ".github/workflows/public-three-platform-game.yml"
       - ".github/workflows/classify-changes.yml"
   workflow_dispatch:
 
@@ -235,12 +237,29 @@ jobs:
       action: apply
     secrets: inherit
 
+  public-game:
+    name: Qualify the deployed three-platform game
+    needs: apply
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/master' &&
+      needs.apply.result == 'success'
+    permissions:
+      contents: read
+      actions: read
+      deployments: write
+    uses: ./.github/workflows/public-three-platform-game.yml
+    with:
+      mode: required
+      server: ${{ format('{0}.duckdns.org:7100', vars.DUCKDNS_SUBDOMAIN) }}
+    secrets: inherit
+
   final-report:
     # Keep one stable required check over validation and the event-specific
     # real-cloud gate. Manual dispatch performs validation only.
     name: Complete infrastructure checks
     if: always()
-    needs: [changes, validation, plan, apply]
+    needs: [changes, validation, plan, apply, public-game]
     runs-on: ubuntu-24.04
     steps:
       - name: Require the appropriate qualification path
@@ -252,6 +271,7 @@ jobs:
           VALIDATION: ${{ needs.validation.result }}
           PLAN: ${{ needs.plan.result }}
           APPLY: ${{ needs.apply.result }}
+          PUBLIC_GAME: ${{ needs.public-game.result }}
           SAME_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
         run: |
           test "$VALIDATION" = success
@@ -266,4 +286,5 @@ jobs:
             fi
           elif test "$EVENT" = push; then
             test "$APPLY" = success
+            test "$PUBLIC_GAME" = success
           fi

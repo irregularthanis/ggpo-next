@@ -237,6 +237,7 @@ Details: [`infra/terraform/README.md`](../../infra/terraform/README.md).
 | `vectorwar_matchmaking_loopback` | Real server and real Vector War sessions: 2, 3 and 4 players with every pair direct, and 2 players relay-only; every group converges and two players reach portable frozen checksum `b3381958` |
 | `NAT traversal` workflow ([`run_nat_matrix.py`](../../tests/nat/run_nat_matrix.py)) | Linux network namespaces with emulated routers: cone NAT is `MASQUERADE`, symmetric is `MASQUERADE --random-fully`, and routers drop unsolicited inbound UDP. Nine scenarios, listed below |
 | `Infrastructure` workflow | Terraform `fmt`, `validate`, `terraform test` with mocked providers, `tflint`, server tests, multi-arch image smoke |
+| `Public three-platform game` workflow | Freshly resolves DuckDNS, probes the deployed lobby, then requires Linux, MinGW and Android to converge in one three-player forced-relay Vector War match; optional manual runs skip before launch when no server is deployed |
 
 The two loopback tests run on every native platform (Linux, Windows MSVC,
 MinGW); a cross-compiled Android build cannot reach the build host's loopback

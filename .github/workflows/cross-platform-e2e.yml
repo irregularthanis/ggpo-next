@@ -122,12 +122,16 @@ jobs:
           # MinGW runtime DLLs on PATH.
           cmake -S . -B build/e2e -G Ninja -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_SHARED_LIBS=OFF -DCMAKE_EXE_LINKER_FLAGS=-static
-          cmake --build build/e2e --target ggpo_windows_peer_smoke --parallel 2
+          cmake --build build/e2e \
+            --target ggpo_windows_peer_smoke VectorWarHeadless --parallel 2
           mkdir -p build/evidence/peer
           cp build/e2e/bin/x64/Release/ggpo_windows_peer_smoke.exe \
             build/evidence/peer/ggpo_peer_smoke.exe
+          cp build/e2e/bin/x64/Release/VectorWarHeadless.exe \
+            build/evidence/peer/vectorwar_headless.exe
           objdump -p build/evidence/peer/ggpo_peer_smoke.exe | grep 'DLL Name'
           sha256sum build/evidence/peer/ggpo_peer_smoke.exe \
+            build/evidence/peer/vectorwar_headless.exe \
             > build/evidence/peer/sha256.txt
           cmake --version > build/evidence/peer/toolchain.txt
           gcc --version >> build/evidence/peer/toolchain.txt

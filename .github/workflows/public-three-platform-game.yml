@@ -1,0 +1,241 @@
+name: Public three-platform game
+
+# One real Vector War match joins Linux, Windows/MinGW and Android through the
+# DuckDNS production name. Forced relay makes the deployed OCI data path part
+# of the contract; deterministic namespace tests cover direct NAT traversal.
+on:
+  workflow_call:
+    inputs:
+      mode:
+        description: "optional skips before launch when no server exists; required fails"
+        type: string
+        default: optional
+      server:
+        description: "Public matchmaking endpoint; empty uses the DuckDNS repository variable"
+        type: string
+        default: ""
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Server availability policy"
+        type: choice
+        options: [optional, required]
+        default: optional
+      server:
+        description: "HOST:PORT; empty uses DUCKDNS_SUBDOMAIN:7100"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  actions: read
+  deployments: write
+
+concurrency:
+  group: public-three-platform-game
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Resolve DDNS and probe the public lobby
+    runs-on: ubuntu-24.04
+    outputs:
+      run: ${{ steps.probe.outputs.run }}
+      lobby: ${{ steps.lobby.outputs.value }}
+      server: ${{ steps.server.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Select the public endpoint
+        id: server
+        env:
+          REQUESTED: ${{ inputs.server }}
+          SUBDOMAIN: ${{ vars.DUCKDNS_SUBDOMAIN }}
+        run: |
+          server="$REQUESTED"
+          if test -z "$server"; then server="$SUBDOMAIN.duckdns.org:7100"; fi
+          test -n "$SUBDOMAIN" || test -n "$REQUESTED"
+          echo "value=$server" >> "$GITHUB_OUTPUT"
+      - name: Derive a run-scoped lobby code
+        id: lobby
+        run: |
+          value=$(printf '%s' "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" | sha256sum | cut -c1-8 | tr 'a-f' 'A-F')
+          echo "value=$value" >> "$GITHUB_OUTPUT"
+      - name: Probe DNS and the lobby protocol
+        id: probe
+        env:
+          SERVER: ${{ steps.server.outputs.value }}
+        run: python tests/e2e/public_group.py probe --server "$SERVER" --mode "${{ inputs.mode }}"
+
+  build-linux:
+    name: Build Linux Vector War peer
+    needs: preflight
+    if: needs.preflight.outputs.run == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the native static headless peer
+        run: |
+          cmake -S . -B build/public-game -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+            -DGGPO_BUILD_VECTORWAR_GUI=OFF
+          cmake --build build/public-game --target VectorWarHeadless --parallel 2
+          install -D -m 0755 build/public-game/bin/x64/Release/VectorWarHeadless \
+            artifact/vectorwar_headless
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-game-binary-linux
+          path: artifact
+          if-no-files-found: error
+
+  build-mingw:
+    name: Build MinGW Vector War peer
+    needs: preflight
+    if: needs.preflight.outputs.run == 'true'
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+      - name: Build the native static headless peer
+        run: |
+          cmake -S . -B build/public-game -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF -DGGPO_BUILD_VECTORWAR_GUI=OFF \
+            -DCMAKE_EXE_LINKER_FLAGS=-static
+          cmake --build build/public-game --target VectorWarHeadless --parallel 2
+          mkdir -p artifact
+          cp build/public-game/bin/x64/Release/VectorWarHeadless.exe \
+            artifact/vectorwar_headless.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-game-binary-mingw
+          path: artifact
+          if-no-files-found: error
+
+  build-android:
+    name: Build Android Vector War peer
+    needs: preflight
+    if: needs.preflight.outputs.run == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the native static arm64 Android peer
+        run: |
+          cmake -S . -B build/public-game -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=21 \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+            -DGGPO_BUILD_VECTORWAR=ON -DGGPO_BUILD_VECTORWAR_GUI=OFF \
+            -DCMAKE_EXE_LINKER_FLAGS=-static
+          cmake --build build/public-game --target VectorWarHeadless --parallel 2
+          install -D -m 0755 build/public-game/bin/*/Release/VectorWarHeadless \
+            artifact/vectorwar_headless
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-game-binary-android
+          path: artifact
+          if-no-files-found: error
+
+  play:
+    name: Play as ${{ matrix.platform }}
+    needs: [preflight, build-linux, build-mingw, build-android]
+    if: needs.preflight.outputs.run == 'true'
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {platform: linux, os: ubuntu-24.04, executable: peer/vectorwar_headless}
+          - {platform: mingw, os: windows-2022, executable: peer/vectorwar_headless.exe}
+          - {platform: android, os: ubuntu-24.04-arm, executable: peer/vectorwar_headless}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-game-binary-${{ matrix.platform }}
+          path: peer
+      - name: Make the Unix peer executable
+        if: runner.os == 'Linux'
+        run: chmod 0755 peer/vectorwar_headless
+      - name: Join the public three-platform match
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          python tests/e2e/public_group.py role \
+            --server "${{ needs.preflight.outputs.server }}" \
+            --lobby "${{ needs.preflight.outputs.lobby }}" \
+            --platform "${{ matrix.platform }}" \
+            --executable "${{ matrix.executable }}" \
+            --output "evidence/${{ matrix.platform }}"
+      - name: Upload peer evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-game-${{ matrix.platform }}
+          path: evidence
+          if-no-files-found: warn
+
+  final-report:
+    name: Complete three-platform public game
+    if: always()
+    needs: [preflight, build-linux, build-mingw, build-android, play]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Report an optional preflight skip
+        if: needs.preflight.result == 'success' && needs.preflight.outputs.run != 'true'
+        run: |
+          echo "### Three-platform public game skipped" >> "$GITHUB_STEP_SUMMARY"
+          echo "The public server was not available before the match started." >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/download-artifact@v4
+        if: needs.preflight.outputs.run == 'true'
+        with:
+          pattern: public-game-*
+          path: evidence
+      - name: Validate all three peers and publish the manifest
+        if: needs.preflight.outputs.run == 'true'
+        env:
+          PREFLIGHT: ${{ needs.preflight.result }}
+          BUILD_LINUX: ${{ needs.build-linux.result }}
+          BUILD_MINGW: ${{ needs.build-mingw.result }}
+          BUILD_ANDROID: ${{ needs.build-android.result }}
+          PLAY: ${{ needs.play.result }}
+        run: |
+          test "$PREFLIGHT" = success
+          test "$BUILD_LINUX" = success
+          test "$BUILD_MINGW" = success
+          test "$BUILD_ANDROID" = success
+          test "$PLAY" = success
+          python tests/e2e/public_group.py validate \
+            --evidence evidence --output public-game-manifest.json
+          {
+            echo "### Three-platform public game passed"
+            echo ""
+            echo "Linux, MinGW and Android converged through the deployed relay."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Fail a required or otherwise broken preflight
+        if: needs.preflight.result != 'success'
+        run: exit 1
+      - uses: actions/upload-artifact@v4
+        if: always() && needs.preflight.outputs.run == 'true'
+        with:
+          name: public-game-complete-manifest
+          path: public-game-manifest.json
+          if-no-files-found: warn
