@@ -245,9 +245,11 @@ protocol-version compatibility; those require separate execution tests.
 
 #### MinGW: registered tests
 
-Runs every [shared test](#shared-tests) with the `windows_` prefix, except
-the two headless Vector War tests: MinGW builds neither Vector War's Win32/GDI
-frontend nor its headless app. Exports and runtime imports are checked in the
+The default SDK configuration runs every [shared test](#shared-tests) with the
+`windows_` prefix except the two headless Vector War tests. MinGW cannot build
+the Win32/GDI frontend, but qualification workflows explicitly enable the
+portable headless app with `GGPO_BUILD_VECTORWAR=ON` and
+`GGPO_BUILD_VECTORWAR_GUI=OFF`. Exports and runtime imports are checked in the
 [CI lane](#mingw-ci-lanes).
 
 *No platform-only tests.*
@@ -435,7 +437,8 @@ libraries, which is the default.
 | `vectorwar_net_proxy_loopback` ² | [`run_proxy_loopback.py`](../../tests/vectorwar/run_proxy_loopback.py), [`net_proxy_tool.cpp`](../../tests/vectorwar/net_proxy_tool.cpp) | Real server and one path proxy per player: 2 and 3 players switch to direct with data flowing; relay-only stays on the relay; an unreachable server and a user cancel end matchmaking with a clear error |
 | `vectorwar_matchmaking_loopback` ¹ ² | [`run_matchmaking_loopback.py`](../../tests/vectorwar/run_matchmaking_loopback.py) | Real server and real Vector War sessions: 2, 3 and 4 players with every pair direct, 2 players relay-only; every group converges and two players reach the portable frozen checksum |
 
-¹ Needs the headless Vector War app, which MinGW does not build.
+¹ Needs the headless Vector War app. The default MinGW SDK build leaves Vector
+War off; the public-game build explicitly enables only the headless fixture.
 ² Native builds only (Linux, Windows MSVC, MinGW): a cross-compiled Android test
 cannot reach the build host's loopback server.
 

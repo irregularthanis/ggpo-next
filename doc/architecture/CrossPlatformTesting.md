@@ -156,9 +156,10 @@ fixtures, and meets MinGW as player 2 in the generic fixture.
 
 #### MinGW: peer build
 
-The `Build native MinGW peer` job compiles `ggpo_windows_peer_smoke` in MSYS2
-`MINGW64` as a static Release x64 executable on `windows-2022` and uploads it
-as `e2e-peer-mingw`. Vector War is not built with MinGW.
+The `Build native MinGW peer` job compiles `ggpo_windows_peer_smoke` and the
+portable `VectorWarHeadless` fixture in MSYS2 `MINGW64` as static Release x64
+executables on `windows-2022`, then uploads them as `e2e-peer-mingw`. The
+interactive Win32/GDI Vector War frontend remains MSVC-only.
 
 #### MinGW: execution
 

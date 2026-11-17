@@ -667,8 +667,8 @@ These apply to every source build, whatever the platform:
 | *(default)* | Build both the shared and the static library |
 | `-DBUILD_SHARED_LIBS=ON` / `OFF` | Build only the shared / only the static library |
 | `-DGGPO_BUILD_SHARED=OFF`, `-DGGPO_BUILD_STATIC=OFF` | Turn off one flavor individually |
-| `-DGGPO_BUILD_VECTORWAR=OFF` | Skip Vector War (always off for MinGW) |
-| `-DGGPO_BUILD_VECTORWAR_GUI=OFF` | Build only the portable Vector War core and headless fixture, without SDL or Win32 frontends |
+| `-DGGPO_BUILD_VECTORWAR=OFF` | Skip Vector War; this is the MinGW default |
+| `-DGGPO_BUILD_VECTORWAR_GUI=OFF` | Build only the portable Vector War core and headless fixture, without SDL or Win32 frontends; combine with `-DGGPO_BUILD_VECTORWAR=ON` for MinGW qualification |
 | `-DGGPO_RUN_TESTS_ON_BUILD=OFF` | Build tests but run them explicitly with `ctest` |
 | `-DBUILD_TESTING=OFF` | Consumer or packaging-only build, no tests |
 
@@ -714,8 +714,10 @@ sudo apt install libsdl2-2.0-0
 Arrow keys steer, `D` fires, `S` bombs, function keys disconnect players, and
 Escape exits. The Android launcher accepts the same local port, player count,
 and peer endpoints; touch controls map to the same steering, fire, and bomb
-inputs. Vector War is not built with MinGW. The sample archives include the
-license and the detailed [Vector War architecture guide](architecture/VectorWar.md).
+inputs. The interactive Vector War sample is not built or released with
+MinGW; CI may build its portable headless fixture for interoperability tests.
+The sample archives include the license and the detailed
+[Vector War architecture guide](architecture/VectorWar.md).
 
 ### Play Vector War over the Internet
 
