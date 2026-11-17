@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run and validate one public three-platform Vector War relay match."""
+"""Run and validate one public multi-platform Vector War relay match."""
 
 import argparse
 import json
@@ -86,7 +86,7 @@ def probe_command(args):
                 output.write("run=false\n")
         if os.environ.get("GITHUB_STEP_SUMMARY"):
             Path(os.environ["GITHUB_STEP_SUMMARY"]).write_text(
-                f"### Public three-platform game not started\n\n{error}\n", encoding="utf-8")
+                f"### Public multi-platform game not started\n\n{error}\n", encoding="utf-8")
         print(f"public server unavailable: {error}")
         return 1 if args.mode == "required" else 0
     if os.environ.get("GITHUB_OUTPUT"):
@@ -97,7 +97,7 @@ def probe_command(args):
 
 
 def role_command(args):
-    """Synchronize three runner pools, then run this platform's relay peer."""
+    """Synchronize all platform runners, then run this platform's relay peer."""
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
     own = rendezvous(f"{args.lobby}-{args.platform}")
@@ -108,8 +108,10 @@ def role_command(args):
             rendezvous(f"{args.lobby}-{platform}").discover(deadline_seconds=600)
 
         result = output / "result.json"
+        player_count = len(PLATFORMS)
         command = [str(Path(args.executable).resolve()), "--matchmaking", args.server,
-                   "3", args.lobby, "180", str(result.resolve()), "--relay-only"]
+                   str(player_count), args.lobby, "180", str(result.resolve()),
+                   "--relay-only"]
         environment = dict(os.environ, VW_HEADLESS_FRAME_MS="16")
         completed = subprocess.run(command, stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, text=True,
@@ -123,8 +125,9 @@ def role_command(args):
         print(completed.stdout, end="")
         if completed.returncode:
             raise RuntimeError(f"{args.platform} peer exited {completed.returncode}")
-        if routes != ["relay", "relay"]:
-            raise RuntimeError(f"{args.platform} did not use two relay paths: {routes}")
+        if routes != ["relay"] * (player_count - 1):
+            raise RuntimeError(
+                f"{args.platform} did not use {player_count - 1} relay paths: {routes}")
         return 0
     finally:
         if deployment_id is not None:
@@ -133,7 +136,7 @@ def role_command(args):
 
 
 def validate_reports(root):
-    """Require one converged result from Linux, Windows and Android."""
+    """Require one converged result from every configured platform."""
     records = []
     for metadata_path in Path(root).rglob("metadata.json"):
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
@@ -142,10 +145,11 @@ def validate_reports(root):
             raise ValueError(f"{metadata['platform']}: missing result.json")
         records.append((metadata, json.loads(result_path.read_text(encoding="utf-8"))))
     platforms = {metadata["platform"] for metadata, _ in records}
-    if len(records) != 3 or platforms != set(PLATFORMS):
+    player_count = len(PLATFORMS)
+    if len(records) != player_count or platforms != set(PLATFORMS):
         raise ValueError(f"expected {PLATFORMS}, found {sorted(platforms)}")
     players = {result.get("player") for _, result in records}
-    if players != {1, 2, 3}:
+    if players != set(range(1, player_count + 1)):
         raise ValueError(f"unexpected player assignment: {players}")
     if {result.get("frame") for _, result in records} != {180}:
         raise ValueError("not every peer reached frame 180")
@@ -153,13 +157,14 @@ def validate_reports(root):
     if len(checksums) != 1:
         raise ValueError(f"peers diverged: {checksums}")
     for metadata, result in records:
-        if metadata.get("exit_code") != 0 or metadata.get("routes") != ["relay", "relay"]:
+        if (metadata.get("exit_code") != 0 or
+                metadata.get("routes") != ["relay"] * (player_count - 1)):
             raise ValueError(f"{metadata['platform']}: invalid process or route evidence")
         if result.get("running_events") != 1:
             raise ValueError(f"{metadata['platform']}: expected one running event")
     if sum(result.get("replay_frames", 0) for _, result in records) < 1:
         raise ValueError("the match did not exercise rollback replay")
-    return {"result": "pass", "platforms": list(PLATFORMS), "players": 3,
+    return {"result": "pass", "platforms": list(PLATFORMS), "players": player_count,
             "frame": 180, "checksum": checksums.pop(), "transport": "forced-relay",
             "peers": [{"platform": metadata["platform"], **result}
                       for metadata, result in records]}
@@ -168,7 +173,7 @@ def validate_reports(root):
 def validate_command(args):
     manifest = validate_reports(args.evidence)
     Path(args.output).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-    print(f"PASS three-platform game: checksum={manifest['checksum']:08x}, all paths relay")
+    print(f"PASS multi-platform game: checksum={manifest['checksum']:08x}, all paths relay")
     return 0
 
 

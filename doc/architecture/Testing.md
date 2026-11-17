@@ -37,7 +37,7 @@
   - [Two-process loopback](#two-process-loopback)
   - [Negative peer contracts](#negative-peer-contracts)
   - [Cross-platform E2E](#cross-platform-e2e)
-  - [Public three-platform game](#public-three-platform-game)
+  - [Public multi-platform game](#public-multi-platform-game)
   - [Matchmaking and hole punching](#matchmaking-and-hole-punching)
   - [CI gating and labels](#ci-gating-and-labels)
   - [Evidence and interpretation](#evidence-and-interpretation)
@@ -472,7 +472,7 @@ cannot reach the build host's loopback server.
 | NAT traversal | Two-to-four-player mixed NAT converges; cone and LAN paths can go direct, restrictive paths retain relay fallback, impairment selects a measured viable route, direct loss falls back, and server loss does not stop an established direct match | [`nat-traversal.yml`](../../.github/workflows/nat-traversal.yml), [`run_nat_matrix.py`](../../tests/nat/run_nat_matrix.py) | Linux network namespaces with emulated NAT routers and `tc netem` on a hosted runner |
 | Infrastructure | Terraform plan/state assertions, lint and server image on every relevant PR; trusted owner PRs add a real remote-state plan; matching `master` merges apply and verify DNS plus lobby health | [`infrastructure.yml`](../../.github/workflows/infrastructure.yml), [`deploy-matchmaking.yml`](../../.github/workflows/deploy-matchmaking.yml), [`infra/terraform`](../../infra/terraform/README.md) | Mocked providers for all PRs; repository secrets and the `matchmaking` approval boundary for real-cloud gates |
 | Cross-host | Linux, Windows, MinGW, and Android peers converge | [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml), [`tests/e2e`](../../tests/e2e) | Native hosted runners joined through ephemeral Tailscale nodes |
-| Public three-platform game | Linux, Windows/MSVC and Android complete one three-player Vector War match with equal state through the deployed relay | [`public-three-platform-game.yml`](../../.github/workflows/public-three-platform-game.yml), [`public_group.py`](../../tests/e2e/public_group.py) | DuckDNS production name, OCI lobby/relay and three native hosted runners |
+| Public multi-platform game | Every platform with a Vector War build completes one shared match with equal state through the deployed relay | [`public-multiplatform-game.yml`](../../.github/workflows/public-multiplatform-game.yml), [`public_multiplatform_game.py`](../../tests/e2e/public_multiplatform_game.py) | DuckDNS production name, OCI lobby/relay and one native hosted runner per supported game build |
 
 ### Shared contracts
 
@@ -746,12 +746,12 @@ event, no unexpected disconnect, clean session close, and zero exit status.
 The generic fixture uses its independently advanced integer-state oracle;
 Vector War uses the frozen 180-frame application checksum `b3381958`.
 
-### Public three-platform game
+### Public multi-platform game
 
-[`public-three-platform-game.yml`](../../.github/workflows/public-three-platform-game.yml)
+[`public-multiplatform-game.yml`](../../.github/workflows/public-multiplatform-game.yml)
 launches one native peer per runtime platform. Windows uses MSVC because Vector
 War is not built with MinGW; MinGW remains covered by SDK, ABI, generic-peer and
-pairwise interoperability tests. All three peers join the
+pairwise interoperability tests. Every configured peer joins the
 same run-scoped lobby through the DuckDNS production name and request
 `--relay-only`, proving that the deployed OCI relay carries the game.
 
@@ -781,8 +781,8 @@ state divergence, absent rollback replay or nonzero process exit fails the
 gate. A successful `master` apply invokes required mode; manual runs default to
 optional mode.
 
-The result proves three-platform interoperability and convergence, not an
-independent three-player gameplay oracle. Pairwise schema-2 E2E supplies the
+The result proves multi-platform interoperability and convergence, not an
+independent multiplayer gameplay oracle. Pairwise schema-2 E2E supplies the
 independent oracle, while the namespace NAT suite supplies controlled direct,
 fallback and impairment coverage.
 [`validate_manifest.py`](../../tests/e2e/validate_manifest.py) rejects a run

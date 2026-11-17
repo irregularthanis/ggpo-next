@@ -749,7 +749,7 @@ workflow or follow the [Terraform instructions](../infra/terraform/README.md).
 After an automatic `master` deployment, CI resolves the DuckDNS name and runs
 one required three-player game across Linux, Windows/MSVC and Android through the OCI
 relay. The standalone
-[`Public three-platform game`](../.github/workflows/public-three-platform-game.yml)
+[`Public multi-platform game`](../.github/workflows/public-multiplatform-game.yml)
 workflow defaults to optional mode and reports a neutral skip before building
 when no server is deployed; select required mode when absence must fail.
 Applications integrating GGPO do not inherit this service automatically: it is

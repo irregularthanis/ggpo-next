@@ -119,7 +119,7 @@ Status: In progress
 - [ ] M6-T03: Friends trial (checklist below), every platform pair in both
   player orders.
 - [ ] M6-T04: Add **Complete infrastructure checks** to the `master` ruleset.
-- [x] M6-T05: Add the post-apply three-platform public game: Linux, Windows/MSVC and
+- [x] M6-T05: Add the post-apply multi-platform public game: Linux, Windows/MSVC and
   Android join one DuckDNS lobby and converge at frame 180 through forced OCI
   relay paths. Manual optional mode skips before builds when no server exists;
   post-apply required mode and every started match fail closed.

@@ -91,7 +91,7 @@ A pass does not certify Internet matchmaking, NAT traversal, performance,
 spectators, more than two players, or arbitrary application determinism.
 Matchmaking, the relay and hole punching have their own tests
 ([Matchmaking: testing](Matchmaking.md#testing)). The separate
-[public three-platform game](Testing.md#public-three-platform-game) joins
+[public multi-platform game](Testing.md#public-multi-platform-game) joins
 Linux, Windows/MSVC and Android in one deployed forced-relay session. MinGW is
 covered by the generic peer because Vector War is not built with MinGW.
 
@@ -453,7 +453,7 @@ qualification when its cost becomes excessive.
 - It does not test NAT traversal, relay selection, matchmaking, encryption, or
   public-Internet reachability; see [Matchmaking: testing](Matchmaking.md#testing)
   for controlled matchmaking, relay and hole-punching tests, and the
-  [public three-platform game](Testing.md#public-three-platform-game) for the
+  [public multi-platform game](Testing.md#public-multi-platform-game) for the
   deployed DuckDNS/OCI path.
 - It is a correctness suite, not a throughput or latency benchmark.
 

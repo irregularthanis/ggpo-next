@@ -392,11 +392,11 @@ Deployment record) is described in
 [Native cross-platform qualification](CrossPlatformTesting.md#address-discovery).
 
 After a production infrastructure apply, the
-[public three-platform workflow](../../.github/workflows/public-three-platform-game.yml)
+[public multi-platform workflow](../../.github/workflows/public-multiplatform-game.yml)
 runs Linux, Windows/MSVC and Android headless peers in one three-player lobby through
 the DuckDNS name. It forces every pair through the OCI relay, then requires all
 three peers to reach frame 180 with equal state and rollback evidence. See the
-[testing contract](Testing.md#public-three-platform-game).
+[testing contract](Testing.md#public-multi-platform-game).
 
 ## Internet play
 

@@ -1,4 +1,4 @@
-name: Public three-platform game
+name: Public multi-platform game
 
 # One real Vector War match joins Linux, Windows/MSVC and Android through the
 # DuckDNS production name. Forced relay makes the deployed OCI data path part
@@ -33,7 +33,7 @@ permissions:
   deployments: write
 
 concurrency:
-  group: public-three-platform-game
+  group: public-multiplatform-game
   cancel-in-progress: false
 
 jobs:
@@ -68,7 +68,7 @@ jobs:
         id: probe
         env:
           SERVER: ${{ steps.server.outputs.value }}
-        run: python tests/e2e/public_group.py probe --server "$SERVER" --mode "${{ inputs.mode }}"
+        run: python tests/e2e/public_multiplatform_game.py probe --server "$SERVER" --mode "${{ inputs.mode }}"
 
   build-linux:
     name: Build Linux Vector War peer
@@ -163,12 +163,12 @@ jobs:
       - name: Make the Unix peer executable
         if: runner.os == 'Linux'
         run: chmod 0755 peer/vectorwar_headless
-      - name: Join the public three-platform match
+      - name: Join the public multi-platform match
         env:
           GITHUB_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          python tests/e2e/public_group.py role \
+          python tests/e2e/public_multiplatform_game.py role \
             --server "${{ needs.preflight.outputs.server }}" \
             --lobby "${{ needs.preflight.outputs.lobby }}" \
             --platform "${{ matrix.platform }}" \
@@ -183,7 +183,7 @@ jobs:
           if-no-files-found: warn
 
   final-report:
-    name: Complete three-platform public game
+    name: Complete public multi-platform game
     if: always()
     needs: [preflight, build-linux, build-windows, build-android, play]
     runs-on: ubuntu-24.04
@@ -192,7 +192,7 @@ jobs:
       - name: Report an optional preflight skip
         if: needs.preflight.result == 'success' && needs.preflight.outputs.run != 'true'
         run: |
-          echo "### Three-platform public game skipped" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Public multi-platform game skipped" >> "$GITHUB_STEP_SUMMARY"
           echo "The public server was not available before the match started." >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/download-artifact@v4
         if: needs.preflight.outputs.run == 'true'
@@ -213,10 +213,10 @@ jobs:
           test "$BUILD_WINDOWS" = success
           test "$BUILD_ANDROID" = success
           test "$PLAY" = success
-          python tests/e2e/public_group.py validate \
+          python tests/e2e/public_multiplatform_game.py validate \
             --evidence evidence --output public-game-manifest.json
           {
-            echo "### Three-platform public game passed"
+            echo "### Public multi-platform game passed"
             echo ""
             echo "Linux, Windows/MSVC and Android converged through the deployed relay."
           } >> "$GITHUB_STEP_SUMMARY"

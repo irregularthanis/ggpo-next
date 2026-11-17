@@ -1,14 +1,14 @@
-"""Focused contracts for the public three-platform game coordinator."""
+"""Focused contracts for the public multi-platform game coordinator."""
 
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
-from .public_group import PLATFORMS, split_server, validate_reports
+from .public_multiplatform_game import PLATFORMS, split_server, validate_reports
 
 
-class PublicGroupTest(unittest.TestCase):
+class PublicMultiplatformGameTest(unittest.TestCase):
     def test_server_requires_host_and_port(self):
         self.assertEqual(split_server("vectorwars-demo.duckdns.org:7100"),
                          ("vectorwars-demo.duckdns.org", 7100))
@@ -16,7 +16,7 @@ class PublicGroupTest(unittest.TestCase):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                 split_server(invalid)
 
-    def test_three_platform_manifest_requires_convergence_and_relay(self):
+    def test_configured_platform_manifest_requires_convergence_and_relay(self):
         self.assertEqual(PLATFORMS, ("linux", "windows", "android"))
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
