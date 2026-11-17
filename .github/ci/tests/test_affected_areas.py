@@ -73,7 +73,12 @@ class EveryTrackedPathIsClassified(unittest.TestCase):
     def test_repository(self):
         import fnmatch
         import subprocess
+        import shutil
         root = pathlib.Path(__file__).resolve().parents[3]
+        # Some test environments (MSYS2 MinGW, extracted build trees) have no
+        # git or no checkout; the Linux and Windows lanes still run this scan.
+        if shutil.which("git") is None or not (root / ".git").exists():
+            self.skipTest("git or a git checkout is not available here")
         files = subprocess.run(["git", "-C", str(root), "ls-files"], check=True,
                                capture_output=True, text=True).stdout.split()
         unmatched = {f for f in files
