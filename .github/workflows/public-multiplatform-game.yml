@@ -210,10 +210,13 @@ jobs:
           # Fail fast, before the other platforms wait, if Android cannot
           # resolve the server name. ping prints "PING host (ip)" once the name
           # resolves, whether or not ICMP replies get through the emulator.
+          # Android reports boot complete before its network is up, so retry
+          # for up to two minutes. The action runs each line through its own
+          # sh -c, so the loop stays on one line. On failure, a well-known
+          # name shows whether DNS works at all.
           script: |
-            adb shell "ping -c 1 -W 2 $(echo '${{ needs.preflight.outputs.server }}' | cut -d: -f1)" > android-dns.txt 2>&1 || true
-            cat android-dns.txt
-            grep -q '^PING ' android-dns.txt
+            host=$(echo '${{ needs.preflight.outputs.server }}' | cut -d: -f1); for i in $(seq 1 24); do adb shell "ping -c 1 -W 2 $host" > android-dns.txt 2>&1; if grep -q '^PING ' android-dns.txt; then break; fi; sleep 5; done; cat android-dns.txt
+            grep -q '^PING ' android-dns.txt || { adb shell "ping -c 1 -W 2 dns.google; getprop | grep -i dns; ip addr" || true; exit 1; }
             python tests/e2e/public_multiplatform_game.py role --server "${{ needs.preflight.outputs.server }}" --lobby "${{ needs.preflight.outputs.lobby }}" --platform android --executable "${{ matrix.executable }}" --output evidence/android
       - name: Upload peer evidence
         if: always()
