@@ -82,7 +82,7 @@ applying Terraform.
 
 After a `master` apply and its DNS/lobby health check, the Infrastructure
 workflow calls [`public-three-platform-game.yml`](../../.github/workflows/public-three-platform-game.yml)
-in required mode. Linux, MinGW and Android join one run-scoped Vector War lobby
+in required mode. Linux, Windows/MSVC and Android join one run-scoped Vector War lobby
 through the DuckDNS name and keep every peer path on the deployed relay. The
 standalone workflow defaults to optional mode: if no server answers the
 preflight probe, it reports a neutral skip before building or launching peers.

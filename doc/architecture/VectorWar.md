@@ -393,7 +393,7 @@ Deployment record) is described in
 
 After a production infrastructure apply, the
 [public three-platform workflow](../../.github/workflows/public-three-platform-game.yml)
-runs Linux, MinGW and Android headless peers in one three-player lobby through
+runs Linux, Windows/MSVC and Android headless peers in one three-player lobby through
 the DuckDNS name. It forces every pair through the OCI relay, then requires all
 three peers to reach frame 180 with equal state and rollback evidence. See the
 [testing contract](Testing.md#public-three-platform-game).

@@ -92,7 +92,8 @@ spectators, more than two players, or arbitrary application determinism.
 Matchmaking, the relay and hole punching have their own tests
 ([Matchmaking: testing](Matchmaking.md#testing)). The separate
 [public three-platform game](Testing.md#public-three-platform-game) joins
-Linux, MinGW and Android in one deployed forced-relay session.
+Linux, Windows/MSVC and Android in one deployed forced-relay session. MinGW is
+covered by the generic peer because Vector War is not built with MinGW.
 
 ### Scenario matrix
 

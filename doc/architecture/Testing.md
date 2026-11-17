@@ -472,7 +472,7 @@ cannot reach the build host's loopback server.
 | NAT traversal | Two-to-four-player mixed NAT converges; cone and LAN paths can go direct, restrictive paths retain relay fallback, impairment selects a measured viable route, direct loss falls back, and server loss does not stop an established direct match | [`nat-traversal.yml`](../../.github/workflows/nat-traversal.yml), [`run_nat_matrix.py`](../../tests/nat/run_nat_matrix.py) | Linux network namespaces with emulated NAT routers and `tc netem` on a hosted runner |
 | Infrastructure | Terraform plan/state assertions, lint and server image on every relevant PR; trusted owner PRs add a real remote-state plan; matching `master` merges apply and verify DNS plus lobby health | [`infrastructure.yml`](../../.github/workflows/infrastructure.yml), [`deploy-matchmaking.yml`](../../.github/workflows/deploy-matchmaking.yml), [`infra/terraform`](../../infra/terraform/README.md) | Mocked providers for all PRs; repository secrets and the `matchmaking` approval boundary for real-cloud gates |
 | Cross-host | Linux, Windows, MinGW, and Android peers converge | [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml), [`tests/e2e`](../../tests/e2e) | Native hosted runners joined through ephemeral Tailscale nodes |
-| Public three-platform game | Linux, MinGW and Android complete one three-player Vector War match with equal state through the deployed relay | [`public-three-platform-game.yml`](../../.github/workflows/public-three-platform-game.yml), [`public_group.py`](../../tests/e2e/public_group.py) | DuckDNS production name, OCI lobby/relay and three native hosted runners |
+| Public three-platform game | Linux, Windows/MSVC and Android complete one three-player Vector War match with equal state through the deployed relay | [`public-three-platform-game.yml`](../../.github/workflows/public-three-platform-game.yml), [`public_group.py`](../../tests/e2e/public_group.py) | DuckDNS production name, OCI lobby/relay and three native hosted runners |
 
 ### Shared contracts
 
@@ -749,8 +749,9 @@ Vector War uses the frozen 180-frame application checksum `b3381958`.
 ### Public three-platform game
 
 [`public-three-platform-game.yml`](../../.github/workflows/public-three-platform-game.yml)
-launches one native peer per runtime platform; Windows uses the MinGW build, so
-MSVC is not duplicated in this final gameplay gate. All three peers join the
+launches one native peer per runtime platform. Windows uses MSVC because Vector
+War is not built with MinGW; MinGW remains covered by SDK, ABI, generic-peer and
+pairwise interoperability tests. All three peers join the
 same run-scoped lobby through the DuckDNS production name and request
 `--relay-only`, proving that the deployed OCI relay carries the game.
 
@@ -759,16 +760,16 @@ flowchart TD
     DNS["DuckDNS<br/>production<br/>name"]
     Relay["OCI lobby<br/>and relay"]
     Linux["Linux<br/>peer"]
-    MinGW["MinGW<br/>peer"]
+    Windows["Windows<br/>MSVC peer"]
     Android["Android<br/>peer"]
     Result["Frame 180<br/>equal state<br/>relay routes"]
 
     DNS --> Relay
     Linux <--> Relay
-    MinGW <--> Relay
+    Windows <--> Relay
     Android <--> Relay
     Linux --> Result
-    MinGW --> Result
+    Windows --> Result
     Android --> Result
 ```
 
@@ -851,7 +852,7 @@ flowchart LR
   placeholder image digest; the separate image lane builds and smoke-tests the
   candidate. Matching `master` merges publish the image, resolve its real
   digest, apply Terraform, verify DuckDNS plus a lobby answer, then require one
-  public Linux/MinGW/Android relay match. Its aggregate is
+  public Linux/Windows/Android relay match. Its aggregate is
   `Complete infrastructure checks`.
 - **Deploy matchmaking server** remains manually dispatchable for explicit
   `plan`, `apply` and `destroy`; `destroy` also clears the DuckDNS record.

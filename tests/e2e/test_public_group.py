@@ -17,6 +17,7 @@ class PublicGroupTest(unittest.TestCase):
                 split_server(invalid)
 
     def test_three_platform_manifest_requires_convergence_and_relay(self):
+        self.assertEqual(PLATFORMS, ("linux", "windows", "android"))
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             for player, platform in enumerate(PLATFORMS, start=1):

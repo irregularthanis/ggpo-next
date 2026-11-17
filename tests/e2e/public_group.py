@@ -18,7 +18,7 @@ except ImportError:  # Direct script execution from tests/e2e.
     from rendezvous import DeploymentRendezvous, GitHubTransport
 
 
-PLATFORMS = ("linux", "mingw", "android")
+PLATFORMS = ("linux", "windows", "android")
 PATH_LINE = re.compile(r"vectorwar-path: player=(\d+) peer=(\d+) route=(\w+)")
 
 
@@ -133,7 +133,7 @@ def role_command(args):
 
 
 def validate_reports(root):
-    """Require one converged result from Linux, MinGW and Android."""
+    """Require one converged result from Linux, Windows and Android."""
     records = []
     for metadata_path in Path(root).rglob("metadata.json"):
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))

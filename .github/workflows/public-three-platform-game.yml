@@ -1,6 +1,6 @@
 name: Public three-platform game
 
-# One real Vector War match joins Linux, Windows/MinGW and Android through the
+# One real Vector War match joins Linux, Windows/MSVC and Android through the
 # DuckDNS production name. Forced relay makes the deployed OCI data path part
 # of the contract; deterministic namespace tests cover direct NAT traversal.
 on:
@@ -91,36 +91,26 @@ jobs:
           path: artifact
           if-no-files-found: error
 
-  build-mingw:
-    name: Build MinGW Vector War peer
+  build-windows:
+    name: Build Windows MSVC Vector War peer
     needs: preflight
     if: needs.preflight.outputs.run == 'true'
     runs-on: windows-2022
-    defaults:
-      run:
-        shell: msys2 {0}
     steps:
       - uses: actions/checkout@v4
-      - uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          update: false
-          install: >-
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-ninja
       - name: Build the native static headless peer
+        shell: pwsh
         run: |
-          cmake -S . -B build/public-game -G Ninja -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=OFF -DGGPO_BUILD_VECTORWAR_GUI=OFF \
-            -DCMAKE_EXE_LINKER_FLAGS=-static
-          cmake --build build/public-game --target VectorWarHeadless --parallel 2
-          mkdir -p artifact
-          cp build/public-game/bin/x64/Release/VectorWarHeadless.exe \
+          cmake -S . -B build/public-game -A x64 `
+            -DBUILD_SHARED_LIBS=OFF -DGGPO_BUILD_VECTORWAR_GUI=OFF
+          cmake --build build/public-game --config Release `
+            --target VectorWarHeadless --parallel 2
+          New-Item -ItemType Directory -Force artifact | Out-Null
+          Copy-Item build/public-game/bin/x64/Release/VectorWarHeadless.exe `
             artifact/vectorwar_headless.exe
       - uses: actions/upload-artifact@v4
         with:
-          name: public-game-binary-mingw
+          name: public-game-binary-windows
           path: artifact
           if-no-files-found: error
 
@@ -150,7 +140,7 @@ jobs:
 
   play:
     name: Play as ${{ matrix.platform }}
-    needs: [preflight, build-linux, build-mingw, build-android]
+    needs: [preflight, build-linux, build-windows, build-android]
     if: needs.preflight.outputs.run == 'true'
     timeout-minutes: 15
     strategy:
@@ -158,7 +148,7 @@ jobs:
       matrix:
         include:
           - {platform: linux, os: ubuntu-24.04, executable: peer/vectorwar_headless}
-          - {platform: mingw, os: windows-2022, executable: peer/vectorwar_headless.exe}
+          - {platform: windows, os: windows-2022, executable: peer/vectorwar_headless.exe}
           - {platform: android, os: ubuntu-24.04-arm, executable: peer/vectorwar_headless}
     runs-on: ${{ matrix.os }}
     steps:
@@ -195,7 +185,7 @@ jobs:
   final-report:
     name: Complete three-platform public game
     if: always()
-    needs: [preflight, build-linux, build-mingw, build-android, play]
+    needs: [preflight, build-linux, build-windows, build-android, play]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -214,13 +204,13 @@ jobs:
         env:
           PREFLIGHT: ${{ needs.preflight.result }}
           BUILD_LINUX: ${{ needs.build-linux.result }}
-          BUILD_MINGW: ${{ needs.build-mingw.result }}
+          BUILD_WINDOWS: ${{ needs.build-windows.result }}
           BUILD_ANDROID: ${{ needs.build-android.result }}
           PLAY: ${{ needs.play.result }}
         run: |
           test "$PREFLIGHT" = success
           test "$BUILD_LINUX" = success
-          test "$BUILD_MINGW" = success
+          test "$BUILD_WINDOWS" = success
           test "$BUILD_ANDROID" = success
           test "$PLAY" = success
           python tests/e2e/public_group.py validate \
@@ -228,7 +218,7 @@ jobs:
           {
             echo "### Three-platform public game passed"
             echo ""
-            echo "Linux, MinGW and Android converged through the deployed relay."
+            echo "Linux, Windows/MSVC and Android converged through the deployed relay."
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Fail a required or otherwise broken preflight
         if: needs.preflight.result != 'success'

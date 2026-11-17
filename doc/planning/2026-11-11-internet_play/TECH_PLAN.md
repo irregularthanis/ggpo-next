@@ -465,7 +465,7 @@ mismatch, or "could not reach the relay".
   non-deployable placeholder image digest while the image lane builds and
   smoke-tests the candidate. Matching `master` merges publish the image and
   run `apply` with its real digest plus DNS/lobby health checks, followed by a
-  required Linux/MinGW/Android three-player forced-relay match through DuckDNS.
+  required Linux/Windows-MSVC/Android three-player forced-relay match through DuckDNS.
   Fork and non-owner PRs never receive deployment credentials.
 - **Undeployed server:** standalone public-game runs default to `optional` and
   exit successfully with a clear skip before builds or gameplay when DNS or
