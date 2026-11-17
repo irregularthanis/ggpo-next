@@ -10,8 +10,8 @@ Status: Ready to start
 
 - [x] M0-T01: D1 decided (2026-11-17): no Apple Developer account; unsigned
   packages.
-- [x] M0-T02: D2 decided (2026-11-17): macOS 15 Sequoia, the oldest release
-  Apple still patches.
+- [x] M0-T02: D2 decided (2026-11-17): built for macOS 11, tested on macOS 15
+  and 26 (the only GitHub-hosted versions).
 - [x] M0-T03: D3 decided (2026-11-17): macOS is the public game's fourth
   player.
 
@@ -19,13 +19,14 @@ Status: Ready to start
 
 - [ ] M1-T01: `src/platform/apple/Platform.cmake`, selected for Darwin.
 - [ ] M1-T02: `-ffp-contract=off` for Apple targets.
-- [ ] M1-T03: Universal static and shared builds; `platform_posix.cpp`
-  compiles.
-- [ ] M1-T04: Native CTest passes on arm64 and under Rosetta 2, including
-  `vectorwar_state_contract`.
-- [ ] M1-T05: `macos-compatibility.yml` with its aggregate check, Xcode
+- [ ] M1-T03: Universal static and shared builds for macOS 11;
+  `platform_posix.cpp` compiles with `-Werror=unguarded-availability-new`.
+- [ ] M1-T04: Minimum-version audit (`minos 11.0`) and export audit.
+- [ ] M1-T05: CTest passes on macOS 15 and 26, Apple Silicon and Intel,
+  including `vectorwar_state_contract`.
+- [ ] M1-T06: `macos-compatibility.yml` with its aggregate check, Xcode
   pinned.
-- [ ] M1-T06: `macos` area in `affected_areas.py`, with tests.
+- [ ] M1-T07: `macos` area in `affected_areas.py`, with tests.
 
 ### M2: Release package (depends: M1)
 
@@ -55,4 +56,4 @@ Status: Ready to start
 
 ## Log
 
-- 2026-11-17: Plan drafted for macOS; iOS deferred. D1–D3 decided.
+- 2026-11-17: Plan drafted for macOS; iOS deferred. D1–D3 decided; D2 revised the same day to a macOS 11 baseline, tested on 15 and 26.

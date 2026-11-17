@@ -39,7 +39,11 @@ settings, CI and packaging. Tests run natively, as on Linux.
 
 ### Testing
 
-- macOS runs the full CTest suite natively, like Linux.
+- macOS runs the full CTest suite natively, like Linux, on macOS 15 and 26,
+  on both Apple Silicon and Intel runners.
+- macOS 11–14 are covered at build time only: the build fails if code uses an
+  API newer than macOS 11 without a version check, and every shipped binary
+  must declare macOS 11 as its minimum.
 - macOS takes part in the cross-platform E2E matrix in both roles against
   Linux, Windows and Android.
 - The public multi-platform game adds macOS as the fourth player (GGPO's
@@ -77,8 +81,10 @@ settings, CI and packaging. Tests run natively, as on Linux.
 
 - **D1 — Apple Developer account: no** (2026-11-17). Packages stay unsigned
   and are not notarized.
-- **D2 — Minimum version: macOS 15 Sequoia** (2026-11-17), the oldest release
-  Apple still patches (macOS 27, 26 and 15 as of November 2026). Raised when
-  Apple drops it.
+- **D2 — Minimum version: macOS 11 Big Sur, tested on 15 and later**
+  (2026-11-17). Binaries are built for macOS 11 and run on every later
+  release. GitHub's hosted runners only offer macOS 15 and 26 (macOS 14 was
+  retired on 2026-11-02), so 11–14 are checked at build time but never run in
+  CI. The documentation says exactly that.
 - **D3 — macOS in the public game: yes** (2026-11-17), as the fourth player on
   a macOS runner.
