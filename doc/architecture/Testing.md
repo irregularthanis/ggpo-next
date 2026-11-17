@@ -433,6 +433,7 @@ libraries, which is the default.
 | `cross_host_result_contract` | [`test_result_schema.py`](../../tests/e2e/test_result_schema.py) | E2E result schema and the independent state oracle |
 | `cross_host_orchestration_contract` | [`test_orchestration.py`](../../tests/e2e/test_orchestration.py) | E2E matrix completeness and control-request authentication |
 | `cross_host_rendezvous_contract` | [`test_rendezvous.py`](../../tests/e2e/test_rendezvous.py) | E2E rendezvous record fails closed on stale or duplicate data |
+| `public_multiplatform_game_contract` | [`test_public_multiplatform_game.py`](../../tests/e2e/test_public_multiplatform_game.py) | Public multi-platform game harness: server parsing, peer command line, and the validator that decides whether the live match converged |
 | `fake_platform_synctest` | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp), [`platform_fake.cpp`](../../tests/platform/fake/platform_fake.cpp) | Production rollback core runs with no OS adapter at all |
 | `fake_platform_contract` | [`platform_fake_test.cpp`](../../tests/platform/fake/platform_fake_test.cpp) | The deterministic fake adapter itself: virtual time, fallbacks, failures |
 | `input_queue_contract` | [`input_queue_test.cpp`](../../tests/unit/input_queue_test.cpp) | Input prediction, confirmation and frame delay |
