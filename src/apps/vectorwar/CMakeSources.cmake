@@ -10,6 +10,7 @@ set(GGPO_EXAMPLES_VECTORWAR_INC_NOFILTER
 	"vectorwar_inputs.h"
 	"vectorwar.h"
 	"vw_bitmap_font.h"
+	"vw_trig.h"
 	"vw_legend.h"
 	"vw_player_colors.h"
 	"vw_start_form.h"

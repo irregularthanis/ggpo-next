@@ -3,14 +3,9 @@
 #include "ggponet.h"
 #include "gamestate.h"
 #include "vectorwar_inputs.h"
+#include "vw_trig.h"
 
 extern GGPOSession *ggpo;
-
-static double
-degtorad(double deg)
-{
-   return PI * deg / 180;
-}
 
 static double
 distance(Position *lhs, Position *rhs)
@@ -45,11 +40,10 @@ GameState::Init(const VectorWarBounds &bounds, int num_players)
    _num_ships = num_players;
    for (i = 0; i < _num_ships; i++) {
       int heading = i * 360 / num_players;
-      double cost, sint, theta;
+      double cost, sint;
 
-      theta = (double)heading * PI / 180;
-      /* Cardinal starts are exact on every supported compiler. This avoids
-       * seeding rollback state with platform-libm rounding differences. */
+      /* Cardinal starts are exact; other starts (3 players) come from the
+       * fixed table, never from the platform maths library. */
       if (heading == 0) {
          cost = 1; sint = 0;
       } else if (heading == 90) {
@@ -59,8 +53,8 @@ GameState::Init(const VectorWarBounds &bounds, int num_players)
       } else if (heading == 270) {
          cost = 0; sint = -1;
       } else {
-         cost = ::cos(theta);
-         sint = ::sin(theta);
+         cost = VwTrigFor(heading).cos;
+         sint = VwTrigFor(heading).sin;
       }
 
       _ships[i].position.x = (w / 2) + r * cost;
@@ -119,8 +113,8 @@ void GameState::MoveShip(int which, double heading, double thrust, int fire)
       if (fire) {
          ggpo_log(ggpo, "firing bullet.\n");
          for (int i = 0; i < MAX_BULLETS; i++) {
-            double dx = ::cos(degtorad(ship->heading));
-            double dy = ::sin(degtorad(ship->heading));
+            double dx = VwTrigFor(ship->heading).cos;
+            double dy = VwTrigFor(ship->heading).sin;
             if (!ship->bullets[i].active) {
                ship->bullets[i].active = true;
                ship->bullets[i].position.x = ship->position.x + (ship->radius * dx);
@@ -135,8 +129,8 @@ void GameState::MoveShip(int which, double heading, double thrust, int fire)
    }
 
    if (thrust) {
-      double dx = thrust * ::cos(degtorad(heading));
-      double dy = thrust * ::sin(degtorad(heading));
+      double dx = thrust * VwTrigFor((int)heading).cos;
+      double dy = thrust * VwTrigFor((int)heading).sin;
 
       ship->velocity.dx += dx;
       ship->velocity.dy += dy;
