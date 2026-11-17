@@ -385,9 +385,17 @@ VectorWar_DrawCurrentFrame()
  * Advances the game state by exactly 1 frame using the inputs specified
  * for player 1 and player 2.
  */
+static int recorded_frame = -1;
+static unsigned int recorded_checksum = 0;
+
 void VectorWar_AdvanceFrame(int inputs[], int disconnect_flags)
 {
    gs.Update(inputs, disconnect_flags);
+   // A rollback re-simulates the frame, so the last write is the confirmed
+   // state once the session has moved past the prediction window.
+   if (gs._framenumber == recorded_frame) {
+      recorded_checksum = VectorWarCanonicalChecksum(gs);
+   }
 
    // update the checksums to display in the top of the window.  this
    // helps to detect desyncs.
@@ -487,6 +495,8 @@ VectorWar_Exit()
 }
 
 int VectorWar_FrameNumber() { return gs._framenumber; }
+void VectorWar_RecordChecksumAt(int frame) { recorded_frame = frame; recorded_checksum = 0; }
+unsigned int VectorWar_RecordedChecksum() { return recorded_checksum; }
 unsigned int VectorWar_StateChecksum() { return VectorWarCanonicalChecksum(gs); }
 int VectorWar_SaveCount() { return save_count; }
 int VectorWar_LoadCount() { return load_count; }

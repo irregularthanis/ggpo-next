@@ -28,6 +28,10 @@ void VectorWar_Exit();
 void VectorWar_SetLegendSource(void (*source)(VwLegend *legend, void *context), void *context);
 int VectorWar_FrameNumber();
 unsigned int VectorWar_StateChecksum();
+/* Keep the checksum of the state at FRAME, refreshed when a rollback
+ * re-simulates it; read it once the session is past the prediction window. */
+void VectorWar_RecordChecksumAt(int frame);
+unsigned int VectorWar_RecordedChecksum();
 int VectorWar_SaveCount();
 int VectorWar_LoadCount();
 int VectorWar_ReplayFrameCount();
