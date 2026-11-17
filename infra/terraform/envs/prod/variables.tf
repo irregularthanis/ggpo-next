@@ -17,6 +17,11 @@ variable "compartment_ocid" {
 variable "container_image" {
   description = "Matchmaking server image pinned by digest."
   type        = string
+  # The deployed server image. Changing it replaces the VM (new public IP, a
+  # short outage), so it only changes when you update this pin: copy the
+  # digest from the "Record the digest to deploy" summary of an Infrastructure
+  # run on master. Images published since then are not deployed until then.
+  default = "ghcr.io/irregularthanis/ggpo-matchmaking@sha256:70efe1b26128247fb96c219cd426c909b4aec1d4eb2875733dfacda1f0a7be65"
 }
 
 variable "server_port" {

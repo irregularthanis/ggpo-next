@@ -176,6 +176,7 @@ jobs:
       - name: Record the digest to deploy
         if: steps.publish.outcome == 'success'
         run: |
+          echo "Published. To deploy it, set the container_image default in infra/terraform/envs/prod/variables.tf to:" >> "$GITHUB_STEP_SUMMARY"
           echo "container_image = \"ghcr.io/${{ github.repository_owner }}/ggpo-matchmaking@${{ steps.publish.outputs.digest }}\"" \
             | tee -a "$GITHUB_STEP_SUMMARY"
 

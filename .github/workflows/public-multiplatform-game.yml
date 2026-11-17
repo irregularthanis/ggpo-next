@@ -121,18 +121,23 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      # x86_64 so the peer runs on a real Android system image (the emulator),
-      # where name resolution goes through Android's own resolver. A static
-      # bionic binary on a plain Linux runner cannot resolve hostnames.
-      - name: Build the static x86_64 Android peer
+      # x86_64 so the peer runs on a real Android system image (the emulator).
+      # Dynamically linked against bionic: name resolution goes through
+      # Android's resolver client, which libc loads at run time; a fully
+      # static executable cannot load it and fails to resolve any hostname,
+      # even on Android. GGPO itself stays statically linked into the peer.
+      - name: Build the x86_64 Android peer
         run: |
           cmake -S . -B build/public-game -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake" \
             -DANDROID_ABI=x86_64 -DANDROID_PLATFORM=21 \
             -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
-            -DGGPO_BUILD_VECTORWAR=ON -DGGPO_BUILD_VECTORWAR_GUI=OFF \
-            -DCMAKE_EXE_LINKER_FLAGS=-static
+            -DGGPO_BUILD_VECTORWAR=ON -DGGPO_BUILD_VECTORWAR_GUI=OFF
           cmake --build build/public-game --target VectorWarHeadless --parallel 2
+          # Must need only Android system libraries (no libGGPO.so to push).
+          "$ANDROID_NDK_LATEST_HOME"/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf -d \
+            build/public-game/bin/*/Release/VectorWarHeadless | tee /dev/stderr \
+            | grep NEEDED | grep -vE '\[(libc|libm|libdl|liblog)\.so\]' && exit 1 || true
           install -D -m 0755 build/public-game/bin/*/Release/VectorWarHeadless \
             artifact/vectorwar_headless
       - uses: actions/upload-artifact@v4

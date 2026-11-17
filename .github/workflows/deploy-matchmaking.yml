@@ -141,14 +141,10 @@ jobs:
         run: |
           image="$REQUESTED"
           if [ -z "$image" ]; then
-            repository="ghcr.io/${{ github.repository_owner }}/ggpo-matchmaking"
-            echo "$GH_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin > /dev/null
-            digest=$(docker buildx imagetools inspect "$repository:latest" --format '{{json .Manifest.Digest}}' | tr -d '"')
-            if [ -z "$digest" ]; then
-              echo "::error::No $repository:latest image yet; it is published when the Infrastructure workflow runs on master"
-              exit 1
-            fi
-            image="$repository@$digest"
+            # Deploy the image pinned in infra/terraform/envs/prod/variables.tf.
+            # Following :latest would replace the VM whenever CI republishes.
+            echo "Server image: pinned default from envs/prod/variables.tf" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
           fi
           case "$image" in
             *@sha256:*) ;;
