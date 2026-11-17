@@ -59,7 +59,7 @@ Facts from `ee465d1` that constrain the design:
 - Fix whatever the first macOS compile finds in `platform_posix.cpp` behind
   `#if defined(__APPLE__)`; expected candidates are header differences.
 - `CMAKE_OSX_ARCHITECTURES="arm64;x86_64"`,
-  `CMAKE_OSX_DEPLOYMENT_TARGET=11.0`. Shared and static builds as on Linux;
+  `CMAKE_OSX_DEPLOYMENT_TARGET=15.0` (D2). Shared and static builds as on Linux;
   the dylib gets `@rpath/libGGPO.dylib` as its install name.
 - Export audit: the installed library's exported symbols must match
   `tests/baseline/linux/exports.txt`, checked with `nm -gU` for both slices.
@@ -107,7 +107,8 @@ Facts from `ee465d1` that constrain the design:
 
 ### Public multi-platform game
 
-- macOS joins as player 4. The harness validator expects four platforms.
+- macOS joins as player 4 (D3). The harness validator expects four
+  platforms.
 
 ## CI
 
@@ -131,10 +132,8 @@ New jobs in `release-packages.yml` on `macos-15`:
 - `package-vectorwar-macos`: `VectorWar.app` with SDL2 embedded in
   `Contents/Frameworks` (`@rpath`), zipped with `ditto -c -k --keepParent`;
   validate by extracting and launching the headless peer from the bundle.
-- Signing (only if D1 is yes): Developer ID certificate as a repository
-  secret, imported into a temporary keychain, then notarization with
-  `notarytool` and stapling. Without D1 the packages are unsigned and the
-  release notes say how to open the app.
+- Unsigned (D1): no signing or notarization. Release notes say to open the
+  app the first time with right-click → Open.
 
 ## Adding iOS later
 
@@ -175,4 +174,4 @@ Each step is one PR, with these documents updated in the same PR.
   only compiled and audited, not executed; the workflow installs it when
   missing.
 - **Xcode updates** on runner images; pinned with `xcode-select`.
-- **Unsigned app** needs one extra step to open until D1 is decided.
+- **Unsigned app** needs one extra step to open (D1).

@@ -1,6 +1,6 @@
 # PROGRESS — macOS support
 
-Status: Not started
+Status: Ready to start
 
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
@@ -8,9 +8,12 @@ Status: Not started
 
 ### M0: Decisions
 
-- [ ] M0-T01: D1 — Apple Developer account, yes or no.
-- [ ] M0-T02: D2 — minimum version (proposed macOS 11).
-- [ ] M0-T03: D3 — macOS as the public game's fourth player.
+- [x] M0-T01: D1 decided (2026-11-17): no Apple Developer account; unsigned
+  packages.
+- [x] M0-T02: D2 decided (2026-11-17): macOS 15 Sequoia, the oldest release
+  Apple still patches.
+- [x] M0-T03: D3 decided (2026-11-17): macOS is the public game's fourth
+  player.
 
 ### M1: macOS library and CI
 
@@ -37,7 +40,7 @@ Status: Not started
 ### M4: Vector War app (depends: M1, M3)
 
 - [ ] M4-T01: `VectorWar.app` with SDL2.
-- [ ] M4-T02: App release package; signed and notarized if D1.
+- [ ] M4-T02: Unsigned app release package.
 
 ### M5: Live tests (depends: M4)
 
@@ -52,4 +55,4 @@ Status: Not started
 
 ## Log
 
-- 2026-11-17: Plan drafted for macOS; iOS deferred.
+- 2026-11-17: Plan drafted for macOS; iOS deferred. D1–D3 decided.

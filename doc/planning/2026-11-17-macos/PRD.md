@@ -63,22 +63,22 @@ settings, CI and packaging. Tests run natively, as on Linux.
     embedded.
 - Every archive is extracted and checked in CI before upload, as the existing
   packages are.
-- Packages are unsigned. Signing and notarization need an Apple Developer
-  account (see open decisions).
+- Packages are unsigned (D1). Players open Vector War the first time with
+  right-click → Open; the SDK works unchanged.
 
 ## Non-goals
 
 - iOS. Later, if wanted, it reuses this plan's Apple build setup and adds a
   simulator test launcher and an app target.
 - Mac App Store distribution.
+- Signing and notarization (D1).
 
-## Open decisions
+## Decisions
 
-- **D1 — Apple Developer account** (USD 99/year). Without it: unsigned
-  packages; players open Vector War once through right-click → Open (or clear
-  the quarantine flag), and the SDK works unchanged. With it: signed and
-  notarized app that opens normally.
-- **D2 — Minimum version.** Proposed: macOS 11 (first version on Apple Silicon
-  Macs).
-- **D3 — macOS in the public game.** Proposed: yes, as the fourth player; the
-  match then uses a macOS runner.
+- **D1 — Apple Developer account: no** (2026-11-17). Packages stay unsigned
+  and are not notarized.
+- **D2 — Minimum version: macOS 15 Sequoia** (2026-11-17), the oldest release
+  Apple still patches (macOS 27, 26 and 15 as of November 2026). Raised when
+  Apple drops it.
+- **D3 — macOS in the public game: yes** (2026-11-17), as the fourth player on
+  a macOS runner.
