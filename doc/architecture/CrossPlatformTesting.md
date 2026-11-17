@@ -54,7 +54,7 @@ performance benchmark.
 flowchart TB
     SRC["One workflow<br/>source revision"]
 
-    subgraph BUILD["Per-platform native builds"]
+    subgraph BUILD["Per-platform<br/>native builds"]
         direction LR
         BL["Linux<br/>ubuntu-24.04<br/>static x64"]
         BW["Windows MSVC<br/>windows-2022<br/>static x64"]

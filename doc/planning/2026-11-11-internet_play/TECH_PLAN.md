@@ -56,7 +56,7 @@ decision D6).
 
 ```mermaid
 flowchart TB
-    subgraph CLOUD["Free-tier cloud, created by Terraform"]
+    subgraph CLOUD["Free-tier cloud,<br/>created by Terraform"]
         direction TB
         DNS["DuckDNS name<br/>name.duckdns.org<br/>→ VM IP"]
         VM["Always-free VM<br/>firewall: UDP 7100<br/>and relay range,<br/>SSH from admin only"]

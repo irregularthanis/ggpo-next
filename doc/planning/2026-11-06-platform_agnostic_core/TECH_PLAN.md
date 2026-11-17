@@ -240,7 +240,7 @@ The two suites answer different questions and must remain separate:
 ```mermaid
 flowchart TD
     CoreSuite["Platform-agnostic<br/>smoke suite"]
-    Fake["Deterministic fake adapter<br/>virtual time, memory UDP,<br/>temp files"]
+    Fake["Deterministic<br/>fake adapter<br/>virtual time,<br/>memory UDP,<br/>temp files"]
     Core["GGPO portable<br/>core"]
     ContractSuite["Windows compatibility<br/>fixtures"]
     Windows["Real Windows adapter<br/>Win32 and Winsock"]
@@ -318,9 +318,9 @@ flowchart TD
     Entry["configure_windows.cmd<br/>or AppVeyor"]
     Root["Root CMake<br/>global options and<br/>output policy"]
     List["src/CMakeLists and<br/>CMakeSources<br/>mixed source selection"]
-    Mixed["GGPO target<br/>core plus selected OS code"]
+    Mixed["GGPO target<br/>core plus selected<br/>OS code"]
     Inline["Inline Windows policy<br/>defines, winmm, ws2_32"]
-    Leak["Public includes<br/>API plus internal headers"]
+    Leak["Public includes<br/>API plus internal<br/>headers"]
     Output["DLL or static library<br/>partial install export"]
     Sample["Windows Vector War<br/>target"]
 
@@ -340,7 +340,7 @@ flowchart TD
     Entry["CMake configure<br/>directly or CI wrapper"]
     Root["Root CMake<br/>products and<br/>platform selection"]
     Core["src/CMakeLists<br/>portable GGPO sources"]
-    Select{"Supported platform layer?"}
+    Select{"Supported<br/>platform layer?"}
     Win["platform/windows CMake<br/>sources, defines,<br/>system libraries"]
     Future["Future Linux or<br/>Apple layer<br/>same build contract"]
     Target["GGPO target<br/>core plus one private<br/>platform layer"]

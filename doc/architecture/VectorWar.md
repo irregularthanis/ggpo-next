@@ -498,8 +498,8 @@ flowchart TD
         SdlDraw["SDLVectorWarRenderer<br/>sdl_renderer.cpp"]
         SdlMain --> SdlHost --> SdlDraw
     end
-    Contract["VectorWarHost contract<br/>bounds, input, renderer,<br/>clock, sleep, diagnostics"]
-    Core["VectorWarCore<br/>session, callbacks,<br/>rollback state, simulation"]
+    Contract["VectorWarHost contract<br/>bounds, input,<br/>renderer, clock,<br/>sleep, diagnostics"]
+    Core["VectorWarCore<br/>session, callbacks,<br/>rollback state,<br/>simulation"]
     GGPO["GGPO SDK<br/>ggponet.h"]
 
     WinHost -->|"implements"| Contract

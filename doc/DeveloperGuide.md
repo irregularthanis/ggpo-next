@@ -80,7 +80,7 @@ flowchart TB
         PKG -.-> APP
     end
 
-    PLAT["platform.h<br/>OS adapter interface<br/>time, waits, UDP sockets,<br/>config, log paths"]
+        PLAT["platform.h<br/>OS adapter interface<br/>time, waits,<br/>UDP sockets,<br/>config, log paths"]
     NET --> PLAT
     CORE --> PLAT
 
