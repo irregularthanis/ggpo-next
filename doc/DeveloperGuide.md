@@ -120,6 +120,8 @@ options, floating point, Vector War) follows in
 | [Android](#android) (arm64-v8a, armeabi-v7a, x86_64; API 21+) | `ggpo-0.6.0-android.tar.gz` |
 
 Downloads are on [GGPO Next Releases](https://github.com/irregularthanis/ggpo-next/releases).
+Windows is supported in both 64-bit (`x64`/x86-64) and 32-bit (`x86`/Win32)
+forms, with separate SDKs for MSVC and MinGW-w64.
 
 ### Windows with MSVC
 

@@ -166,6 +166,10 @@ not (`readelf -d` on Linux; on Windows the static programs run with the SDK's
 | [Linux](#linux) | `libGGPO.so`, static `.a`, DEB/RPM/tar SDKs | GCC/Clang builds, SONAME/glibc audit, consumers and package layout |
 | [Android](#android) | Per-ABI `libGGPO.so`, static `.a`, CMake SDK | API-21 ceiling, ELF exports/dependencies, 16 KB alignment, consumers and cross-toolchain rejection |
 
+Both Windows toolchains qualify and package 32-bit x86 and 64-bit x86-64
+targets. MSVC names these `Win32` and `x64`; MinGW-w64 release artifacts use
+`x86` and `x64`.
+
 ### Windows with MSVC
 
 #### MSVC: registered tests
