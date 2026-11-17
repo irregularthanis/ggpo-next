@@ -1,0 +1,8 @@
+# Copy to terraform.tfvars (git-ignored) and fill in.
+region            = "us-ashburn-1"
+compartment_ocid  = "ocid1.tenancy.oc1..aaaa..."
+container_image   = "ghcr.io/irregularthanis/ggpo-matchmaking@sha256:<digest>"
+admin_cidr        = "203.0.113.7/32"
+ssh_public_key    = "ssh-ed25519 AAAA... you@host"
+duckdns_subdomain = "your-name"
+# duckdns_token: set TF_VAR_duckdns_token in the environment instead of here.

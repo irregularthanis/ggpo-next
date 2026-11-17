@@ -1,4 +1,5 @@
 set(GGPO_EXAMPLES_VECTORWAR_INC_NOFILTER
+	"matchmade.h"
 	"gamestate.h"
 	"gdi_renderer.h"
 	"ggpo_perfmon.h"
@@ -8,12 +9,19 @@ set(GGPO_EXAMPLES_VECTORWAR_INC_NOFILTER
 	"vectorwar_host.h"
 	"vectorwar_inputs.h"
 	"vectorwar.h"
+	"vw_bitmap_font.h"
+	"vw_legend.h"
+	"vw_player_colors.h"
+	"vw_start_form.h"
 )
 
 set(GGPO_EXAMPLES_VECTORWAR_SRC_NOFILTER
+	"matchmade.cpp"
 	"gamestate.cpp"
 	"state_contract.cpp"
 	"vectorwar.cpp"
+	"vw_legend.cpp"
+	"vw_start_form.cpp"
 )
 
 set(GGPO_EXAMPLES_VECTORWAR_WIN32_INC
@@ -22,6 +30,7 @@ set(GGPO_EXAMPLES_VECTORWAR_WIN32_INC
 	"Resource.h"
 	"targetver.h"
 	"win32_host.h"
+	"win32_start_dialog.h"
 )
 
 set(GGPO_EXAMPLES_VECTORWAR_WIN32_SRC
@@ -29,6 +38,7 @@ set(GGPO_EXAMPLES_VECTORWAR_WIN32_SRC
 	"ggpo_perfmon.cpp"
 	"main.cpp"
 	"win32_host.cpp"
+	"win32_start_dialog.cpp"
 )
 
 set(GGPO_EXAMPLES_VECTORWAR_WIN32RES
@@ -41,6 +51,9 @@ set(GGPO_EXAMPLES_VECTORWAR_SDL_SRC
 	"sdl_main.cpp"
 	"sdl_renderer.cpp"
 	"sdl_renderer.h"
+	"sdl_start_screen.cpp"
+	"sdl_start_screen.h"
+	"sdl_text.h"
 	"sdl_touch_controls.h"
 	"vw_sdl.h"
 )
@@ -52,4 +65,29 @@ source_group("SDL host" FILES ${GGPO_EXAMPLES_VECTORWAR_SDL_SRC})
 set(GGPO_EXAMPLES_VECTORWAR_SRC
 	${GGPO_EXAMPLES_VECTORWAR_INC_NOFILTER}
 	${GGPO_EXAMPLES_VECTORWAR_SRC_NOFILTER}
+)
+
+# Matchmaking client codec and hole punching with relay fallback; portable
+# and free of GGPO, so its contract test runs on every platform.
+set(GGPO_EXAMPLES_VECTORWAR_NET_SRC
+	"net/vw_net_protocol.cpp"
+	"net/vw_net_protocol.h"
+	"net/vw_net_types.cpp"
+	"net/vw_net_types.h"
+	"net/vw_path_probe.cpp"
+	"net/vw_path_probe.h"
+	"net/vw_path_selector.cpp"
+	"net/vw_path_selector.h"
+	"net/vw_siphash.cpp"
+	"net/vw_siphash.h"
+)
+
+# Sockets, matchmaking client and path proxy (need the platform's sockets).
+set(GGPO_EXAMPLES_VECTORWAR_NET_IO_SRC
+	"net/vw_matchmaking.cpp"
+	"net/vw_matchmaking.h"
+	"net/vw_path_proxy.cpp"
+	"net/vw_path_proxy.h"
+	"net/vw_udp.cpp"
+	"net/vw_udp.h"
 )

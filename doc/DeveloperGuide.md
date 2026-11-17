@@ -40,6 +40,7 @@ The GGPO Network Library Developer Guide is for developers who are integrating t
   - [Floating-point determinism](#floating-point-determinism)
   - [Deployment and license](#deployment-and-license)
   - [Run the standalone Vector War sample](#run-the-standalone-vector-war-sample)
+  - [Play Vector War over the Internet](#play-vector-war-over-the-internet)
   - [Upgrading from 0.3.0](#upgrading-from-030)
 - [Game State and Inputs](#game-state-and-inputs)
 - [Using State and Inputs for Synchronization](#using-state-and-inputs-for-synchronization)
@@ -79,7 +80,7 @@ flowchart TB
         PKG -.-> APP
     end
 
-    PLAT["platform.h<br/>OS adapter interface<br/>time, waits, UDP sockets,<br/>config, log paths"]
+        PLAT["platform.h<br/>OS adapter interface<br/>time, waits,<br/>UDP sockets,<br/>config, log paths"]
     NET --> PLAT
     CORE --> PLAT
 
@@ -119,6 +120,8 @@ options, floating point, Vector War) follows in
 | [Android](#android) (arm64-v8a, armeabi-v7a, x86_64; API 21+) | `ggpo-0.6.0-android.tar.gz` |
 
 Downloads are on [GGPO Next Releases](https://github.com/irregularthanis/ggpo-next/releases).
+Windows is supported in both 64-bit (`x64`/x86-64) and 32-bit (`x86`/Win32)
+forms, with separate SDKs for MSVC and MinGW-w64.
 
 ### Windows with MSVC
 
@@ -489,6 +492,20 @@ g++ -I$HOME/ggpo-0.6.0-linux-x86_64/include main.cpp $HOME/ggpo-0.6.0-linux-x86_
 For NDK applications on arm64-v8a, armeabi-v7a, and x86_64, API 21 or newer.
 `GGPO_SHARED_LIB` is not used.
 
+| Dimension | Supported variants | Qualification |
+| --- | --- | --- |
+| CPU ABI | `arm64-v8a` (64-bit ARM), `armeabi-v7a` (32-bit ARM), `x86_64` (64-bit x86) | All three build, run the shared test suite, pass SDK audits, and ship in the Android SDK and Vector War APK |
+| Android version | API 21+ (Android 5.0 and newer) | API 21 is the binary/API floor; full emulator and APK smoke tests run on API 21 and API 35 |
+| Build type | Release; Debug qualification on `arm64-v8a` | Release is packaged for all ABIs; CI also exercises one Debug build |
+| NDK | The current NDK exposed by `ANDROID_NDK_LATEST_HOME` | CI records `source.properties`; older NDK revisions are not a compatibility guarantee |
+
+API level and NDK revision are different dimensions. API 21 means the produced
+library can target older Android systems; it does **not** mean CI builds with an
+older NDK. The Gradle APK build reads the selected NDK's exact revision from
+[`source.properties`](../src/apps/vectorwar/android/app/build.gradle) and uses
+that same installation for native compilation. The APK currently compiles and
+targets API 35 while retaining `minSdk 21`.
+
 #### Android: release SDK
 
 `ggpo-0.6.0-android.tar.gz` contains one complete CMake prefix per ABI:
@@ -715,6 +732,46 @@ Escape exits. The Android launcher accepts the same local port, player count,
 and peer endpoints; touch controls map to the same steering, fire, and bomb
 inputs. Vector War is not built with MinGW. The sample archives include the
 license and the detailed [Vector War architecture guide](architecture/VectorWar.md).
+
+### Play Vector War over the Internet
+
+Vector War supports direct `IP:PORT` play and matchmade Internet play. Run the
+GUI without arguments and choose **Matchmaking**, then enter the same server,
+player count (2–4), and optional lobby code on every device. The server places
+players in the lobby, starts every peer pair on its relay, and the clients then
+try an authenticated direct UDP path while keeping the relay available.
+
+The equivalent desktop command is:
+
+```text
+VectorWar --matchmaking HOST[:PORT] PLAYERS [LOBBY] LOCAL_PORT [--relay-only]
+```
+
+- `HOST` is the matchmaking server; the default UDP port is `7100`.
+- `PLAYERS` is `2`, `3`, or `4`.
+- `LOBBY` is an optional shared code of up to eight letters or digits.
+- `LOCAL_PORT` is the public UDP port; use `0` to choose one automatically.
+- `--relay-only` disables direct-path negotiation for diagnosis or comparison.
+
+The in-game legend reports each peer's platform and active path. On Windows,
+press `P` to open the performance monitor, which also reports the active route,
+active RTT, and relay RTT per remote player. A match can contain both direct
+and relayed pairs, and a failed direct route falls back to the relay without
+changing GGPO's session.
+
+Operators can deploy or remove the reference server with the manual
+[`Deploy matchmaking server`](../.github/workflows/deploy-matchmaking.yml)
+workflow or follow the [Terraform instructions](../infra/terraform/README.md).
+After an automatic `master` deployment, CI resolves the DuckDNS name and runs
+one required three-player game across Linux, Windows/MSVC and Android through the OCI
+relay. The standalone
+[`Public multi-platform game`](../.github/workflows/public-multiplatform-game.yml)
+workflow defaults to optional mode and reports a neutral skip before building
+when no server is deployed; select required mode when absence must fail.
+Applications integrating GGPO do not inherit this service automatically: it is
+Vector War sample infrastructure, implemented outside GGPO's API and protocol.
+See [Matchmaking, relay and hole punching](architecture/Matchmaking.md) for the
+packet flow, compatibility rules, security boundaries, and tests.
 
 ### Upgrading from 0.3.0
 

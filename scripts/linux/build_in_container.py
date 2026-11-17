@@ -96,6 +96,18 @@ def main():
     ]
     if not args.sanitizers:
         commands.append("python3 /src/scripts/ci/audit_linux_sdk.py /out/install")
+        # The Vector War SDL frontend and its host contract (legend, start
+        # screen) under SDL's dummy video driver; the SDK build above leaves
+        # Vector War off.
+        commands.extend([
+            f"cmake -S /src -B /out/vectorwar -G Ninja "
+            f"-DCMAKE_C_COMPILER={cc} -DCMAKE_CXX_COMPILER={cxx} "
+            "-DCMAKE_BUILD_TYPE=Release -DGGPO_BUILD_VECTORWAR=ON "
+            "-DGGPO_RUN_TESTS_ON_BUILD=OFF -DBUILD_TESTING=ON",
+            f"cmake --build /out/vectorwar --parallel {args.jobs}",
+            "ctest --test-dir /out/vectorwar --output-on-failure "
+            "-R 'gui_host_contract|legend_contract|start_form_contract'",
+        ])
     commands.extend([
         f"{cc} --version | head -n 1",
         "cmake --version | head -n 1",

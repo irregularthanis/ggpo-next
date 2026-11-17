@@ -3,6 +3,7 @@
 
 #include "gamestate.h"
 #include "ggponet.h"
+#include "vw_legend.h"
 
 class Renderer;
 
@@ -21,6 +22,7 @@ public:
    virtual void UpdatePerformanceMonitor(GGPOSession *session,
                                          GGPOPlayerHandle players[],
                                          int num_players) = 0;
+   virtual void UpdatePathMonitor(const VwLegend &legend) = 0;
    virtual void TogglePerformanceMonitor() = 0;
    virtual void ShutdownPerformanceMonitor() = 0;
 };

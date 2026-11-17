@@ -40,5 +40,6 @@ unsigned int SDLVectorWarHost::NowMs() const { return SDL_GetTicks(); }
 void SDLVectorWarHost::SleepMs(unsigned int milliseconds) const { SDL_Delay(milliseconds); }
 void SDLVectorWarHost::InitializePerformanceMonitor() { }
 void SDLVectorWarHost::UpdatePerformanceMonitor(GGPOSession *, GGPOPlayerHandle [], int) { }
+void SDLVectorWarHost::UpdatePathMonitor(const VwLegend &) { }
 void SDLVectorWarHost::TogglePerformanceMonitor() { }
 void SDLVectorWarHost::ShutdownPerformanceMonitor() { }

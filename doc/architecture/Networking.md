@@ -62,7 +62,9 @@ exchange session traffic directly through `Udp`.
 
 Tailscale is CI transport for that qualification suite, not a GGPO runtime
 dependency or a production relay/NAT-traversal feature. Applications remain
-responsible for providing reachable peer endpoints.
+responsible for providing reachable peer endpoints; Vector War does so with a
+lobby and relay server and a path proxy that punches direct paths
+([Matchmaking](Matchmaking.md)), without changing this protocol.
 
 ## Peer state machine
 
@@ -146,7 +148,8 @@ the per-player connect-status frame used by synchronization.
 ## Security boundary
 
 The current protocol has no encryption, authentication, replay protection, relay,
-or NAT traversal. It accepts application-provided IPv4 endpoints and exchanges
+or NAT traversal (Vector War layers relay and hole punching around it in the
+application; see [Matchmaking](Matchmaking.md)). It accepts application-provided IPv4 endpoints and exchanges
 packed native structures over UDP. A production integration should treat remote
 packets as untrusted and assess length validation, endian assumptions, structure
 layout, denial-of-service limits, and protocol versioning before Internet exposure.

@@ -262,6 +262,13 @@ jobs:
           curl -sSL https://github.com/libsdl-org/SDL/releases/download/release-2.30.9/SDL2-2.30.9.tar.gz \
             | tar -xz -C "$RUNNER_TEMP"
           echo "SDL2_SOURCE_DIR=$RUNNER_TEMP/SDL2-2.30.9" >> "$GITHUB_ENV"
+      - name: Launcher arguments match the desktop start screens
+        run: |
+          out="$RUNNER_TEMP/start-args"
+          javac -d "$out" \
+            src/apps/vectorwar/android/app/src/main/java/org/ggponext/vectorwar/StartArgs.java \
+            tests/android/StartArgsTest.java
+          java -cp "$out" StartArgsTest
       - name: Build the APK
         run: |
           gradle -p src/apps/vectorwar/android assembleDebug --no-daemon

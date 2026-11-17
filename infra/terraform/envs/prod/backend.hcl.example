@@ -1,0 +1,12 @@
+# Copy to backend.hcl (git-ignored) and fill in. Uses OCI Object Storage via
+# its S3-compatible API; create a Customer Secret Key for the access keys.
+bucket                      = "ggpo-terraform-state"
+key                         = "matchmaking/terraform.tfstate"
+region                      = "us-ashburn-1"
+endpoints                   = { s3 = "https://<namespace>.compat.objectstorage.us-ashburn-1.oraclecloud.com" }
+skip_region_validation      = true
+skip_credentials_validation = true
+skip_requesting_account_id  = true
+skip_metadata_api_check     = true
+skip_s3_checksum            = true
+use_path_style              = true
