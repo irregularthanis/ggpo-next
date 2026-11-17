@@ -9,6 +9,7 @@
 #if defined(_WIN32)
 #include <winsock2.h>
 #include <windows.h>
+#include <mmsystem.h>
 #else
 #include <errno.h>
 #include <time.h>
@@ -202,6 +203,12 @@ main(int argc, char **argv)
 {
    GGPOSessionCallbacks callbacks;
    GGPOPlayerHandle local_handle = GGPO_INVALID_HANDLE;
+#if defined(_WIN32)
+   /* Windows sleeps in ~15.6 ms ticks by default, so the 1 ms waits below
+    * would run about 15x slower than on other platforms. The process exit
+    * restores the system default. */
+   timeBeginPeriod(1);
+#endif
 #if defined(_WIN32)
    WSADATA winsock_data;
 #endif
