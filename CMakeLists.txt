@@ -35,9 +35,7 @@ endif()
 
 # What do we want to build?
 option(GGPO_BUILD_SDK "Enable the build of the GGPO SDK" ON)
-# Vector War's Windows GUI frontend is MSVC-only. MinGW keeps the sample off by
-# default, but may explicitly build the portable headless fixture with the GUI
-# disabled for cross-platform qualification.
+# Vector War's Windows frontend is MSVC-only; MinGW builds the SDK alone.
 if(MINGW)
 	set(GGPO_BUILD_VECTORWAR_DEFAULT OFF)
 else()
@@ -45,8 +43,8 @@ else()
 endif()
 option(GGPO_BUILD_VECTORWAR "Enable the build of the Vector War example app" ${GGPO_BUILD_VECTORWAR_DEFAULT})
 option(GGPO_BUILD_VECTORWAR_GUI "Enable the interactive Vector War frontend" ON)
-if(MINGW AND GGPO_BUILD_VECTORWAR AND GGPO_BUILD_VECTORWAR_GUI)
-	message(FATAL_ERROR "Vector War's GUI is not supported with MinGW; set -DGGPO_BUILD_VECTORWAR_GUI=OFF for the headless fixture")
+if(MINGW AND GGPO_BUILD_VECTORWAR)
+	message(FATAL_ERROR "Vector War is not supported with MinGW; configure with -DGGPO_BUILD_VECTORWAR=OFF")
 endif()
 # Linkage: leave BUILD_SHARED_LIBS unset to build both shared and static GGPO,
 # or pass -DBUILD_SHARED_LIBS=ON/OFF for one flavor (see src/CMakeLists.txt).

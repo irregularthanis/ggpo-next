@@ -112,8 +112,7 @@ jobs:
       - name: Build the native static headless peer
         run: |
           cmake -S . -B build/public-game -G Ninja -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=OFF -DGGPO_BUILD_VECTORWAR=ON \
-            -DGGPO_BUILD_VECTORWAR_GUI=OFF \
+            -DBUILD_SHARED_LIBS=OFF -DGGPO_BUILD_VECTORWAR_GUI=OFF \
             -DCMAKE_EXE_LINKER_FLAGS=-static
           cmake --build build/public-game --target VectorWarHeadless --parallel 2
           mkdir -p artifact

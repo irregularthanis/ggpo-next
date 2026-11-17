@@ -22,8 +22,6 @@ Depends on [PR #9](https://github.com/irregularthanis/ggpo-next/pull/9)
 - [x] M1-T04: Undecorated x86 exports; link libgcc/libstdc++ statically and
   verify `libGGPO.dll` imports no MinGW runtime DLLs.
 - [x] M1-T05: Disable Vector War under MinGW with a clear message.
-  A later public-game qualification preserves that default and the GUI
-  rejection while permitting an explicit headless-only build.
 - [x] M1-T06: Record the toolchain in `GGPOConfig.cmake`; reject a mismatched
   consumer toolchain on Windows.
 - [x] M1-T07: MSVC and Linux CI unchanged.
@@ -80,7 +78,7 @@ Parallel with M2.
 | Decision | Status |
 |---|---|
 | Support x64 and x86 | Accepted (2026-11-11) |
-| No interactive/release MinGW Vector War; later qualification may explicitly build headless only | Accepted (2026-11-11), clarified by the public three-platform gate |
+| No MinGW Vector War | Accepted (2026-11-11) |
 | Both architectures use MSVCRT (x64 `MINGW64`, x86 `MINGW32`) | Accepted (2026-11-11), replacing UCRT64 for x64: FBNeo builds x64 in `MINGW64`, and a UCRT static library cannot link there. `UCRT64` projects use `libGGPO.dll`, a source build, or the MSVC `GGPO.dll`; a `-mingw-ucrt` variant can be added later without renaming |
 | Statically link libgcc/libstdc++ into `libGGPO.dll` | Accepted (2026-11-11) |
 | Release-only MinGW lanes, no Debug lane | Accepted (implemented) |
