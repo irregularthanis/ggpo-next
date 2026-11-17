@@ -9,7 +9,7 @@ from pathlib import Path
 
 from control import derive_key
 from control_client import ControlClient
-from peer_agent import PeerSupervisor
+from peer_agent import PeerSupervisor, describe_exit
 from rendezvous import DeploymentRendezvous, GitHubTransport
 from result_schema import expected_state, validate_pair
 
@@ -99,7 +99,12 @@ def main():
                         break
                     if remote_status["returncode"] not in (None, 0) or \
                             local_status["returncode"] not in (None, 0):
-                        raise RuntimeError("peer exited before the completion barrier")
+                        raise RuntimeError(
+                            "peer exited before the completion barrier: "
+                            f"player 1 {describe_exit(remote_status['returncode'])}, "
+                            f"frame {remote_status['frame']}; "
+                            f"player 2 {describe_exit(local_status['returncode'])}, "
+                            f"frame {local_status['frame']}")
                     time.sleep(0.1)
                 else:
                     raise TimeoutError("both peers did not reach the completion barrier")
@@ -120,14 +125,14 @@ def main():
                 args.out.parent.mkdir(parents=True, exist_ok=True)
                 args.out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n",
                                     encoding="utf-8")
-                remote.request("shutdown")
+                remote.request("shutdown", {"passed": True})
                 shutdown_sent = True
                 print(json.dumps(report, indent=2, sort_keys=True))
             finally:
                 if remote_prepared and not shutdown_sent:
                     try:
                         remote.request("cancel")
-                        remote.request("shutdown")
+                        remote.request("shutdown", {"passed": False})
                     except (OSError, RuntimeError):
                         pass
     finally:

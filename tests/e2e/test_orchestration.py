@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 
 from control import MessageVerifier, _payload, derive_key, sign_message
-from peer_agent import PeerSupervisor
+from peer_agent import PeerSupervisor, describe_exit
 from run_schema2_loopback import stage_runtime_bundle
 from run_matrix import generate_matrix, validate_matrix
 from validate_manifest import build_manifest
@@ -194,6 +194,30 @@ class SupervisorTests(unittest.TestCase):
             supervisor._log = log
             supervisor.cancel({})
             self.assertTrue(log.closed)
+
+    def test_log_records_the_exit_code_of_a_silent_crash(self):
+        with tempfile.TemporaryDirectory() as directory:
+            supervisor = PeerSupervisor(directory)
+            supervisor.process = ExitedProcess()
+            log = io.StringIO()
+            log.close = lambda: None  # keep the buffer readable
+            supervisor._log = log
+            supervisor.cancel({})
+            self.assertIn("peer exited with code 17", log.getvalue())
+
+    def test_exit_codes_are_readable(self):
+        self.assertEqual(describe_exit(1), "code 1")
+        self.assertEqual(describe_exit(-11), "code -11 (signal 11)")
+        self.assertEqual(describe_exit(0xC0000005), "code 3221225477 (0xC0000005)")
+        self.assertIn("still running", describe_exit(None))
+
+    def test_session_passes_only_when_the_coordinator_says_so(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for arguments, expected in (({"passed": True}, True), ({"passed": False}, False),
+                                        ({}, False), ({"passed": "yes"}, False)):
+                supervisor = PeerSupervisor(directory)
+                supervisor.shutdown(arguments)
+                self.assertIs(supervisor.session_passed, expected, arguments)
 
     def test_status_requires_a_complete_ready_state_snapshot(self):
         with tempfile.TemporaryDirectory() as directory:
