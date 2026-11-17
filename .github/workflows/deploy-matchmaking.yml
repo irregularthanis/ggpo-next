@@ -185,11 +185,18 @@ jobs:
                 echo "Server launched as $shape (availability domain index $ad)" | tee -a "$GITHUB_STEP_SUMMARY"
                 exit 0
               fi
-              if ! grep -q "Out of host capacity" apply.log; then
+              if grep -q "Out of host capacity" apply.log; then
+                echo "::warning::No free capacity for $shape in availability domain index $ad"
+              elif [ "$shape" = VM.Standard.E2.1.Micro ] && grep -qE "404-NotAuthorizedOrNotFound|LimitExceeded" apply.log; then
+                # The always-free AMD micro shape is offered in only one
+                # availability domain of the home region; elsewhere the launch
+                # is refused this way. A1 attempts reaching the capacity check
+                # already proved the credentials work.
+                echo "::warning::$shape is not offered in availability domain index $ad"
+              else
                 echo "::error::terraform apply failed for a reason other than capacity"
                 exit 1
               fi
-              echo "::warning::No free capacity for $shape in availability domain index $ad"
             done
           done
           echo "::error::No always-free capacity in any availability domain; rerun later"
