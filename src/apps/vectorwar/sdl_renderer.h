@@ -15,9 +15,11 @@ public:
    virtual void Draw(GameState &state, NonGameState &non_game_state);
    virtual void SetStatusText(const char *text);
    bool IsReady() const;
+   SDL_Renderer *Handle() const { return _renderer; }  /* for host contract tests */
 
 private:
    void DrawShip(const Ship &ship, int player);
+   void DrawLegend(const VwLegend &legend);
 
    SDL_Window *_window;
    SDL_Renderer *_renderer;

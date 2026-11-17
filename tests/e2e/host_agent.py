@@ -68,6 +68,7 @@ def main():
         server.server_close()
         if deployment_id is not None:
             rendezvous.retire(deployment_id)
+            rendezvous.delete(deployment_id)
 
 
 if __name__ == "__main__":

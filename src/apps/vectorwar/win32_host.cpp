@@ -77,6 +77,12 @@ Win32VectorWarHost::UpdatePerformanceMonitor(GGPOSession *session,
 }
 
 void
+Win32VectorWarHost::UpdatePathMonitor(const VwLegend &legend)
+{
+   ggpoutil_perfmon_update_paths(legend);
+}
+
+void
 Win32VectorWarHost::TogglePerformanceMonitor()
 {
    ggpoutil_perfmon_toggle();

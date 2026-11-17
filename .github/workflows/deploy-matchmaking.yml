@@ -1,0 +1,247 @@
+name: Deploy matchmaking server
+
+# Bring the Oracle Cloud matchmaking server up or down, or show a plan. The
+# infrastructure workflow reuses this implementation for trusted PR plans and
+# master applies; maintainers can also dispatch it directly.
+#
+# The VM keeps its own DuckDNS record current (at boot and every 5 minutes);
+# after apply this workflow waits until the name resolves to the VM and the
+# server answers on the lobby port.
+
+on:
+  workflow_call:
+    inputs:
+      action:
+        description: "apply, plan or destroy"
+        type: string
+        required: true
+      container_image:
+        description: "Optional image pinned by digest"
+        type: string
+        required: false
+        default: ""
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "apply (bring up), destroy (tear down) or plan (show changes only)"
+        type: choice
+        options: [apply, plan, destroy]
+        default: apply
+      container_image:
+        description: "Image to run, pinned by digest; empty = current :latest resolved to its digest"
+        type: string
+        required: false
+        default: ""
+
+# One run at a time: apply and destroy share the same remote state.
+concurrency:
+  group: deploy-matchmaking
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  TERRAFORM_VERSION: "1.9.8"
+  TF_IN_AUTOMATION: "1"
+  WORKDIR: infra/terraform/envs/prod
+
+jobs:
+  terraform:
+    name: Matchmaking server ${{ inputs.action }}
+    runs-on: ubuntu-24.04
+    environment: matchmaking
+    timeout-minutes: 30
+    env:
+      TF_VAR_region: ${{ secrets.OCI_REGION }}
+      TF_VAR_compartment_ocid: ${{ secrets.OCI_COMPARTMENT_OCID }}
+      TF_VAR_admin_cidr: ${{ secrets.ADMIN_CIDR }}
+      TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+      TF_VAR_duckdns_subdomain: ${{ vars.DUCKDNS_SUBDOMAIN }}
+      TF_VAR_duckdns_token: ${{ secrets.DUCKDNS_TOKEN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.STATE_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.STATE_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Check that repository deployment settings are configured
+        env:
+          REQUIRED: >-
+            OCI_REGION=${{ secrets.OCI_REGION != '' }}
+            OCI_TENANCY_OCID=${{ secrets.OCI_TENANCY_OCID != '' }}
+            OCI_USER_OCID=${{ secrets.OCI_USER_OCID != '' }}
+            OCI_FINGERPRINT=${{ secrets.OCI_FINGERPRINT != '' }}
+            OCI_PRIVATE_KEY=${{ secrets.OCI_PRIVATE_KEY != '' }}
+            OCI_COMPARTMENT_OCID=${{ secrets.OCI_COMPARTMENT_OCID != '' }}
+            STATE_BUCKET=${{ vars.STATE_BUCKET != '' }}
+            STATE_NAMESPACE=${{ vars.STATE_NAMESPACE != '' }}
+            STATE_ACCESS_KEY_ID=${{ secrets.STATE_ACCESS_KEY_ID != '' }}
+            STATE_SECRET_ACCESS_KEY=${{ secrets.STATE_SECRET_ACCESS_KEY != '' }}
+            ADMIN_CIDR=${{ secrets.ADMIN_CIDR != '' }}
+            SSH_PUBLIC_KEY=${{ secrets.SSH_PUBLIC_KEY != '' }}
+            DUCKDNS_SUBDOMAIN=${{ vars.DUCKDNS_SUBDOMAIN != '' }}
+            DUCKDNS_TOKEN=${{ secrets.DUCKDNS_TOKEN != '' }}
+        run: |
+          missing=$(printf '%s\n' $REQUIRED | sed -n 's/=false$//p')
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets or variables: $(echo $missing)"
+            exit 1
+          fi
+
+      - name: Write the OCI API key profile
+        env:
+          OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
+          OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
+          OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+          OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
+          OCI_REGION: ${{ secrets.OCI_REGION }}
+        run: |
+          umask 077
+          mkdir -p ~/.oci
+          printf '%s\n' "$OCI_PRIVATE_KEY" > ~/.oci/api_key.pem
+          cat > ~/.oci/config <<EOF
+          [DEFAULT]
+          user=$OCI_USER_OCID
+          fingerprint=$OCI_FINGERPRINT
+          tenancy=$OCI_TENANCY_OCID
+          region=$OCI_REGION
+          key_file=$HOME/.oci/api_key.pem
+          EOF
+
+      - name: Write the remote state backend settings
+        env:
+          STATE_BUCKET: ${{ vars.STATE_BUCKET }}
+          STATE_NAMESPACE: ${{ vars.STATE_NAMESPACE }}
+          OCI_REGION: ${{ secrets.OCI_REGION }}
+        run: |
+          cat > "$WORKDIR/backend.hcl" <<EOF
+          bucket                      = "$STATE_BUCKET"
+          key                         = "matchmaking/terraform.tfstate"
+          region                      = "$OCI_REGION"
+          endpoints                   = { s3 = "https://$STATE_NAMESPACE.compat.objectstorage.$OCI_REGION.oraclecloud.com" }
+          skip_region_validation      = true
+          skip_credentials_validation = true
+          skip_requesting_account_id  = true
+          skip_metadata_api_check     = true
+          skip_s3_checksum            = true
+          use_path_style              = true
+          EOF
+
+      - name: Choose the server image (pinned by digest)
+        if: inputs.action != 'destroy'
+        env:
+          REQUESTED: ${{ inputs.container_image }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          image="$REQUESTED"
+          if [ -z "$image" ]; then
+            repository="ghcr.io/${{ github.repository_owner }}/ggpo-matchmaking"
+            echo "$GH_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin > /dev/null
+            digest=$(docker buildx imagetools inspect "$repository:latest" --format '{{json .Manifest.Digest}}' | tr -d '"')
+            if [ -z "$digest" ]; then
+              echo "::error::No $repository:latest image yet; it is published when the Infrastructure workflow runs on master"
+              exit 1
+            fi
+            image="$repository@$digest"
+          fi
+          case "$image" in
+            *@sha256:*) ;;
+            *) echo "::error::container_image must be pinned by digest (…@sha256:…)"; exit 1 ;;
+          esac
+          echo "TF_VAR_container_image=$image" >> "$GITHUB_ENV"
+          echo "Server image: \`$image\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Terraform init
+        run: terraform -chdir="$WORKDIR" init -input=false -backend-config=backend.hcl
+
+      - name: Terraform plan
+        if: inputs.action == 'plan'
+        run: terraform -chdir="$WORKDIR" plan -input=false
+
+      - name: Terraform apply
+        if: inputs.action == 'apply'
+        run: terraform -chdir="$WORKDIR" apply -input=false -auto-approve
+
+      - name: Terraform destroy
+        if: inputs.action == 'destroy'
+        env:
+          # Destroy does not need a real image, but the variable is required.
+          TF_VAR_container_image: ghcr.io/${{ github.repository_owner }}/ggpo-matchmaking@sha256:0000000000000000000000000000000000000000000000000000000000000000
+        run: terraform -chdir="$WORKDIR" destroy -input=false -auto-approve
+
+      - name: Wait for DuckDNS and the server
+        if: inputs.action == 'apply'
+        run: |
+          fqdn=$(terraform -chdir="$WORKDIR" output -raw fqdn)
+          ip=$(terraform -chdir="$WORKDIR" output -raw public_ip)
+          port=$(terraform -chdir="$WORKDIR" output -raw server_port)
+          address=$(terraform -chdir="$WORKDIR" output -raw server_address)
+          echo "Waiting for $fqdn to resolve to $ip (the VM updates DuckDNS itself)"
+          deadline=$((SECONDS + 600))
+          until [ "$(dig +short "$fqdn" @1.1.1.1 | tail -n 1)" = "$ip" ]; do
+            if [ $SECONDS -gt $deadline ]; then
+              echo "::error::$fqdn did not resolve to $ip within 10 minutes"; exit 1
+            fi
+            sleep 10
+          done
+          echo "DuckDNS: $fqdn -> $ip"
+          echo "Waiting for the server to answer on $ip:$port/udp"
+          python3 - "$ip" "$port" <<'EOF'
+          import socket, struct, sys, time
+          host, port = sys.argv[1], int(sys.argv[2])
+          # A JOIN with an unknown version: the server answers ERROR(version
+          # mismatch) without queuing anyone.
+          probe = b"VWMM" + bytes([99, 1, 0, 0]) + struct.pack("<Q", 7) + bytes(48)
+          s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+          s.settimeout(2)
+          deadline = time.monotonic() + 600
+          while time.monotonic() < deadline:
+              s.sendto(probe, (host, port))
+              try:
+                  data, _ = s.recvfrom(64)
+              except socket.timeout:
+                  continue
+              if data[:4] == b"VWMM" and data[5] == 7 and data[16] == 1:
+                  print("server answered the version probe")
+                  sys.exit(0)
+          sys.exit("the server did not answer within 10 minutes")
+          EOF
+          {
+            echo "### Matchmaking server is up"
+            echo ""
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Server address (Vector War Matchmaking field) | \`$address\` |"
+            echo "| Public IP | \`$ip\` |"
+            echo "| Relay ports | 7101-7499/udp (default range) |"
+            echo ""
+            echo "Tear it down with this workflow's **destroy** action when you are done."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Clear the DuckDNS record
+        if: inputs.action == 'destroy'
+        env:
+          SUBDOMAIN: ${{ vars.DUCKDNS_SUBDOMAIN }}
+          TOKEN: ${{ secrets.DUCKDNS_TOKEN }}
+        run: |
+          # The released public IP may be reassigned to someone else; stop
+          # resolving the name until the next apply publishes the new IP.
+          answer=$(curl -fsS --max-time 20 "https://www.duckdns.org/update?domains=$SUBDOMAIN&token=$TOKEN&clear=true")
+          if [ "$answer" != "OK" ]; then
+            echo "::error::DuckDNS did not clear the record (answer: $answer)"; exit 1
+          fi
+          {
+            echo "### Matchmaking server destroyed"
+            echo ""
+            echo "The DuckDNS record for \`$SUBDOMAIN.duckdns.org\` is cleared until the next apply."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove credentials from the runner
+        if: always()
+        run: rm -rf ~/.oci "$WORKDIR/backend.hcl"

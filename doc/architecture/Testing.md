@@ -37,6 +37,8 @@
   - [Two-process loopback](#two-process-loopback)
   - [Negative peer contracts](#negative-peer-contracts)
   - [Cross-platform E2E](#cross-platform-e2e)
+  - [Public multi-platform game](#public-multi-platform-game)
+  - [Matchmaking and hole punching](#matchmaking-and-hole-punching)
   - [CI gating and labels](#ci-gating-and-labels)
   - [Evidence and interpretation](#evidence-and-interpretation)
   - [Current limits and follow-ups](#current-limits-and-follow-ups)
@@ -164,6 +166,10 @@ not (`readelf -d` on Linux; on Windows the static programs run with the SDK's
 | [Linux](#linux) | `libGGPO.so`, static `.a`, DEB/RPM/tar SDKs | GCC/Clang builds, SONAME/glibc audit, consumers and package layout |
 | [Android](#android) | Per-ABI `libGGPO.so`, static `.a`, CMake SDK | API-21 ceiling, ELF exports/dependencies, 16 KB alignment, consumers and cross-toolchain rejection |
 
+Both Windows toolchains qualify and package 32-bit x86 and 64-bit x86-64
+targets. MSVC names these `Win32` and `x64`; MinGW-w64 release artifacts use
+`x86` and `x64`.
+
 ### Windows with MSVC
 
 #### MSVC: registered tests
@@ -174,7 +180,7 @@ test below. DLL exports are checked in the [CI lane](#msvc-ci-lanes) with
 
 | Test | Code | What it tests |
 | --- | --- | --- |
-| `windows_vectorwar_gui_host_contract` | [`win32_host_contract_test.cpp`](../../tests/vectorwar/win32_host_contract_test.cpp) | Real hidden Win32 window: client bounds, GDI renderer, diagnostics |
+| `windows_vectorwar_gui_host_contract` | [`win32_host_contract_test.cpp`](../../tests/vectorwar/win32_host_contract_test.cpp) | Real hidden Win32 window: client bounds, GDI renderer, diagnostics, the start dialog driven with synthetic input, the compiled `.rc`, and the legend drawn by GDI |
 
 #### MSVC: run locally
 
@@ -285,7 +291,7 @@ are identical on LP64; see the
 | Test | Code | What it tests |
 | --- | --- | --- |
 | `linux_exports` | [`check_exports.py`](../../tests/baseline/linux/check_exports.py), [`exports.txt`](../../tests/baseline/linux/exports.txt) | The shared library exports exactly the frozen `ggpo_*` symbols (shared builds) |
-| `linux_vectorwar_gui_host_contract` | [`sdl_host_contract_test.cpp`](../../tests/vectorwar/sdl_host_contract_test.cpp) | SDL2 frontend with `SDL_VIDEODRIVER=dummy`: bounds, input, renderer |
+| `linux_vectorwar_gui_host_contract` | [`sdl_host_contract_test.cpp`](../../tests/vectorwar/sdl_host_contract_test.cpp) | SDL2 frontend with `SDL_VIDEODRIVER=dummy`: bounds, input, renderer, the start screen driven with synthetic input, and the legend swatch color read back |
 
 #### Linux: run locally
 
@@ -305,6 +311,11 @@ GCC and Clang lanes inside that image, each building both libraries. Each lane r
 installs the SDK, builds and executes external C11/C++98 consumers, and audits
 the installed Linux library.
 
+Those lanes build the library without Vector War, so each lane then configures
+a second tree with `GGPO_BUILD_VECTORWAR=ON` (SDL2 from the image) and runs
+`ctest -R 'gui_host_contract|legend_contract|start_form_contract'`; this is
+where `linux_vectorwar_gui_host_contract` runs in CI.
+
 [`sanitizer-qualification.yml`](../../.github/workflows/sanitizer-qualification.yml)
 runs manually and weekly. It uses the same image to instrument production GGPO,
 all registered tests, and installed static-library consumers with Clang ASan and
@@ -318,6 +329,21 @@ one-byte `GGPOPlayer.local` placeholder while C++ retains the frozen empty-membe
 Windows ABI. All other pedantic diagnostics remain errors.
 
 ### Android
+
+The Android contract separates CPU ABI, device API level, and NDK revision:
+
+| Axis | CI coverage | Contract |
+| --- | --- | --- |
+| ABI | `arm64-v8a`, `armeabi-v7a`, `x86_64` | Release libraries, installed consumers, exports, dependencies, ABI ceiling, and shared tests |
+| API level | API 21 and API 35 x86_64 emulators | API 21 remains the supported floor; API 35 represents a current Android runtime |
+| Native execution | 64-bit ARM, 32-bit ARM, and x86_64 runners | Static test fixtures execute for every packaged ABI without substituting a cross-compile-only result |
+| APK | One APK containing all three ABIs | Launcher, SDL frontend, native library loading, and frontend-ready marker on API 21 and API 35 |
+| NDK revision | Runner-provided `ANDROID_NDK_LATEST_HOME` | The exact revision is printed into CI evidence; no older-NDK matrix or promise exists |
+
+An “older Android” result refers to the API 21 runtime and imported-symbol
+ceiling, not to compiling with an older NDK. The public multi-platform game
+uses the `arm64-v8a` headless peer; the broader Android workflow qualifies the
+other packaged ABIs.
 
 #### Android: registered tests
 
@@ -334,7 +360,7 @@ packaged app.
 | Test | Code | What it tests |
 | --- | --- | --- |
 | `android_exports` | [`check_exports.py`](../../tests/baseline/linux/check_exports.py), [`exports.txt`](../../tests/baseline/linux/exports.txt) | The shared library exports exactly the frozen `ggpo_*` symbols (shared builds) |
-| `android_vectorwar_gui_host_contract` | [`sdl_host_contract_test.cpp`](../../tests/vectorwar/sdl_host_contract_test.cpp) | The APK's SDL2 frontend on the dummy driver: bounds, renderer, input, clock |
+| `android_vectorwar_gui_host_contract` | [`sdl_host_contract_test.cpp`](../../tests/vectorwar/sdl_host_contract_test.cpp) | The APK's SDL2 frontend on the dummy driver: bounds, renderer, input, clock, start screen and legend |
 
 #### Android: run locally
 
@@ -356,6 +382,12 @@ ctest --test-dir build/emu --output-on-failure --timeout 300
 builds all three ABIs, runs static fixtures natively on matching Linux runners,
 runs the full suite on API 21 and API 35 x86_64 emulators, and runs ASan+UBSan
 on an x86_64 emulator.
+
+The APK job also compiles the launcher's
+[`StartArgs.java`](../../src/apps/vectorwar/android/app/src/main/java/org/ggponext/vectorwar/StartArgs.java)
+with [`StartArgsTest.java`](../../tests/android/StartArgsTest.java) using plain
+`javac` and runs it on the JVM, so the Android form builds the same arguments
+as the C++ start-form model.
 
 #### Android: SDK audit and APK smoke
 
@@ -413,10 +445,18 @@ libraries, which is the default.
 | `fake_platform_conformance` | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | The shared adapter conformance contract against the fake adapter |
 | `vectorwar_state_contract` | [`gamestate_contract_test.cpp`](../../tests/vectorwar/gamestate_contract_test.cpp) | Vector War simulation hits the canonical checkpoints over 180 frames |
 | `vectorwar_gameplay_contract` | [`gameplay_determinism_test.cpp`](../../tests/vectorwar/gameplay_determinism_test.cpp) | Vector War starts and initialization are identical on every platform |
+| `vectorwar_legend_contract` | [`legend_contract_test.cpp`](../../tests/vectorwar/legend_contract_test.cpp) | Legend rows (`P2 Android direct`), platform numbering shared with the wire protocol, player colors and the bitmap font |
+| `vectorwar_start_form_contract` | [`start_form_contract_test.cpp`](../../tests/vectorwar/start_form_contract_test.cpp) | Start-screen fields become the same arguments as the command line, with one error message per bad field |
 | `vectorwar_headless_loopback` ¹ | [`run_headless_loopback.py`](../../tests/vectorwar/run_headless_loopback.py) | Two headless Vector War processes converge over UDP with rollback |
 | `vectorwar_headless_negative_contracts` ¹ | [`headless_negative.py`](../../tests/vectorwar/headless_negative.py) | The Vector War runner rejects controlled failures |
+| `matchmaking_server_contract` | [`services/matchmaking/tests`](../../services/matchmaking/tests) | Lobby and relay server: protocol v2/v3 and shared vectors, lobbies, relay forwarding, hole-punching candidates, expiry, rate limits, real sockets on loopback |
+| `vectorwar_net_contract` | [`net_contract_test.cpp`](../../tests/vectorwar/net_contract_test.cpp), [`gen_net_vectors.py`](../../tests/vectorwar/gen_net_vectors.py) | Vector War's matchmaking codec against the server's shared vectors, SipHash, probe authentication, and the path selector on a fake clock |
+| `vectorwar_net_proxy_loopback` ² | [`run_proxy_loopback.py`](../../tests/vectorwar/run_proxy_loopback.py), [`net_proxy_tool.cpp`](../../tests/vectorwar/net_proxy_tool.cpp) | Real server and one path proxy per player: 2 and 3 players switch to direct with data flowing; relay-only stays on the relay; an unreachable server and a user cancel end matchmaking with a clear error |
+| `vectorwar_matchmaking_loopback` ¹ ² | [`run_matchmaking_loopback.py`](../../tests/vectorwar/run_matchmaking_loopback.py) | Real server and real Vector War sessions: 2, 3 and 4 players with every pair direct, 2 players relay-only; every group converges and two players reach the portable frozen checksum |
 
 ¹ Needs the headless Vector War app, which MinGW does not build.
+² Native builds only (Linux, Windows MSVC, MinGW): a cross-compiled Android test
+cannot reach the build host's loopback server.
 
 ### Coverage map
 
@@ -445,7 +485,13 @@ libraries, which is the default.
 | MinGW-w64 | x64 (MINGW64) and x86 (MINGW32), both MSVCRT, with both libraries: full CTest, installed consumers, export manifest, no MinGW runtime imports | [`mingw-compatibility.yml`](../../.github/workflows/mingw-compatibility.yml) | MSYS2 on Windows runners |
 | Toolchain isolation | MSVC and MinGW SDKs reject each other's CMake consumers; a MinGW program runs against the MSVC `GGPO.dll` | [`mingw-compatibility.yml`](../../.github/workflows/mingw-compatibility.yml) | One runner with both toolchains |
 | Android compatibility | Three ABIs, API 21/current emulators, installed consumers, SDK audit, APK smoke, and sanitizer qualification | [`android-compatibility.yml`](../../.github/workflows/android-compatibility.yml), [`tests/android`](../../tests/android) | NDK builds, native ARM execution, and x86_64 Android emulators |
+| Matchmaking server | Protocol, lobbies, relay, candidates, abuse limits | [`services/matchmaking/tests`](../../services/matchmaking/tests) | Python server, unit and real-socket loopback |
+| Hole punching | Codec vs shared vectors, probe authentication, path selection, proxy forwarding, real sessions direct and relay-only | [`tests/vectorwar`](../../tests/vectorwar/net_contract_test.cpp), [`src/apps/vectorwar/net`](../../src/apps/vectorwar/net) | `VectorWarNet` on every platform; loopback sessions on native platforms |
+| Start screen and legend | Fields map to the command-line arguments on every screen; dialog and SDL form driven by synthetic input; legend rows, platform numbering, colors (SDL swatch read back) and font | [`start_form_contract_test.cpp`](../../tests/vectorwar/start_form_contract_test.cpp), [`legend_contract_test.cpp`](../../tests/vectorwar/legend_contract_test.cpp), the GUI host contracts, [`StartArgsTest.java`](../../tests/android/StartArgsTest.java) | Portable tests everywhere; Win32 dialog on MSVC; SDL form on Linux (dummy driver) and the Android emulator; plain Java in the APK job |
+| NAT traversal | Two-to-four-player mixed NAT converges; cone and LAN paths can go direct, restrictive paths retain relay fallback, impairment selects a measured viable route, direct loss falls back, and server loss does not stop an established direct match | [`nat-traversal.yml`](../../.github/workflows/nat-traversal.yml), [`run_nat_matrix.py`](../../tests/nat/run_nat_matrix.py) | Linux network namespaces with emulated NAT routers and `tc netem` on a hosted runner |
+| Infrastructure | Terraform plan/state assertions, lint and server image on every relevant PR; trusted owner PRs add a real remote-state plan; matching `master` merges apply and verify DNS plus lobby health | [`infrastructure.yml`](../../.github/workflows/infrastructure.yml), [`deploy-matchmaking.yml`](../../.github/workflows/deploy-matchmaking.yml), [`infra/terraform`](../../infra/terraform/README.md) | Mocked providers for all PRs; repository secrets and the `matchmaking` approval boundary for real-cloud gates |
 | Cross-host | Linux, Windows, MinGW, and Android peers converge | [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml), [`tests/e2e`](../../tests/e2e) | Native hosted runners joined through ephemeral Tailscale nodes |
+| Public multi-platform game | Every platform with a Vector War build completes one shared match with equal state through the deployed relay | [`public-multiplatform-game.yml`](../../.github/workflows/public-multiplatform-game.yml), [`public_multiplatform_game.py`](../../tests/e2e/public_multiplatform_game.py) | DuckDNS production name, OCI lobby/relay and one native hosted runner per supported game build |
 
 ### Shared contracts
 
@@ -718,6 +764,46 @@ identity, expected platform roles, independent oracle checksum, one running
 event, no unexpected disconnect, clean session close, and zero exit status.
 The generic fixture uses its independently advanced integer-state oracle;
 Vector War uses the frozen 180-frame application checksum `b3381958`.
+
+### Public multi-platform game
+
+[`public-multiplatform-game.yml`](../../.github/workflows/public-multiplatform-game.yml)
+launches one native peer per runtime platform. Windows uses MSVC because Vector
+War is not built with MinGW; MinGW remains covered by SDK, ABI, generic-peer and
+pairwise interoperability tests. Every configured peer joins the
+same run-scoped lobby through the DuckDNS production name and request
+`--relay-only`, proving that the deployed OCI relay carries the game.
+
+```mermaid
+flowchart TD
+    DNS["DuckDNS<br/>production<br/>name"]
+    Relay["OCI lobby<br/>and relay"]
+    Linux["Linux<br/>peer"]
+    Windows["Windows<br/>MSVC peer"]
+    Android["Android<br/>peer"]
+    Result["Frame 180<br/>equal state<br/>relay routes"]
+
+    DNS --> Relay
+    Linux <--> Relay
+    Windows <--> Relay
+    Android <--> Relay
+    Linux --> Result
+    Windows --> Result
+    Android --> Result
+```
+
+Before launching any peer, the workflow freshly resolves the hostname and
+sends a protocol version probe. In `optional` mode an absent server produces a
+clearly reported neutral skip. In `required` mode, or after any peer starts, an
+unavailable server, missing platform, non-relay route, incomplete frame count,
+state divergence, absent rollback replay or nonzero process exit fails the
+gate. A successful `master` apply invokes required mode; manual runs default to
+optional mode.
+
+The result proves multi-platform interoperability and convergence, not an
+independent multiplayer gameplay oracle. Pairwise schema-2 E2E supplies the
+independent oracle, while the namespace NAT suite supplies controlled direct,
+fallback and impairment coverage.
 [`validate_manifest.py`](../../tests/e2e/validate_manifest.py) rejects a run
 unless every required generic and Vector War scenario for Linux, Windows,
 MinGW, and Android produces a passing role-2 report.
@@ -737,6 +823,61 @@ a missing, duplicate, or failed scenario in an unconditional final job. It runs 
 same-repository PRs, trusted `master` pushes, and manual dispatch; fork and
 non-owner PR jobs are skipped.
 
+### Matchmaking and hole punching
+
+Internet play is tested in three layers, all without a cloud account:
+
+```mermaid
+flowchart LR
+    Unit["Unit<br/>server rules;<br/>codec vs shared vectors;<br/>probes; selector<br/>(fake clock)"]
+    Proxy["Proxy loopback<br/>real server,<br/>path proxies,<br/>GGPO stand-in"]
+    Sessions["Session loopback<br/>real server,<br/>real Vector War,<br/>frozen checksum"]
+    Unit --> Proxy --> Sessions
+```
+
+- The server and the C++ client decode the same
+  [`protocol_vectors.json`](../../services/matchmaking/protocol_vectors.json);
+  the C++ checks are generated from it at build time.
+- On loopback every pair can go direct, so the loopback tests prove the
+  switch, data flow on both routes, and that the proxy changes nothing in the
+  game's result.
+- NAT behavior is a fourth layer, outside CTest:
+  [`nat-traversal.yml`](../../.github/workflows/nat-traversal.yml) runs
+  [`run_nat_matrix.py`](../../tests/nat/run_nat_matrix.py) on a hosted Linux
+  runner. Each player sits behind an emulated router in its own network
+  namespace (cone NAT is `MASQUERADE`, symmetric NAT adds `--random-fully`,
+  and the router drops unsolicited inbound UDP like a home router). Every
+  scenario must reach the expected checksum and route per pair:
+
+  | Scenario | Expected route |
+  | --- | --- |
+  | cone-cone | direct |
+  | symmetric-symmetric | relay |
+  | cone-symmetric | relay (recorded; one-sided symmetric is not punched) |
+  | same-lan (two players behind one router) | direct, over LAN addresses |
+  | three-players-mixed (cone, cone, symmetric) | cone pair direct, pairs with the symmetric player relay |
+  | four-players-mixed (two cone, two symmetric) | cone pair direct; restrictive pairs remain available through the relay |
+  | impaired-cone-cone (delay, jitter, loss and reordering) | measured direct or relay path, match converges |
+  | direct-cut-mid-match (direct path dropped at 8 s) | falls back to the relay, match finishes |
+  | server-lost-while-direct (server killed at 8 s) | stays direct, match finishes |
+
+  Timed scenarios set `VW_HEADLESS_FRAME_MS=16` so the headless match lasts
+  long enough for the event. The aggregate check is `Complete NAT traversal
+  checks`. Run it locally only on a disposable Linux VM: it needs root and
+  creates namespaces.
+- The path-filtered `Infrastructure` workflow runs Terraform `fmt`, `validate`,
+  mocked `terraform test`, `tflint`, server tests and a multi-arch image smoke.
+  Trusted owner pull requests then run a real cloud plan with a non-deployable
+  placeholder image digest; the separate image lane builds and smoke-tests the
+  candidate. Matching `master` merges publish the image, resolve its real
+  digest, apply Terraform, verify DuckDNS plus a lobby answer, then require one
+  public Linux/Windows/Android relay match. Its aggregate is
+  `Complete infrastructure checks`.
+- **Deploy matchmaking server** remains manually dispatchable for explicit
+  `plan`, `apply` and `destroy`; `destroy` also clears the DuckDNS record.
+
+Design and safety rules: [Matchmaking](Matchmaking.md).
+
 ### CI gating and labels
 
 [`classify-changes.yml`](../../.github/workflows/classify-changes.yml) keeps
@@ -755,7 +896,8 @@ check have no concurrency group.
 The `master` ruleset requires one stable aggregate check per workflow rather
 than individual lanes: `Complete Linux compatibility`, `Complete MinGW
 compatibility`, `Complete Windows compatibility`, `Complete Android
-compatibility`, and `Complete native E2E matrix`, plus `Fork owner approval`.
+compatibility`, `Complete native E2E matrix`, and `Complete NAT traversal
+checks`, plus `Fork owner approval`.
 Each aggregate covers every lane of its workflow. Individual matrix lanes cannot
 be required directly: a lane skipped on a documentation-only change never
 reports its expanded name, so the requirement would wait forever. Each aggregate
@@ -793,12 +935,17 @@ established by the frame, checksum, callback, and lifecycle assertions.
 
 ### Current limits and follow-ups
 
-- No spectator, disconnect/resume, simulated loss, or multi-player automated
-  session exists.
+- No spectator or disconnect/resume automated session exists. Matchmaking
+  loopback covers 2, 3 and 4 players; the NAT matrix covers mixed four-player
+  routing and a paced latency/jitter/loss/reordering scenario.
+- The NAT matrix models symmetric NAT but not a real carrier-grade provider;
+  public mobile and carrier-grade networks remain part of the friends trial.
+- The matchmaking server is not deployed yet, so no test reaches a public
+  server; every matchmaking test uses a server on the runner.
 - The automated matrix covers native Linux, Windows, MinGW, and Android peers,
   but not SteamOS hardware.
-- The clean cross-platform workflow does not inject latency or packet loss;
-  deterministic impairment remains a follow-up after clean-run qualification.
+- The cross-platform E2E workflow remains a clean-link test; deterministic
+  impairment belongs to the Linux namespace NAT workflow.
 - No macOS adapter or build exists.
 - Android ASan+UBSan is scheduled on an x86_64 emulator; Linux Clang and MSVC
   sanitizer configurations remain in the same qualification workflow.

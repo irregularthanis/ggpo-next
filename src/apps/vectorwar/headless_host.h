@@ -15,6 +15,7 @@ public:
    virtual void SleepMs(unsigned int milliseconds) const;
    virtual void InitializePerformanceMonitor();
    virtual void UpdatePerformanceMonitor(GGPOSession *, GGPOPlayerHandle [], int);
+   virtual void UpdatePathMonitor(const VwLegend &);
    virtual void TogglePerformanceMonitor();
    virtual void ShutdownPerformanceMonitor();
 

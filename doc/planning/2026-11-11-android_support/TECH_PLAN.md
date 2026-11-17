@@ -72,8 +72,8 @@ flowchart TD
     API["platform.h<br/>16 operations"]
     Posix["platform_posix.cpp<br/>shared POSIX adapter"]
     Win["platform_windows.cpp<br/>MSVC and MinGW"]
-    LinuxCfg["platform/linux/Platform.cmake"]
-    AndroidCfg["platform/android/Platform.cmake<br/>NDK flags, log library"]
+    LinuxCfg["platform/linux/<br/>Platform.cmake"]
+    AndroidCfg["platform/android/<br/>Platform.cmake<br/>NDK flags,<br/>log library"]
     Core --> API
     API --> Posix
     API --> Win

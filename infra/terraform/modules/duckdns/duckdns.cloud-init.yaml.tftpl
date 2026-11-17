@@ -1,0 +1,29 @@
+#cloud-config
+# Keeps the DuckDNS name pointing at this server's public IP.
+write_files:
+  - path: /etc/ggpo-matchmaking/duckdns.env
+    permissions: "0600"
+    content: |
+      DUCKDNS_URL='${update_url}'
+  - path: /etc/systemd/system/duckdns.service
+    content: |
+      [Unit]
+      Description=Update the matchmaking DuckDNS record
+      Wants=network-online.target
+      After=network-online.target
+      [Service]
+      Type=oneshot
+      EnvironmentFile=/etc/ggpo-matchmaking/duckdns.env
+      ExecStart=/usr/bin/curl -fsS --max-time 20 -o /dev/null $${DUCKDNS_URL}
+  - path: /etc/systemd/system/duckdns.timer
+    content: |
+      [Unit]
+      Description=Refresh the matchmaking DuckDNS record
+      [Timer]
+      OnBootSec=30s
+      OnUnitActiveSec=${interval_minutes}min
+      [Install]
+      WantedBy=timers.target
+runcmd:
+  - systemctl daemon-reload
+  - systemctl enable --now duckdns.timer
