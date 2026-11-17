@@ -4,7 +4,11 @@
 mock_provider "oci" {
   mock_data "oci_identity_availability_domains" {
     defaults = {
-      availability_domains = [{ name = "Uocm:US-ASHBURN-AD-1" }]
+      availability_domains = [
+        { name = "Uocm:US-ASHBURN-AD-1" },
+        { name = "Uocm:US-ASHBURN-AD-2" },
+        { name = "Uocm:US-ASHBURN-AD-3" },
+      ]
     }
   }
   mock_data "oci_core_images" {
@@ -192,4 +196,56 @@ run "rejects_shapes_beyond_the_free_allowance" {
     memory_gbs = 24
   }
   expect_failures = [var.ocpus, var.memory_gbs]
+}
+
+run "launches_in_the_chosen_availability_domain" {
+  command = apply
+  variables {
+    availability_domain_index = 2
+  }
+
+  assert {
+    condition     = oci_core_instance.server.availability_domain == "Uocm:US-ASHBURN-AD-3"
+    error_message = "availability_domain_index must select that availability domain."
+  }
+}
+
+run "availability_domain_index_wraps_around" {
+  command = apply
+  variables {
+    availability_domain_index = 4
+  }
+
+  assert {
+    condition     = oci_core_instance.server.availability_domain == "Uocm:US-ASHBURN-AD-2"
+    error_message = "An index past the last availability domain must wrap around."
+  }
+}
+
+run "amd_micro_fallback_has_no_flexible_size" {
+  command = plan
+  variables {
+    shape = "VM.Standard.E2.1.Micro"
+  }
+
+  assert {
+    condition     = oci_core_instance.server.shape == "VM.Standard.E2.1.Micro"
+    error_message = "The fallback must use the always-free AMD micro shape."
+  }
+  assert {
+    condition     = length(oci_core_instance.server.shape_config) == 0
+    error_message = "A fixed shape must not get a shape_config block."
+  }
+  assert {
+    condition     = strcontains(base64decode(oci_core_instance.server.metadata["user_data"]), var.container_image)
+    error_message = "The fallback runs the same multi-arch image."
+  }
+}
+
+run "rejects_shapes_outside_the_free_tier" {
+  command = plan
+  variables {
+    shape = "VM.Standard.E4.Flex"
+  }
+  expect_failures = [var.shape]
 }

@@ -166,7 +166,32 @@ jobs:
 
       - name: Terraform apply
         if: inputs.action == 'apply'
-        run: terraform -chdir="$WORKDIR" apply -input=false -auto-approve
+        # Oracle's always-free pools are often full ("Out of host capacity").
+        # Try every availability domain with Ampere A1, then with the
+        # always-free AMD micro shape. Any other error fails at once. A failed
+        # launch leaves nothing in state, so each retry only creates the VM.
+        run: |
+          set -uo pipefail
+          for shape in VM.Standard.A1.Flex VM.Standard.E2.1.Micro; do
+            for ad in 0 1 2; do
+              echo "::group::apply with $shape in availability domain index $ad"
+              terraform -chdir="$WORKDIR" apply -input=false -auto-approve -no-color \
+                -var "shape=$shape" -var "availability_domain_index=$ad" 2>&1 | tee apply.log
+              status=${PIPESTATUS[0]}
+              echo "::endgroup::"
+              if [ "$status" -eq 0 ]; then
+                echo "Server launched as $shape (availability domain index $ad)" | tee -a "$GITHUB_STEP_SUMMARY"
+                exit 0
+              fi
+              if ! grep -q "Out of host capacity" apply.log; then
+                echo "::error::terraform apply failed for a reason other than capacity"
+                exit 1
+              fi
+              echo "::warning::No free capacity for $shape in availability domain index $ad"
+            done
+          done
+          echo "::error::No always-free capacity in any availability domain; rerun later"
+          exit 1
 
       - name: Terraform destroy
         if: inputs.action == 'destroy'

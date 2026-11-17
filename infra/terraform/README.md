@@ -150,6 +150,11 @@ is **Complete infrastructure checks**.
 
 ## Cost guardrails
 
+- `shape` accepts only the always-free `VM.Standard.A1.Flex` (default) and
+  `VM.Standard.E2.1.Micro`; when Oracle reports "Out of host capacity", the
+  apply workflow retries every availability domain with A1, then with the AMD
+  micro shape (same multi-arch image). Locally, pass
+  `-var shape=VM.Standard.E2.1.Micro` or `-var availability_domain_index=1`.
 - Variable validation keeps the VM inside the always-free Ampere A1 allowance
   (at most 2 OCPUs and 12 GB).
 - One VCN, one public IP, no load balancer, no block volume beyond the boot

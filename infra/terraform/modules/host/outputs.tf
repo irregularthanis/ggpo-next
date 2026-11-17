@@ -13,6 +13,16 @@ output "relay_port_range" {
   value       = "${var.relay_port_range.first}-${var.relay_port_range.last}"
 }
 
+output "shape" {
+  description = "Shape the server runs on."
+  value       = oci_core_instance.server.shape
+}
+
+output "availability_domain" {
+  description = "Availability domain the server runs in."
+  value       = oci_core_instance.server.availability_domain
+}
+
 output "instance_id" {
   description = "OCID of the server instance."
   value       = oci_core_instance.server.id

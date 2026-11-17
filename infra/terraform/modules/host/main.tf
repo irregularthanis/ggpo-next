@@ -1,8 +1,11 @@
-# One always-free Ampere A1 VM whose only job is running the matchmaking
-# container, in its own public subnet.
+# One always-free VM whose only job is running the matchmaking container, in
+# its own public subnet. Ampere A1 by default; the always-free AMD micro shape
+# is the fallback when Oracle has no free A1 capacity.
 
 locals {
-  shape     = "VM.Standard.A1.Flex"
+  shape     = var.shape
+  flexible  = endswith(var.shape, ".Flex")
+  ads       = data.oci_identity_availability_domains.all.availability_domains
   vcn_cidr  = "10.71.0.0/16"
   subnet    = "10.71.1.0/24"
   container = "${var.name}-server"
@@ -136,13 +139,17 @@ data "cloudinit_config" "server" {
 
 resource "oci_core_instance" "server" {
   compartment_id      = var.compartment_ocid
-  availability_domain = data.oci_identity_availability_domains.all.availability_domains[0].name
+  availability_domain = local.ads[var.availability_domain_index % length(local.ads)].name
   display_name        = var.name
   shape               = local.shape
 
-  shape_config {
-    ocpus         = var.ocpus
-    memory_in_gbs = var.memory_gbs
+  # Only flexible shapes take a size; E2.1.Micro is fixed at 1/8 OCPU, 1 GB.
+  dynamic "shape_config" {
+    for_each = local.flexible ? [1] : []
+    content {
+      ocpus         = var.ocpus
+      memory_in_gbs = var.memory_gbs
+    }
   }
 
   source_details {
