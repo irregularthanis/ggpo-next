@@ -5,10 +5,25 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from . import public_multiplatform_game as game
 from .public_multiplatform_game import PLATFORMS, split_server, validate_reports
 
 
 class PublicMultiplatformGameTest(unittest.TestCase):
+    def test_peer_runs_directly_without_a_launcher(self):
+        command = game.peer_command("peer/vw", "mm.example:7100", 3, "LOBBY1", "out/r.json")
+        self.assertTrue(command[0].endswith("vw"))
+        self.assertEqual(command[1:6], ["--matchmaking", "mm.example:7100", "3", "LOBBY1", "180"])
+        self.assertEqual(command[-1], "--relay-only")
+
+    def test_android_peer_runs_through_the_launcher_with_absolute_paths(self):
+        command = game.peer_command("peer/vw", "mm.example:7100", 3, "LOBBY1", "out/r.json",
+                                    launcher="/w/tests/android/run_on_device.py")
+        self.assertEqual(command[:2], [game.sys.executable, "/w/tests/android/run_on_device.py"])
+        # The launcher maps absolute paths to the device and pulls them back.
+        self.assertTrue(game.Path(command[2]).is_absolute())
+        self.assertTrue(game.Path(command[8]).is_absolute())
+
     def test_server_requires_host_and_port(self):
         self.assertEqual(split_server("vectorwars-demo.duckdns.org:7100"),
                          ("vectorwars-demo.duckdns.org", 7100))

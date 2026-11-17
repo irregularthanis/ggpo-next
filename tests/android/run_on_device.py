@@ -10,7 +10,8 @@ peer runners, so the regular test suite runs unchanged on Android:
   that directory and keeps them in sync both ways while the program runs:
   files created on the device (ready, result) are pulled, files created on the
   host (the coordinator's finalize file) are pushed;
-- forwards GGPO_* environment variables (faults, run identity);
+- forwards GGPO_* and VW_HEADLESS_* environment variables (faults, run
+  identity, Vector War pacing);
 - streams output and returns the program's exit code. Devices below API 24 do
   not report exit codes through `adb shell`, so the code is read from a marker.
 
@@ -70,7 +71,7 @@ def main():
 
     forwarded = {}
     for name, value in os.environ.items():
-        if not name.startswith("GGPO_") or name in ("GGPO_TEST_LAUNCHER", "GGPO_DEVICE_ROOT",
+        if not name.startswith(("GGPO_", "VW_HEADLESS_")) or name in ("GGPO_TEST_LAUNCHER", "GGPO_DEVICE_ROOT",
                                                          "GGPO_LAUNCHER_LIB_DIRS"):
             continue
         path = Path(value)
