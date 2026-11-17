@@ -26,12 +26,15 @@ cmake -S $repo -B $BuildDirectory -G $Generator -A $Architecture `
     $linkageArguments `
     -DGGPO_BUILD_SDK=ON `
     -DGGPO_BUILD_VECTORWAR=ON `
-    -DBUILD_TESTING=ON
+    -DBUILD_TESTING=ON `
+    -DGGPO_RUN_TESTS_ON_BUILD=OFF
 if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
 
 cmake --build $BuildDirectory --config $Configuration --parallel
 if ($LASTEXITCODE -ne 0) { throw "CMake build failed" }
 
+# The build does not run the tests (GGPO_RUN_TESTS_ON_BUILD=OFF); run them
+# once here.
 ctest --test-dir $BuildDirectory -C $Configuration --output-on-failure
 if ($LASTEXITCODE -ne 0) { throw "CTest failed" }
 
