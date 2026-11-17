@@ -490,6 +490,20 @@ g++ -I$HOME/ggpo-0.6.0-linux-x86_64/include main.cpp $HOME/ggpo-0.6.0-linux-x86_
 For NDK applications on arm64-v8a, armeabi-v7a, and x86_64, API 21 or newer.
 `GGPO_SHARED_LIB` is not used.
 
+| Dimension | Supported variants | Qualification |
+| --- | --- | --- |
+| CPU ABI | `arm64-v8a` (64-bit ARM), `armeabi-v7a` (32-bit ARM), `x86_64` (64-bit x86) | All three build, run the shared test suite, pass SDK audits, and ship in the Android SDK and Vector War APK |
+| Android version | API 21+ (Android 5.0 and newer) | API 21 is the binary/API floor; full emulator and APK smoke tests run on API 21 and API 35 |
+| Build type | Release; Debug qualification on `arm64-v8a` | Release is packaged for all ABIs; CI also exercises one Debug build |
+| NDK | The current NDK exposed by `ANDROID_NDK_LATEST_HOME` | CI records `source.properties`; older NDK revisions are not a compatibility guarantee |
+
+API level and NDK revision are different dimensions. API 21 means the produced
+library can target older Android systems; it does **not** mean CI builds with an
+older NDK. The Gradle APK build reads the selected NDK's exact revision from
+[`source.properties`](../src/apps/vectorwar/android/app/build.gradle) and uses
+that same installation for native compilation. The APK currently compiles and
+targets API 35 while retaining `minSdk 21`.
+
 #### Android: release SDK
 
 `ggpo-0.6.0-android.tar.gz` contains one complete CMake prefix per ABI:

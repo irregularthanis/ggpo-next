@@ -326,6 +326,21 @@ Windows ABI. All other pedantic diagnostics remain errors.
 
 ### Android
 
+The Android contract separates CPU ABI, device API level, and NDK revision:
+
+| Axis | CI coverage | Contract |
+| --- | --- | --- |
+| ABI | `arm64-v8a`, `armeabi-v7a`, `x86_64` | Release libraries, installed consumers, exports, dependencies, ABI ceiling, and shared tests |
+| API level | API 21 and API 35 x86_64 emulators | API 21 remains the supported floor; API 35 represents a current Android runtime |
+| Native execution | 64-bit ARM, 32-bit ARM, and x86_64 runners | Static test fixtures execute for every packaged ABI without substituting a cross-compile-only result |
+| APK | One APK containing all three ABIs | Launcher, SDL frontend, native library loading, and frontend-ready marker on API 21 and API 35 |
+| NDK revision | Runner-provided `ANDROID_NDK_LATEST_HOME` | The exact revision is printed into CI evidence; no older-NDK matrix or promise exists |
+
+An “older Android” result refers to the API 21 runtime and imported-symbol
+ceiling, not to compiling with an older NDK. The public multi-platform game
+uses the `arm64-v8a` headless peer; the broader Android workflow qualifies the
+other packaged ABIs.
+
 #### Android: registered tests
 
 Runs every [shared test](#shared-tests) with the `android_` prefix, plus the
