@@ -62,12 +62,12 @@ flowchart TB
         BA["Android NDK<br/>static arm64"]
     end
 
-    subgraph COMMON["Common to all platforms"]
+    subgraph COMMON["Common to all<br/>platforms"]
         direction TB
-        MATRIX["44 role jobs<br/>22 ordered scenarios<br/>generic + Vector War"]
-        NET["Ephemeral tailnet<br/>HMAC control,<br/>GGPO over UDP"]
+        MATRIX["44 role jobs<br/>22 ordered<br/>scenarios<br/>generic +<br/>Vector War"]
+        NET["Ephemeral<br/>tailnet<br/>HMAC control,<br/>GGPO over UDP"]
         ORACLE["Independent<br/>canonical oracle"]
-        MAN["Fail-closed<br/>complete manifest"]
+        MAN["Fail-closed<br/>complete<br/>manifest"]
         MATRIX --> NET --> ORACLE --> MAN
     end
 
@@ -229,16 +229,16 @@ summarizes all scenarios. Because each mixed pair also runs in reverse order
 flowchart LR
     Coordinator["Role 2<br/>coordinator"]
     Agent["Role 1<br/>control agent"]
-    Deployment["Transient GitHub<br/>Deployment record"]
+    Deployment["Transient GitHub<br/>Deployment<br/>record"]
     Peer1["Player 1<br/>native GGPO peer"]
     Peer2["Player 2<br/>native GGPO peer"]
-    Results["Canonical result<br/>and lifecycle data"]
+    Results["Canonical<br/>result and<br/>lifecycle data"]
 
     Agent -->|"publish endpoint"| Deployment
     Coordinator -->|"discover exact<br/>run and scenario"| Deployment
     Coordinator <-->|"HMAC control<br/>TCP 24871"| Agent
-    Agent -->|"launch and supervise"| Peer1
-    Coordinator -->|"launch and supervise"| Peer2
+    Agent -->|"launch and<br/>supervise"| Peer1
+    Coordinator -->|"launch and<br/>supervise"| Peer2
     Peer1 <-->|"production GGPO<br/>UDP 24872–24873"| Peer2
     Peer1 --> Results
     Peer2 --> Results
@@ -295,9 +295,9 @@ This separation is intentional:
 ```mermaid
 flowchart LR
     Native["Native fixture<br/>GGPO callbacks<br/>and replay"]
-    NativeState["Canonical bytes<br/>from native state"]
-    Oracle["Independent Python<br/>input and state model"]
-    OracleState["Expected<br/>canonical checksum"]
+    NativeState["Canonical bytes<br/>from native<br/>state"]
+    Oracle["Independent<br/>Python input and<br/>state model"]
+    OracleState["Expected<br/>canonical<br/>checksum"]
     Gate{"Both peers and<br/>oracle agree?"}
 
     Native --> NativeState --> Gate

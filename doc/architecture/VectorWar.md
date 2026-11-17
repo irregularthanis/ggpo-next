@@ -40,12 +40,12 @@ confirmed inputs from one serving peer.
 
 ```mermaid
 flowchart TD
-    Main["main.cpp (Win32)<br/>sdl_main.cpp (Linux)<br/>headless_main.cpp<br/>process and<br/>60 Hz loop"]
-    Platform["Win32 / SDL /<br/>Headless<br/>VectorWarHost<br/>window, input,<br/>clock and diagnostics"]
+    Main["main.cpp<br/>(Win32)<br/>sdl_main.cpp<br/>(Linux)<br/>headless_<br/>main.cpp<br/>process and<br/>60 Hz loop"]
+    Platform["Win32 / SDL /<br/>Headless<br/>VectorWarHost<br/>window, input,<br/>clock and<br/>diagnostics"]
     Host["VectorWarCore<br/>portable GGPO<br/>integration"]
     Game["GameState<br/>deterministic<br/>simulation"]
     NonGame["NonGameState<br/>connection and<br/>UI data"]
-    Renderer["GDIRenderer /<br/>SDLVectorWarRenderer<br/>presentation<br/>only"]
+    Renderer["GDIRenderer /<br/>SDLVectorWar<br/>Renderer<br/>presentation<br/>only"]
     Perf["GGPO perf<br/>monitor<br/>network<br/>statistics"]
     API["ggponet.h<br/>public API"]
     Session["GGPOSession<br/>P2P,<br/>spectator,<br/>or SyncTest"]
@@ -486,20 +486,20 @@ same `VectorWarCore`, GGPO callbacks, rollback state, controls, and topology.
 
 ```mermaid
 flowchart TD
-    subgraph Windows["Windows: VectorWar.exe"]
-        WinMain["main.cpp<br/>wWinMain and<br/>Win32 message loop"]
-        WinHost["Win32VectorWarHost<br/>win32_host.cpp"]
+    subgraph Windows["Windows:<br/>VectorWar.exe"]
+        WinMain["main.cpp<br/>wWinMain and<br/>Win32 message<br/>loop"]
+        WinHost["Win32VectorWar<br/>Host<br/>win32_host.cpp"]
         GDI["GDIRenderer<br/>gdi_renderer.cpp"]
         WinMain --> WinHost --> GDI
     end
     subgraph Linux["Linux: vectorwar"]
         SdlMain["sdl_main.cpp<br/>main and<br/>SDL event loop"]
         SdlHost["SDLVectorWarHost<br/>sdl_host.cpp"]
-        SdlDraw["SDLVectorWarRenderer<br/>sdl_renderer.cpp"]
+        SdlDraw["SDLVectorWar<br/>Renderer<br/>sdl_renderer.cpp"]
         SdlMain --> SdlHost --> SdlDraw
     end
-    Contract["VectorWarHost contract<br/>bounds, input,<br/>renderer, clock,<br/>sleep, diagnostics"]
-    Core["VectorWarCore<br/>session, callbacks,<br/>rollback state,<br/>simulation"]
+    Contract["VectorWarHost<br/>contract<br/>bounds, input,<br/>renderer,<br/>clock, sleep,<br/>diagnostics"]
+    Core["VectorWarCore<br/>session,<br/>callbacks,<br/>rollback state,<br/>simulation"]
     GGPO["GGPO SDK<br/>ggponet.h"]
 
     WinHost -->|"implements"| Contract

@@ -34,7 +34,7 @@ flowchart TD
     Public["src/include/<br/>ggponet.h<br/>public API"]
     Core["Backends,<br/>sync, input,<br/>poll and UDP<br/>sources"]
     Platform{"Supported<br/>platform layer?"}
-    Windows["platform/windows/<br/>Platform.cmake<br/>Windows source,<br/>defines and libs"]
+    Windows["platform/<br/>windows/<br/>Platform.cmake<br/>Windows source,<br/>defines and libs"]
     Linux["platform/linux/<br/>Platform.cmake<br/>POSIX source<br/>and flags"]
     Unsupported["Configuration<br/>error<br/>unsupported<br/>platform"]
     Library["GGPO libraries<br/>shared and<br/>static"]
