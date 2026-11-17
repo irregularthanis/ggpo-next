@@ -188,6 +188,14 @@ jobs:
     timeout-minutes: 15
     strategy:
       fail-fast: false
+      # Each role waits for its partner while holding a runner. Uncapped, the
+      # matrix could fill every concurrent-job slot with halves whose partners
+      # are still queued, and none could start until all timed out. Capped,
+      # GitHub starts entries in the order listed, and both roles of a pair
+      # are adjacent (checked by .github/ci/tests), so a waiting role's
+      # partner is always next in line. Even, so pairs start together, and
+      # below the 20-job account limit so other workflows keep running.
+      max-parallel: 12
       matrix:
         include:
           - {fixture: smoke, scenario: linux-linux, role: 1, platform: linux, os: ubuntu-24.04, player1: linux, player2: linux, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
