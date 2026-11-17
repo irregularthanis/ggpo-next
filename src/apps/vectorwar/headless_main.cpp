@@ -100,6 +100,10 @@ WriteResult(const char *path, int player, int frame, unsigned int checksum,
    return true;
 }
 
+/* GGPO's prediction window (MAX_PREDICTION_FRAMES in sync.h) + FRAME_DELAY
+ * + 2 frames of slack. */
+#define CONFIRMATION_MARGIN (8 + FRAME_DELAY + 2)
+
 /* Play one session to target_frames and write the result; shared by the direct
  * and the matchmaking forms. A matchmade session's routes are reported. */
 static int
@@ -122,12 +126,20 @@ RunSession(HeadlessVectorWarHost *host, int local_player, unsigned short local_p
     * network events land mid-match; unset keeps the unpaced default. */
    const char *pace = getenv("VW_HEADLESS_FRAME_MS");
    const int frame_ms = (pace && atoi(pace) > 0 && atoi(pace) <= 100) ? atoi(pace) : 1;
-   while (VectorWar_FrameNumber() < target_frames && host->NowMs() - start < 45000) {
+   /* Over the internet the fastest peer can reach the target frame on
+    * predicted input, and a fixed settle time does not guarantee the late
+    * input arrives. A matchmade session therefore plays on past GGPO's
+    * prediction window (8 frames) plus the frame delay, which GGPO only allows
+    * once every input up to the target is confirmed, and reports the target
+    * frame's state as last simulated. */
+   const int run_to = matchmade ? target_frames + CONFIRMATION_MARGIN : target_frames;
+   VectorWar_RecordChecksumAt(target_frames);
+   while (VectorWar_FrameNumber() < run_to && host->NowMs() - start < 45000) {
       VectorWar_RunFrame();
       VectorWar_Idle(1);
       host->SleepMs(frame_ms);
    }
-   if (VectorWar_FrameNumber() != target_frames ||
+   if (VectorWar_FrameNumber() != run_to ||
        VectorWar_RunningEventCount() != 1) {
       fprintf(stderr, "incomplete Vector War session: frame=%d running=%d\n",
               VectorWar_FrameNumber(), VectorWar_RunningEventCount());
@@ -162,8 +174,9 @@ RunSession(HeadlessVectorWarHost *host, int local_player, unsigned short local_p
       }
    }
 
-   const int frame = VectorWar_FrameNumber();
-   const unsigned int checksum = VectorWar_StateChecksum();
+   const int frame = matchmade ? target_frames : VectorWar_FrameNumber();
+   const unsigned int checksum =
+      matchmade ? VectorWar_RecordedChecksum() : VectorWar_StateChecksum();
    const int saves = VectorWar_SaveCount();
    const int loads = VectorWar_LoadCount();
    int replay_frames = VectorWar_ReplayFrameCount();
