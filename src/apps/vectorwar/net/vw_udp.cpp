@@ -1,5 +1,6 @@
 #include "vw_udp.h"
 
+#include <stdio.h>
 #include <string.h>
 
 #if defined(_WIN32)
@@ -178,14 +179,22 @@ UdpSocket::WaitReadable(UdpSocket *const *sockets, int count, int timeout_ms)
 }
 
 bool
-ResolveIPv4(const char *host, uint16_t port, Endpoint *out)
+ResolveIPv4(const char *host, uint16_t port, Endpoint *out, char *reason, size_t reason_length)
 {
    addrinfo hints;
    memset(&hints, 0, sizeof(hints));
    hints.ai_family = AF_INET;
    hints.ai_socktype = SOCK_DGRAM;
    addrinfo *result = NULL;
-   if (getaddrinfo(host, NULL, &hints, &result) != 0 || !result) return false;
+   const int status = getaddrinfo(host, NULL, &hints, &result);
+   if (status != 0 || !result) {
+      if (reason && reason_length) {
+         snprintf(reason, reason_length, "%s",
+                  status != 0 ? gai_strerror(status) : "no IPv4 address");
+      }
+      if (result) freeaddrinfo(result);
+      return false;
+   }
    *out = FromSockaddr(*(const sockaddr_in *)result->ai_addr);
    out->port = port;
    freeaddrinfo(result);
