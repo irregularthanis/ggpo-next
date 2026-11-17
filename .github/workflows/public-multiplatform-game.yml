@@ -121,11 +121,14 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Build the native static arm64 Android peer
+      # x86_64 so the peer runs on a real Android system image (the emulator),
+      # where name resolution goes through Android's own resolver. A static
+      # bionic binary on a plain Linux runner cannot resolve hostnames.
+      - name: Build the static x86_64 Android peer
         run: |
           cmake -S . -B build/public-game -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake" \
-            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=21 \
+            -DANDROID_ABI=x86_64 -DANDROID_PLATFORM=21 \
             -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
             -DGGPO_BUILD_VECTORWAR=ON -DGGPO_BUILD_VECTORWAR_GUI=OFF \
             -DCMAKE_EXE_LINKER_FLAGS=-static
@@ -142,14 +145,15 @@ jobs:
     name: Play as ${{ matrix.platform }}
     needs: [preflight, build-linux, build-windows, build-android]
     if: needs.preflight.outputs.run == 'true'
-    timeout-minutes: 15
+    # The Android role also boots an emulator.
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
         include:
           - {platform: linux, os: ubuntu-24.04, executable: peer/vectorwar_headless}
           - {platform: windows, os: windows-2022, executable: peer/vectorwar_headless.exe}
-          - {platform: android, os: ubuntu-24.04-arm, executable: peer/vectorwar_headless}
+          - {platform: android, os: ubuntu-24.04, executable: peer/vectorwar_headless}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -164,6 +168,7 @@ jobs:
         if: runner.os == 'Linux'
         run: chmod 0755 peer/vectorwar_headless
       - name: Join the public multi-platform match
+        if: matrix.platform != 'android'
         env:
           GITHUB_TOKEN: ${{ github.token }}
         shell: bash
@@ -174,6 +179,27 @@ jobs:
             --platform "${{ matrix.platform }}" \
             --executable "${{ matrix.executable }}" \
             --output "evidence/${{ matrix.platform }}"
+      - name: Enable KVM
+        if: matrix.platform == 'android'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Join the public multi-platform match on the Android emulator
+        if: matrix.platform == 'android'
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          # The harness runs the peer on the emulator through adb.
+          GGPO_TEST_LAUNCHER: ${{ github.workspace }}/tests/android/run_on_device.py
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot
+          script: python tests/e2e/public_multiplatform_game.py role --server "${{ needs.preflight.outputs.server }}" --lobby "${{ needs.preflight.outputs.lobby }}" --platform android --executable "${{ matrix.executable }}" --output evidence/android
       - name: Upload peer evidence
         if: always()
         uses: actions/upload-artifact@v4

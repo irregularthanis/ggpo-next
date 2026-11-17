@@ -96,6 +96,17 @@ def probe_command(args):
     return 0
 
 
+def peer_command(executable, server, player_count, lobby, result, launcher=None):
+    """The relay-only peer command; a launcher (Android: run_on_device.py)
+    runs it on the emulator, mapping the result path and pulling it back."""
+    command = [str(Path(executable).resolve()), "--matchmaking", server,
+               str(player_count), lobby, "180", str(Path(result).resolve()),
+               "--relay-only"]
+    if launcher:
+        command = [sys.executable, launcher] + command
+    return command
+
+
 def role_command(args):
     """Synchronize all platform runners, then run this platform's relay peer."""
     output = Path(args.output)
@@ -109,9 +120,8 @@ def role_command(args):
 
         result = output / "result.json"
         player_count = len(PLATFORMS)
-        command = [str(Path(args.executable).resolve()), "--matchmaking", args.server,
-                   str(player_count), args.lobby, "180", str(result.resolve()),
-                   "--relay-only"]
+        command = peer_command(args.executable, args.server, player_count, args.lobby,
+                               result, os.environ.get("GGPO_TEST_LAUNCHER"))
         environment = dict(os.environ, VW_HEADLESS_FRAME_MS="16")
         completed = subprocess.run(command, stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, text=True,
