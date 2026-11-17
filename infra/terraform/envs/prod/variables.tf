@@ -34,6 +34,18 @@ variable "relay_port_range" {
   default = { first = 7101, last = 7499 }
 }
 
+variable "shape" {
+  description = "Always-free shape; see modules/host."
+  type        = string
+  default     = "VM.Standard.A1.Flex"
+}
+
+variable "availability_domain_index" {
+  description = "Availability domain to launch in; see modules/host."
+  type        = number
+  default     = 0
+}
+
 variable "admin_cidr" {
   description = "IPv4 CIDR allowed to reach key-only SSH; prefer your public IP as x.x.x.x/32."
   type        = string

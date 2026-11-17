@@ -59,6 +59,26 @@ variable "ssh_public_key" {
   type        = string
 }
 
+variable "shape" {
+  description = "Always-free shape: VM.Standard.A1.Flex (Arm) or VM.Standard.E2.1.Micro (AMD fallback)."
+  type        = string
+  default     = "VM.Standard.A1.Flex"
+  validation {
+    condition     = contains(["VM.Standard.A1.Flex", "VM.Standard.E2.1.Micro"], var.shape)
+    error_message = "shape must be an always-free shape: VM.Standard.A1.Flex or VM.Standard.E2.1.Micro."
+  }
+}
+
+variable "availability_domain_index" {
+  description = "Which availability domain to launch in (wraps around), so a full one can be skipped."
+  type        = number
+  default     = 0
+  validation {
+    condition     = var.availability_domain_index >= 0 && floor(var.availability_domain_index) == var.availability_domain_index
+    error_message = "availability_domain_index must be a non-negative integer."
+  }
+}
+
 variable "ocpus" {
   description = "Ampere A1 OCPUs; the always-free allowance is 2 in total."
   type        = number

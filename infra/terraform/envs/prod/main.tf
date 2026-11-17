@@ -8,12 +8,14 @@ module "duckdns" {
 }
 
 module "host" {
-  source           = "../../modules/host"
-  compartment_ocid = var.compartment_ocid
-  container_image  = var.container_image
-  server_port      = var.server_port
-  relay_port_range = var.relay_port_range
-  admin_cidr       = var.admin_cidr
-  ssh_public_key   = var.ssh_public_key
-  extra_cloud_init = [module.duckdns.cloud_init_part]
+  source                    = "../../modules/host"
+  compartment_ocid          = var.compartment_ocid
+  container_image           = var.container_image
+  server_port               = var.server_port
+  relay_port_range          = var.relay_port_range
+  shape                     = var.shape
+  availability_domain_index = var.availability_domain_index
+  admin_cidr                = var.admin_cidr
+  ssh_public_key            = var.ssh_public_key
+  extra_cloud_init          = [module.duckdns.cloud_init_part]
 }

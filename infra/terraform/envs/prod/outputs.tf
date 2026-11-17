@@ -8,6 +8,11 @@ output "relay_port_range" {
   value       = module.host.relay_port_range
 }
 
+output "shape" {
+  description = "Shape the server runs on."
+  value       = module.host.shape
+}
+
 output "fqdn" {
   description = "DuckDNS name of the server."
   value       = module.duckdns.fqdn
