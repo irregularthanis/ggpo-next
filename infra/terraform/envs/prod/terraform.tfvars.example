@@ -5,4 +5,6 @@ container_image   = "ghcr.io/irregularthanis/ggpo-matchmaking@sha256:<digest>"
 admin_cidr        = "203.0.113.7/32"
 ssh_public_key    = "ssh-ed25519 AAAA... you@host"
 duckdns_subdomain = "your-name"
+tenancy_ocid       = "ocid1.tenancy.oc1..aaaa..."
+budget_alert_email = "you@example.com"   # empty skips the budget
 # duckdns_token: set TF_VAR_duckdns_token in the environment instead of here.

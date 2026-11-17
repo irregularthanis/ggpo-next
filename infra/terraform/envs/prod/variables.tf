@@ -14,6 +14,23 @@ variable "compartment_ocid" {
   type        = string
 }
 
+variable "tenancy_ocid" {
+  description = "Tenancy OCID, for the tenancy-wide budget."
+  type        = string
+}
+
+variable "budget_alert_email" {
+  description = "Address for cost alerts; leave empty to skip the budget."
+  type        = string
+  default     = ""
+}
+
+variable "monthly_budget" {
+  description = "Monthly budget that triggers alerts."
+  type        = number
+  default     = 1
+}
+
 variable "container_image" {
   description = "Matchmaking server image pinned by digest."
   type        = string

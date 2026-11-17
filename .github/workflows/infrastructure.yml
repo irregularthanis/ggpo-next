@@ -68,7 +68,7 @@ jobs:
         working-directory: infra/terraform
         run: |
           set -euo pipefail
-          for dir in modules/duckdns modules/host envs/prod; do
+          for dir in modules/budget modules/duckdns modules/host envs/prod; do
             echo "::group::$dir"
             terraform -chdir="$dir" init -backend=false -input=false
             terraform -chdir="$dir" validate

@@ -20,13 +20,15 @@ mock_provider "oci" {
 }
 
 variables {
-  region            = "us-ashburn-1"
-  compartment_ocid  = "ocid1.tenancy.oc1..test"
-  container_image   = "ghcr.io/irregularthanis/ggpo-matchmaking@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-  admin_cidr        = "203.0.113.7/32"
-  ssh_public_key    = "ssh-ed25519 AAAATEST test@example"
-  duckdns_subdomain = "vw-friends"
-  duckdns_token     = "01234567-89ab-cdef-0123-456789abcdef"
+  tenancy_ocid       = "ocid1.tenancy.oc1..test"
+  budget_alert_email = "owner@example.com"
+  region             = "us-ashburn-1"
+  compartment_ocid   = "ocid1.tenancy.oc1..test"
+  container_image    = "ghcr.io/irregularthanis/ggpo-matchmaking@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+  admin_cidr         = "203.0.113.7/32"
+  ssh_public_key     = "ssh-ed25519 AAAATEST test@example"
+  duckdns_subdomain  = "vw-friends"
+  duckdns_token      = "01234567-89ab-cdef-0123-456789abcdef"
 }
 
 run "applied_state_exposes_the_address_vector_war_uses" {
@@ -59,5 +61,26 @@ run "custom_port_flows_to_the_address" {
   assert {
     condition     = output.server_address == "vw-friends.duckdns.org:7600"
     error_message = "A custom port must reach server_address."
+  }
+}
+
+run "budget_is_created_with_an_alert_email" {
+  command = plan
+
+  assert {
+    condition     = length(module.budget) == 1
+    error_message = "A budget must be created when budget_alert_email is set."
+  }
+}
+
+run "budget_is_skipped_without_an_alert_email" {
+  command = plan
+  variables {
+    budget_alert_email = ""
+  }
+
+  assert {
+    condition     = length(module.budget) == 0
+    error_message = "No budget without an alert address."
   }
 }

@@ -60,6 +60,9 @@ jobs:
       TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
       TF_VAR_duckdns_subdomain: ${{ vars.DUCKDNS_SUBDOMAIN }}
       TF_VAR_duckdns_token: ${{ secrets.DUCKDNS_TOKEN }}
+      TF_VAR_tenancy_ocid: ${{ secrets.OCI_TENANCY_OCID }}
+      # Optional: without it the budget and its cost alerts are skipped.
+      TF_VAR_budget_alert_email: ${{ secrets.BUDGET_ALERT_EMAIL }}
       AWS_ACCESS_KEY_ID: ${{ secrets.STATE_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.STATE_SECRET_ACCESS_KEY }}
     steps:

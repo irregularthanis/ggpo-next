@@ -19,3 +19,14 @@ module "host" {
   ssh_public_key            = var.ssh_public_key
   extra_cloud_init          = [module.duckdns.cloud_init_part]
 }
+
+# Cost alerts for a Pay As You Go account. Created and destroyed with the
+# server, so it exists whenever there is anything to bill.
+module "budget" {
+  source         = "../../modules/budget"
+  count          = var.budget_alert_email == "" ? 0 : 1
+  tenancy_ocid   = var.tenancy_ocid
+  alert_email    = var.budget_alert_email
+  monthly_amount = var.monthly_budget
+  name           = "ggpo-matchmaking"
+}

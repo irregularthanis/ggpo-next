@@ -150,6 +150,13 @@ is **Complete infrastructure checks**.
 
 ## Cost guardrails
 
+- [`modules/budget`](modules/budget): a monthly budget over the whole tenancy
+  (default 1 in the account currency) that emails `budget_alert_email` on the
+  first cent of actual spend and when the month's forecast exceeds the budget.
+  It is created and destroyed with the server; leave `budget_alert_email` empty
+  to skip it. In CI, set the `BUDGET_ALERT_EMAIL` secret. Budgets only alert:
+  they never stop resources.
+
 - `shape` accepts only the always-free `VM.Standard.A1.Flex` (default) and
   `VM.Standard.E2.1.Micro`; when Oracle reports "Out of host capacity", the
   apply workflow retries every availability domain with A1, then with the AMD
