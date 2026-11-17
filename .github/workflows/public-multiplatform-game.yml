@@ -211,7 +211,9 @@ jobs:
           # resolve the server name. ping prints "PING host (ip)" once the name
           # resolves, whether or not ICMP replies get through the emulator.
           script: |
-            adb shell "ping -c 1 -W 2 $(echo '${{ needs.preflight.outputs.server }}' | cut -d: -f1)" 2>&1 | tee /dev/stderr | grep -q '^PING '
+            adb shell "ping -c 1 -W 2 $(echo '${{ needs.preflight.outputs.server }}' | cut -d: -f1)" > android-dns.txt 2>&1 || true
+            cat android-dns.txt
+            grep -q '^PING ' android-dns.txt
             python tests/e2e/public_multiplatform_game.py role --server "${{ needs.preflight.outputs.server }}" --lobby "${{ needs.preflight.outputs.lobby }}" --platform android --executable "${{ matrix.executable }}" --output evidence/android
       - name: Upload peer evidence
         if: always()
