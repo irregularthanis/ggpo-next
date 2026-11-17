@@ -16,6 +16,12 @@ on:
       - ".github/workflows/deploy-matchmaking.yml"
       - ".github/workflows/public-multiplatform-game.yml"
       - ".github/workflows/classify-changes.yml"
+      # The public multi-platform game plays these on master after apply.
+      - "src/lib/**"
+      - "src/apps/vectorwar/**"
+      - "!src/**/*.md"
+      - "tests/e2e/public_multiplatform_game.py"
+      - "tests/android/run_on_device.py"
   pull_request:
     paths:
       - "infra/terraform/**"
