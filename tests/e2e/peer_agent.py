@@ -12,6 +12,17 @@ from pathlib import Path
 from control import MessageVerifier
 
 
+def describe_exit(code):
+    """Exit code in a readable form; Windows crashes are NTSTATUS values."""
+    if code is None:
+        return "no exit code (still running)"
+    if code < 0:
+        return f"code {code} (signal {-code})"
+    if code >= 0xC0000000:
+        return f"code {code} (0x{code:08X})"
+    return f"code {code}"
+
+
 class PeerSupervisor:
     """Execute only the fixed peer lifecycle inside one configured workspace."""
 
@@ -20,9 +31,15 @@ class PeerSupervisor:
         self.process = None
         self.command = None
         self._log = None
+        # Set only when the coordinator reports that the whole session passed.
+        self.session_passed = False
 
     def _close_log(self):
         if self._log is not None:
+            # A crashing peer may print nothing; always leave its exit code.
+            code = None if self.process is None else self.process.poll()
+            if code is not None:
+                self._log.write(f"\n[peer agent] peer exited with {describe_exit(code)}\n")
             self._log.close()
             self._log = None
 
@@ -121,7 +138,7 @@ class PeerSupervisor:
         if self.process is None or self.process.poll() is None:
             raise ValueError("peer has not exited")
         if self.process.returncode != 0:
-            raise ValueError(f"peer exited with {self.process.returncode}")
+            raise ValueError(f"peer exited with {describe_exit(self.process.returncode)}")
         if not self.command["result"].is_file():
             raise ValueError("peer result is missing")
         self._close_log()
@@ -139,6 +156,10 @@ class PeerSupervisor:
         return {"cancelled": True}
 
     def shutdown(self, arguments):
+        # The coordinator says whether the paired session passed, so role 1
+        # can fail with it; otherwise "re-run failed jobs" would restart only
+        # role 2, which then waits for a host that no longer exists.
+        self.session_passed = arguments.get("passed") is True
         self.cancel(arguments)
         return {"shutdown": True}
 

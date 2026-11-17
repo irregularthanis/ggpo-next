@@ -48,6 +48,7 @@ jobs:
     with:
       base: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
       force: ${{ github.event_name == 'workflow_dispatch' }}
+      area: infra
 
   terraform:
     needs: changes

@@ -19,6 +19,13 @@ add_test(NAME matchmaking_server_contract
 )
 set_tests_properties(matchmaking_server_contract PROPERTIES LABELS "portable;matchmaking")
 
+# CI area rules: which workflows a changed path must run.
+add_test(NAME ci_area_rules_contract
+    COMMAND ${PYTHON_EXECUTABLE} -m unittest discover -s .github/ci/tests
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+)
+set_tests_properties(ci_area_rules_contract PROPERTIES LABELS "portable;ci")
+
 # Prove the run-scoped Deployment record fails closed on stale/duplicate data.
 add_test(NAME cross_host_rendezvous_contract
     COMMAND ${PYTHON_EXECUTABLE}

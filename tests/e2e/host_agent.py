@@ -62,6 +62,9 @@ def main():
             raise TimeoutError(
                 f"paired role did not connect within {args.timeout} seconds"
             )
+        if not server.supervisor.session_passed:
+            # Fail with the session so "re-run failed jobs" restarts both roles.
+            raise SystemExit("the paired session did not pass; see role 2 for the cause")
     finally:
         timer.cancel()
         server.supervisor.cancel({})

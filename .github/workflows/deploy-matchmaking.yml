@@ -171,7 +171,9 @@ jobs:
         # always-free AMD micro shape. Any other error fails at once. A failed
         # launch leaves nothing in state, so each retry only creates the VM.
         run: |
-          set -uo pipefail
+          # GitHub runs this with bash -e; a failed attempt must not end the
+          # step, so turn errexit off and check each attempt's status.
+          set +e -uo pipefail
           for shape in VM.Standard.A1.Flex VM.Standard.E2.1.Micro; do
             for ad in 0 1 2; do
               echo "::group::apply with $shape in availability domain index $ad"

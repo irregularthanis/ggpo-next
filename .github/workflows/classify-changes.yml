@@ -11,6 +11,12 @@ on:
         type: boolean
         required: false
         default: false
+      area:
+        # The calling workflow's area (see .github/ci/affected_areas.py).
+        # Empty keeps the old meaning: any non-documentation change.
+        type: string
+        required: false
+        default: ""
     outputs:
       code:
         value: ${{ jobs.classify.outputs.code }}
@@ -24,16 +30,26 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Detect non-documentation changes
+      - name: Detect whether this workflow's area changed
         id: changes
         shell: bash
         env:
           BASE: ${{ inputs.base }}
           FORCE: ${{ inputs.force }}
+          AREA: ${{ inputs.area }}
+          # Only pull requests are narrowed; master pushes run everything, so
+          # a wrong rule can never let a broken platform reach master unseen.
+          EVENT: ${{ github.event_name }}
         run: |
           set -euo pipefail
           if [[ "$FORCE" = true || -z "$BASE" || "$BASE" =~ ^0+$ ]]; then
             echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ -n "$AREA" && "$EVENT" = pull_request ]]; then
+            code=$(python3 .github/ci/affected_areas.py --area "$AREA" --base "$BASE" --head "$GITHUB_SHA")
+            echo "Area $AREA affected: $code"
+            echo "code=$code" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           code=false
