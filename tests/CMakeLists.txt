@@ -32,6 +32,14 @@ add_test(NAME cross_host_rendezvous_contract
             ${CMAKE_CURRENT_SOURCE_DIR}/e2e/test_rendezvous.py
 )
 
+# Public multi-platform game harness: server parsing, peer command line and
+# the validator that decides whether the live match converged.
+add_test(NAME public_multiplatform_game_contract
+    COMMAND ${PYTHON_EXECUTABLE} -m unittest tests.e2e.test_public_multiplatform_game
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+)
+set_tests_properties(public_multiplatform_game_contract PROPERTIES LABELS "portable;matchmaking")
+
 set(GGPO_SMOKE_COMMON
     smoke/smoke_session.cpp
     smoke/smoke_session.h
