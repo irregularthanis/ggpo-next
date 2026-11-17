@@ -37,6 +37,7 @@
   - [Two-process loopback](#two-process-loopback)
   - [Negative peer contracts](#negative-peer-contracts)
   - [Cross-platform E2E](#cross-platform-e2e)
+  - [Public three-platform game](#public-three-platform-game)
   - [Matchmaking and hole punching](#matchmaking-and-hole-punching)
   - [CI gating and labels](#ci-gating-and-labels)
   - [Evidence and interpretation](#evidence-and-interpretation)

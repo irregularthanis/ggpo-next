@@ -746,6 +746,12 @@ changing GGPO's session.
 Operators can deploy or remove the reference server with the manual
 [`Deploy matchmaking server`](../.github/workflows/deploy-matchmaking.yml)
 workflow or follow the [Terraform instructions](../infra/terraform/README.md).
+After an automatic `master` deployment, CI resolves the DuckDNS name and runs
+one required three-player game across Linux, MinGW and Android through the OCI
+relay. The standalone
+[`Public three-platform game`](../.github/workflows/public-three-platform-game.yml)
+workflow defaults to optional mode and reports a neutral skip before building
+when no server is deployed; select required mode when absence must fail.
 Applications integrating GGPO do not inherit this service automatically: it is
 Vector War sample infrastructure, implemented outside GGPO's API and protocol.
 See [Matchmaking, relay and hole punching](architecture/Matchmaking.md) for the

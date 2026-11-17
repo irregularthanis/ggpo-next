@@ -90,7 +90,9 @@ flowchart TB
 A pass does not certify Internet matchmaking, NAT traversal, performance,
 spectators, more than two players, or arbitrary application determinism.
 Matchmaking, the relay and hole punching have their own tests
-([Matchmaking: testing](Matchmaking.md#testing)).
+([Matchmaking: testing](Matchmaking.md#testing)). The separate
+[public three-platform game](Testing.md#public-three-platform-game) joins
+Linux, MinGW and Android in one deployed forced-relay session.
 
 ### Scenario matrix
 
@@ -449,7 +451,9 @@ qualification when its cost becomes excessive.
 - Clean qualification injects no latency or packet loss.
 - It does not test NAT traversal, relay selection, matchmaking, encryption, or
   public-Internet reachability; see [Matchmaking: testing](Matchmaking.md#testing)
-  for the matchmaking, relay and hole-punching tests.
+  for controlled matchmaking, relay and hole-punching tests, and the
+  [public three-platform game](Testing.md#public-three-platform-game) for the
+  deployed DuckDNS/OCI path.
 - It is a correctness suite, not a throughput or latency benchmark.
 
 Seeded impairment is the next independent nightly tier; it is not part of the

@@ -391,6 +391,13 @@ Runner address discovery (ephemeral Tailscale nodes and a run-scoped GitHub
 Deployment record) is described in
 [Native cross-platform qualification](CrossPlatformTesting.md#address-discovery).
 
+After a production infrastructure apply, the
+[public three-platform workflow](../../.github/workflows/public-three-platform-game.yml)
+runs Linux, MinGW and Android headless peers in one three-player lobby through
+the DuckDNS name. It forces every pair through the OCI relay, then requires all
+three peers to reach frame 180 with equal state and rollback evidence. See the
+[testing contract](Testing.md#public-three-platform-game).
+
 ## Internet play
 
 Besides direct `IP:PORT` play, Vector War can join a lobby on the matchmaking

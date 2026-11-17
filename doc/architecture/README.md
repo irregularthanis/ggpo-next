@@ -22,7 +22,7 @@ protocol, and platform layer. Start with the [architecture overview](Overview.md
 | [Synchronization](Synchronization.md) | Input prediction, saved states, rollback, and confirmation |
 | [Networking](Networking.md) | UDP transport, peer protocol, messages, acknowledgements, and time sync |
 | [API reference](API.md) | Public types, callbacks, events, errors, and functions |
-| [Testing](Testing.md) | Layered ABI, core, platform, transport, package, and CI contracts |
+| [Testing](Testing.md) | Layered ABI, core, platform, transport, package, CI, and deployed three-platform game contracts |
 | [Native cross-platform qualification](CrossPlatformTesting.md) | Linux/Windows matrix, deterministic oracle, CI security, evidence, and cleanup |
 | [Vector War](VectorWar.md) | End-to-end walkthrough of the sample application's GGPO integration |
 | [Matchmaking, relay and hole punching](Matchmaking.md) | Vector War's internet play: lobby and relay server, protocol, path proxy, hole punching with relay fallback, deployment |
