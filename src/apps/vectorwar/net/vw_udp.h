@@ -32,7 +32,10 @@ private:
 };
 
 /* host is "a.b.c.d" or a name; resolved to the first IPv4 address. */
-bool ResolveIPv4(const char *host, uint16_t port, Endpoint *out);
+/* Resolve host to an IPv4 endpoint. On failure, reason (if given) receives
+ * the resolver's own explanation, e.g. "No address associated with hostname". */
+bool ResolveIPv4(const char *host, uint16_t port, Endpoint *out,
+                 char *reason = NULL, size_t reason_length = 0);
 /* The address this host would use to reach the Internet (no packets sent);
  * false when there is no route. */
 bool PrimaryLanAddress(Endpoint *out);

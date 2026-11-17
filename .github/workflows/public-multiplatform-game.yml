@@ -203,8 +203,16 @@ jobs:
           target: google_apis
           arch: x86_64
           disable-animations: true
-          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot
-          script: python tests/e2e/public_multiplatform_game.py role --server "${{ needs.preflight.outputs.server }}" --lobby "${{ needs.preflight.outputs.lobby }}" --platform android --executable "${{ matrix.executable }}" --output evidence/android
+          # The emulator copies the host's DNS servers, and on Ubuntu runners
+          # that is systemd-resolved's 127.0.0.53, which is unreachable from
+          # inside Android; give it real resolvers.
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -dns-server 1.1.1.1,8.8.8.8
+          # Fail fast, before the other platforms wait, if Android cannot
+          # resolve the server name. ping prints "PING host (ip)" once the name
+          # resolves, whether or not ICMP replies get through the emulator.
+          script: |
+            adb shell "ping -c 1 -W 2 $(echo '${{ needs.preflight.outputs.server }}' | cut -d: -f1)" 2>&1 | tee /dev/stderr | grep -q '^PING '
+            python tests/e2e/public_multiplatform_game.py role --server "${{ needs.preflight.outputs.server }}" --lobby "${{ needs.preflight.outputs.lobby }}" --platform android --executable "${{ matrix.executable }}" --output evidence/android
       - name: Upload peer evidence
         if: always()
         uses: actions/upload-artifact@v4

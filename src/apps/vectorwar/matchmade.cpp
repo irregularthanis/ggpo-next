@@ -90,8 +90,10 @@ MatchmadeStart(const MatchmadeArgs &args, GGPOPlayer players[GGPO_MAX_PLAYERS], 
       return NULL;
    }
    vwnet::Endpoint server;
-   if (!vwnet::ResolveIPv4(args.server, args.server_port, &server)) {
-      snprintf(error, error_length, "cannot resolve the matchmaking server %s", args.server);
+   char reason[128] = "";
+   if (!vwnet::ResolveIPv4(args.server, args.server_port, &server, reason, sizeof(reason))) {
+      snprintf(error, error_length, "cannot resolve the matchmaking server %s (%s)",
+               args.server, reason);
       vwnet::NetShutdown();
       return NULL;
    }
