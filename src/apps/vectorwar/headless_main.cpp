@@ -9,6 +9,8 @@
 
 #if defined(_WIN32)
 #include <winsock2.h>
+#include <windows.h>
+#include <mmsystem.h>
 #endif
 
 static bool
@@ -237,6 +239,12 @@ MatchmakingMain(int argc, char **argv)
 int
 main(int argc, char **argv)
 {
+#if defined(_WIN32)
+   /* Windows sleeps in ~15.6 ms ticks by default, so the 1 ms waits below
+    * would run about 15x slower than on other platforms. The process exit
+    * restores the system default. */
+   timeBeginPeriod(1);
+#endif
    if (argc >= 2 && strcmp(argv[1], "--matchmaking") == 0) {
       return MatchmakingMain(argc, argv);
    }
