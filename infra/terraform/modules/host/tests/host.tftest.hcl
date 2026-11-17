@@ -76,6 +76,15 @@ run "vm_stays_inside_the_always_free_allowance" {
   }
 }
 
+run "user_data_is_sensitive_so_plans_never_print_secrets" {
+  command = plan
+
+  assert {
+    condition     = issensitive(oci_core_instance.server.metadata["user_data"])
+    error_message = "user_data carries the DuckDNS token and must stay sensitive in plans."
+  }
+}
+
 run "cloud_init_runs_the_pinned_image_on_the_host_network" {
   command = plan
 

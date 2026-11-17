@@ -30,8 +30,8 @@ Plan and decisions: [internet play technical plan](../../doc/planning/2026-11-11
 4. **DuckDNS:** sign in at duckdns.org, create a subdomain, and export your
    token as `TF_VAR_duckdns_token`.
 5. **Variables:** copy `envs/prod/terraform.tfvars.example` to
-   `terraform.tfvars` and fill it in. `container_image` is the digest printed in
-   the summary of the latest `Infrastructure` workflow run on `master`.
+   `terraform.tfvars` and fill it in. `container_image` defaults to the pinned
+   server image (see [updating the server image](#updating-the-server-image)).
 
 `backend.hcl`, `terraform.tfvars` and all state files are git-ignored. Never
 commit them.
@@ -69,9 +69,9 @@ does the same from the Actions tab: **Run workflow** and pick an action.
 The same deployment workflow is reusable: the Infrastructure workflow calls
 `plan` for repository-owner pull requests and `apply` after matching changes
 merge to `master`. Direct manual runs expose `plan`, `apply` and `destroy`.
-Runs are serialized, so operations never race on the state. By default it
-deploys the current `:latest` image pinned by its digest; the
-`container_image` input overrides that. The GHCR package must be public,
+Runs are serialized, so operations never race on the state. It deploys the
+image pinned in `envs/prod/variables.tf`; the `container_image` input overrides
+that for one run. The GHCR package must be public,
 because the VM pulls it without credentials.
 
 Pull-request plans use a non-deployable placeholder digest. The image lane
@@ -122,6 +122,20 @@ destroy locally, or the other way round.
 The job still targets the `matchmaking` GitHub environment as a deployment
 boundary. It does not require environment-scoped values; optionally configure
 required reviewers there to approve each deployment.
+
+## Updating the server image
+
+CI publishes a new image to GHCR on every Infrastructure run on `master`, but
+the server only runs the digest pinned as the `container_image` default in
+[`envs/prod/variables.tf`](envs/prod/variables.tf). Republished images never
+redeploy by themselves. To update the server:
+
+1. Copy the digest from the "Record the digest to deploy" summary of an
+   Infrastructure run on `master`.
+2. Change the default in `envs/prod/variables.tf` and merge.
+
+The merge's apply then replaces the VM: a new public IP and a short outage
+while DuckDNS follows, and any match in progress ends.
 
 ## Tests
 

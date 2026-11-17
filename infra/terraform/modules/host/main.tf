@@ -164,6 +164,8 @@ resource "oci_core_instance" "server" {
 
   metadata = {
     ssh_authorized_keys = var.ssh_public_key
-    user_data           = data.cloudinit_config.server.rendered
+    # User data carries secrets (the DuckDNS token). Sensitive keeps plans,
+    # which would otherwise print it in base64, from leaking it into CI logs.
+    user_data = sensitive(data.cloudinit_config.server.rendered)
   }
 }
