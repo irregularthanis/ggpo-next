@@ -15,6 +15,9 @@
   - [Windows with MinGW-w64](#windows-with-mingw-w64)
     - [MinGW: peer build](#mingw-peer-build)
     - [MinGW: execution](#mingw-execution)
+  - [macOS](#macos)
+    - [macOS: peer build](#macos-peer-build)
+    - [macOS: execution](#macos-execution)
   - [Android](#android)
     - [Android: peer build](#android-peer-build)
     - [Android: execution](#android-execution)
@@ -22,6 +25,7 @@
   - [Why each scenario has two jobs](#why-each-scenario-has-two-jobs)
   - [Components](#components)
   - [Control and data boundaries](#control-and-data-boundaries)
+    - [Address discovery](#address-discovery)
   - [Deterministic state contract](#deterministic-state-contract)
   - [Completion protocol](#completion-protocol)
   - [Security model](#security-model)
@@ -35,7 +39,7 @@
 ## Overview
 
 The native E2E suite proves that GGPO peers built from one source revision for
-Linux, Windows (MSVC and MinGW) and Android can establish a real UDP session
+Linux, Windows (MSVC and MinGW), Android and macOS can establish a real UDP session
 between two hosts, exchange deterministic inputs, converge after prediction and
 rollback, and close cleanly.
 
@@ -60,11 +64,12 @@ flowchart TB
         BW["Windows MSVC<br/>windows-2022<br/>static x64"]
         BM["MinGW-w64<br/>windows-2022<br/>static x64"]
         BA["Android NDK<br/>static arm64"]
+        BMac["macOS<br/>macos-15<br/>static universal"]
     end
 
     subgraph COMMON["Common to all<br/>platforms"]
         direction TB
-        MATRIX["44 role jobs<br/>22 ordered<br/>scenarios<br/>generic +<br/>Vector War"]
+        MATRIX["68 role jobs<br/>34 ordered<br/>scenarios<br/>generic +<br/>Vector War"]
         NET["Ephemeral<br/>tailnet<br/>HMAC control,<br/>GGPO over UDP"]
         ORACLE["Independent<br/>canonical oracle"]
         MAN["Fail-closed<br/>complete<br/>manifest"]
@@ -79,7 +84,7 @@ flowchart TB
 | Contract | How it is checked | Why it matters |
 | --- | --- | --- |
 | Source identity | Both native bundles come from the same workflow checkout | Prevents comparing unrelated revisions |
-| Native execution | Each platform runs its own native binary on its own runner (ELF, PE, Android NDK) | Wine or cross-compiled peers cannot substitute for native interoperability |
+| Native execution | Each platform runs its own native binary on its own runner (ELF, PE, Android NDK, Mach-O) | Wine or cross-compiled peers cannot substitute for native interoperability |
 | GGPO transport | Peers exchange production GGPO messages over UDP | Exercises platform sockets and the peer protocol |
 | Role symmetry | Each mixed-platform pair runs in both player orders | Detects behavior tied to host role |
 | Deterministic convergence | Both peers match an independent canonical oracle | Detects prediction, rollback, serialization, or input divergence |
@@ -152,7 +157,7 @@ The `Build native Windows peer` job compiles `ggpo_windows_peer_smoke` and
 
 Windows roles run on `windows-2022`. Each Windows job opens only the E2E ports
 (TCP `24871`, UDP `24872–24873`) in the firewall and removes those rules with
-`if: always()`. MSVC Windows plays Linux and Android in both orders with both
+`if: always()`. MSVC Windows plays Linux, Android and macOS in both orders with both
 fixtures, and meets MinGW as player 2 in the generic fixture.
 
 ### Windows with MinGW-w64

@@ -41,6 +41,7 @@ The GGPO Network Library Developer Guide is for developers who are integrating t
 - [Common to all platforms](#common-to-all-platforms)
   - [SDK contents](#sdk-contents)
   - [Link GGPO into an application](#link-ggpo-into-an-application)
+    - [Static versus dynamic on each platform](#static-versus-dynamic-on-each-platform)
   - [Linking without CMake](#linking-without-cmake)
   - [Build options](#build-options)
   - [Floating-point determinism](#floating-point-determinism)
@@ -62,6 +63,8 @@ The GGPO Network Library Developer Guide is for developers who are integrating t
   - [Define a Fixed Time Quanta for Advancing Your Game State](#define-a-fixed-time-quanta-for-advancing-your-game-state)
   - [Separate Updating Game State from Rendering in Your Game Loop](#separate-updating-game-state-from-rendering-in-your-game-loop)
   - [Make Sure Your Game State Advances Deterministically](#make-sure-your-game-state-advances-deterministically)
+    - [Beware of Random Number Generators](#beware-of-random-number-generators)
+    - [Beware of External Time Sources (aka. Wall clock time)](#beware-of-external-time-sources-aka-wall-clock-time)
   - [Beware of Dangling References](#beware-of-dangling-references)
   - [Beware of Static Variables or Other Hidden State](#beware-of-static-variables-or-other-hidden-state)
   - [Use the GGPO SyncTest Feature.  A Lot.](#use-the-ggpo-synctest-feature--a-lot)
@@ -1061,13 +1064,13 @@ Another reason to set the frame delay high is to eliminate the glitching that ca
 
 ## Sample Application
 
-The Vector War application in the source directory contains a simple application which uses GGPO to synchronize the two clients.  The command line arguments are:
-
-```
-vectorwar.exe  <localport>  <num players> ('local' | <remote ip>:<remote port>) for each player
-```
-
-See the .cmd files in the bin directory for examples on how to start 2, 3, and 4 player games.
+Vector War, in [`src/apps/vectorwar`](../src/apps/vectorwar), is a small game
+that uses GGPO to keep 2 to 4 players in sync on Windows, Linux, Android and
+macOS. Downloads, the start screen, matchmaking and the command line are in
+[Run the standalone Vector War sample](#run-the-standalone-vector-war-sample)
+and [Play Vector War over the Internet](#play-vector-war-over-the-internet);
+how it integrates GGPO is walked through in
+[Vector War](architecture/VectorWar.md).
 
 ## Best Practices and Troubleshooting
 

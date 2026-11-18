@@ -103,11 +103,11 @@ integration guidance is in the [Developer Guide](doc/DeveloperGuide.md).
 
 ## Install or build the SDK
 
-The SDK supports Windows (MSVC and MinGW-w64, x64 and x86), Linux, and Android
-(arm64-v8a, armeabi-v7a, and x86_64). Vector War runs on Windows (Win32/GDI),
-Linux (SDL2), Android (SDL2/touch), and macOS (SDL2). The SDK also supports
-macOS 11 and later as one universal (arm64 + x86_64) library, tested on macOS
-15 and 26. iOS and other unsupported SDK targets fail
+The SDK supports Windows (MSVC and MinGW-w64, x64 and x86), Linux, Android
+(arm64-v8a, armeabi-v7a, and x86_64) and macOS 11 and later (one universal
+arm64 + x86_64 library, tested on macOS 15 and 26). Vector War runs on Windows
+(Win32/GDI), Linux (SDL2), Android (SDL2/touch), and macOS (SDL2). iOS and
+other unsupported SDK targets fail
 configuration explicitly.
 
 Choose either:

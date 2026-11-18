@@ -17,6 +17,9 @@
 - [10. Shutdown](#10-shutdown)
 - [Headless application contract](#headless-application-contract)
 - [Internet play](#internet-play)
+  - [Start screen](#start-screen)
+  - [Legend](#legend)
+- [Interactive platform frontends](#interactive-platform-frontends)
 - [End-to-end two-player example](#end-to-end-two-player-example)
 - [What the sample demonstrates](#what-the-sample-demonstrates)
 - [Sample limitations](#sample-limitations)
@@ -26,7 +29,7 @@
 Vector War is GGPO's reference game integration under
 [`src/apps/vectorwar`](../../src/apps/vectorwar). It is a small deterministic
 four-ship simulation with a portable application core and Windows (Win32/GDI),
-Linux (SDL2), and Android (SDL2/touch) hosts. It demonstrates how
+Linux (SDL2), Android (SDL2/touch) and macOS (SDL2, `VectorWar.app`) hosts. It demonstrates how
 an application owns game state and presentation while GGPO owns input prediction,
 network synchronization, saved checkpoints, and rollback scheduling.
 
@@ -409,8 +412,8 @@ relay as a live fallback. GGPO is unchanged: a path proxy owns the public
 socket and GGPO sees each remote player at a loopback endpoint. The design,
 protocol and safety rules are in [Matchmaking](Matchmaking.md).
 
-Every frontend accepts it on the command line (Windows, Linux and Android,
-where Android passes the same words through the launcher's arguments):
+Every frontend accepts it on the command line (Windows, Linux, macOS and
+Android, where Android passes the same words through the launcher's arguments):
 
 ```text
 VectorWar --matchmaking HOST[:PORT] PLAYERS [LOBBY] LOCAL_PORT [--relay-only]
@@ -567,8 +570,10 @@ For frame 120:
 
 ## Sample limitations
 
-- Interactive hosts are qualified on Windows and Linux. Other desktop and
-  mobile frontends remain unsupported.
+- Interactive hosts are qualified on Windows (Win32/GDI), Linux and macOS
+  (SDL2) and Android (SDL2 with touch controls); CI runs them on dummy or
+  hidden displays, and real displays are checked by hand. iOS and other
+  frontends are unsupported.
 - The simulation retains native `double` internally, but canonical state uses
   explicit field encoding and the qualified 180-frame trace has a fixed oracle.
   Other traces still require their own cross-platform qualification.
@@ -576,8 +581,10 @@ For frame 120:
   dynamic containers.
 - The sample uses a full peer mesh rather than an authoritative server; the
   matchmaking server only groups and relays players.
-- Automated tests cover the application core, native GUI lifecycle, and two
-  native processes exchanging scripted inputs over loopback UDP.
+- Automated tests cover the application core, native GUI lifecycle, two
+  native processes over loopback UDP, every ordered platform pair across two
+  hosts, and a four-platform match through the deployed server; see
+  [Testing](Testing.md).
 
 Continue with the general [Runtime](Runtime.md), [Synchronization](Synchronization.md),
 and [API reference](API.md).
