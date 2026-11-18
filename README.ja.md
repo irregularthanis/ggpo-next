@@ -1,6 +1,11 @@
 ![](doc/images/ggpo_header.png)
 
-&nbsp; _[![Appveyor build status](https://img.shields.io/appveyor/ci/pond3r/ggpo/master.svg?logo=appveyor)](https://ci.appveyor.com/project/pond3r/ggpo/branch/master)_
+[![Linux](https://github.com/irregularthanis/ggpo-next/actions/workflows/linux-compatibility.yml/badge.svg?branch=master)](https://github.com/irregularthanis/ggpo-next/actions/workflows/linux-compatibility.yml)
+[![Windows](https://github.com/irregularthanis/ggpo-next/actions/workflows/windows-compatibility.yml/badge.svg?branch=master)](https://github.com/irregularthanis/ggpo-next/actions/workflows/windows-compatibility.yml)
+[![MinGW](https://github.com/irregularthanis/ggpo-next/actions/workflows/mingw-compatibility.yml/badge.svg?branch=master)](https://github.com/irregularthanis/ggpo-next/actions/workflows/mingw-compatibility.yml)
+[![Android](https://github.com/irregularthanis/ggpo-next/actions/workflows/android-compatibility.yml/badge.svg?branch=master)](https://github.com/irregularthanis/ggpo-next/actions/workflows/android-compatibility.yml)
+[![macOS](https://github.com/irregularthanis/ggpo-next/actions/workflows/macos-compatibility.yml/badge.svg?branch=master)](https://github.com/irregularthanis/ggpo-next/actions/workflows/macos-compatibility.yml)
+[![Cross-platform E2E](https://github.com/irregularthanis/ggpo-next/actions/workflows/cross-platform-e2e.yml/badge.svg?branch=master)](https://github.com/irregularthanis/ggpo-next/actions/workflows/cross-platform-e2e.yml)
 
 ## GGPOとは
 
@@ -20,13 +25,13 @@ macOS版Vector War（`.dmg`）は署名されていないため、初回起動�
 
 ## サンプルアプリケーション
 
-ソースディレクトリ内のVector Warには、GGPOを使った2つのクライアントを同期する単純なアプリケーションが含まれています。コマンドライン引数は以下の通りです。
+[`src/apps/vectorwar`](src/apps/vectorwar)のVector Warは、GGPOを使って2～4人のプレイヤーを同期する小さなゲームです。引数なしで起動するとスタート画面が表示され、インターネット経由のマッチメイキング（リリース版では公開サーバーが入力済み）か、アドレス指定による直接対戦を選べます。コマンドラインでの直接対戦の引数は以下の通りです。
 
 ```
-vectorwar.exe  <localport>  <num players> ('local' | <remote ip>:<remote port>) for each player
+VectorWar <localport> <num players> ('local' | <remote ip>:<remote port>) for each player
 ```
 
-2～4プレイヤーでのゲーム開始方法の例については、binディレクトリにある.cmdファイルを参照してください。
+1台のWindowsマシンで2～4プレイヤーのゲームを開始する例については、[`bin`](bin)ディレクトリにある.cmdファイルを参照してください。各プラットフォームのダウンロードと詳細は、英語版の[開発者ガイド](doc/DeveloperGuide.md#run-the-standalone-vector-war-sample)を参照してください。
 
 ## ライセンス
 

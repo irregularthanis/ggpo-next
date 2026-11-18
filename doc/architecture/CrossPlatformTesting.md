@@ -456,7 +456,8 @@ Required setup:
 
 For ordinary local validation, use CTest instead; the cross-host workflow
 depends on GitHub Deployments, native hosted runners, and ephemeral Tailscale
-nodes. See [CI gating and labels](Testing.md#ci-gating-and-labels).
+nodes. See [CI gating and labels](Testing.md#ci-gating-and-labels) and the
+workflow's job graph in [CI workflows](CIWorkflows.md#native-cross-platform-e2e).
 
 ### Adding another platform
 
@@ -465,8 +466,8 @@ two-process loopback, and package/consumer checks described in
 [Portability](Portability.md#follow-up-platform-contract). Only then should it
 enter this ordered interoperability matrix.
 
-macOS can use a native GitHub-hosted runner and the same ephemeral Tailscale
-control plane. A future Android physical-device topology must separately prove
+macOS joined this way, with its own capped matrix job (see
+[macOS](#macos)). A future Android physical-device topology must separately prove
 that the device itself reaches the tailnet; a host proxy must be reported as a
 distinct topology.
 
@@ -476,8 +477,9 @@ qualification when its cost becomes excessive.
 
 ### Limits
 
-- The matrix covers native Ubuntu, Windows (MSVC and MinGW), and Android-NDK peers on hosted
-  runners, not SteamOS, macOS, consoles, simulators, or physical devices.
+- The matrix covers native Ubuntu, Windows (MSVC and MinGW), Android-NDK and
+  macOS peers on hosted runners, not SteamOS, consoles, simulators, or
+  physical devices.
 - It uses two players and does not cover spectators or disconnect/resume.
 - Clean qualification injects no latency or packet loss.
 - It does not test NAT traversal, relay selection, matchmaking, encryption, or

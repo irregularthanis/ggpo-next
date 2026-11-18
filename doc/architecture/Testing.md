@@ -959,6 +959,8 @@ Design and safety rules: [Matchmaking](Matchmaking.md).
 
 ### CI gating and labels
 
+Every workflow's triggers and job graph are in [CI workflows](CIWorkflows.md).
+
 [`classify-changes.yml`](../../.github/workflows/classify-changes.yml) keeps
 documentation-only changes (`doc/**`, `docs/**`, and Markdown files) on a
 lightweight path. Compatibility workflows still report their check state, but

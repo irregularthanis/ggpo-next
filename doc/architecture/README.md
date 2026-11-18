@@ -17,16 +17,17 @@ protocol, and platform layer. Start with the [architecture overview](Overview.md
 | Document | Scope |
 | --- | --- |
 | [Overview](Overview.md) | Project boundaries and the build/runtime component map |
-| [Build](Build.md) | CMake targets, sources, artifacts, and current platform constraints |
+| [Build](Build.md) | CMake targets, sources, artifacts, release packages, and platform status |
 | [Runtime](Runtime.md) | Session lifecycle, frame loop, callbacks, and backend selection |
 | [Synchronization](Synchronization.md) | Input prediction, saved states, rollback, and confirmation |
 | [Networking](Networking.md) | UDP transport, peer protocol, messages, acknowledgements, and time sync |
 | [API reference](API.md) | Public types, callbacks, events, errors, and functions |
 | [Testing](Testing.md) | Layered ABI, core, platform, transport, package, CI, and deployed multi-platform game contracts |
-| [Native cross-platform qualification](CrossPlatformTesting.md) | Linux/Windows matrix, deterministic oracle, CI security, evidence, and cleanup |
+| [Native cross-platform qualification](CrossPlatformTesting.md) | Every ordered platform pair over a real network: matrix, deterministic oracle, CI security, evidence, and cleanup |
+| [CI workflows](CIWorkflows.md) | Every GitHub Actions workflow: triggers, job graphs, change routing, required checks, runners and manual runs |
 | [Vector War](VectorWar.md) | End-to-end walkthrough of the sample application's GGPO integration |
 | [Matchmaking, relay and hole punching](Matchmaking.md) | Vector War's internet play: lobby and relay server, protocol, path proxy, hole punching with relay fallback, deployment |
-| [Portability](Portability.md) | Platform boundaries relevant to a multiplatform port |
+| [Portability](Portability.md) | The platform adapter boundary, per-platform differences, and adding a platform |
 
 ## Source of truth
 

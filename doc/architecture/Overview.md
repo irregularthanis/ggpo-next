@@ -80,6 +80,7 @@ does not create a background networking thread.
 | Poll loop | Invokes loop, periodic, and message sinks until the computed deadline | [`poll.h`](../../src/lib/ggpo/poll.h), [`poll.cpp`](../../src/lib/ggpo/poll.cpp) |
 | Platform contract | Defines clock, wait, configuration, diagnostics, filesystem, and UDP services | [`platform.h`](../../src/lib/ggpo/platform.h) |
 | Windows platform layer | Implements the contract with Win32 and Winsock | [`platform_windows.cpp`](../../src/lib/ggpo/platform_windows.cpp), [`Platform.cmake`](../../src/platform/windows/Platform.cmake) |
+| POSIX platform layer | Implements the contract for Linux, Android and macOS | [`platform_posix.cpp`](../../src/lib/ggpo/platform_posix.cpp), per-platform `Platform.cmake` in [`src/platform`](../../src/platform) |
 | Sample application | Demonstrates callbacks, frame submission, rendering separation, spectators, and statistics | [`src/apps/vectorwar`](../../src/apps/vectorwar) |
 
 For the complete application flow, see the [Vector War walkthrough](VectorWar.md).
