@@ -44,8 +44,9 @@ jobs:
           cmake --version
 
       - name: Configure
-        # Python is found on PATH at test time, so the tree runs unchanged on
-        # runners whose Python lives elsewhere.
+        # A STRING (not FILEPATH) Python stays the bare name python3, found on
+        # PATH at build and test time, so the tree runs unchanged on runners
+        # whose Python lives elsewhere.
         run: |
           cmake -S . -B "$BUILD_DIR" \
             -DCMAKE_BUILD_TYPE=Release \
@@ -54,7 +55,7 @@ jobs:
             -DCMAKE_INSTALL_PREFIX="$PWD/$BUILD_DIR/install" \
             -DGGPO_BUILD_VECTORWAR_GUI=OFF \
             -DGGPO_RUN_TESTS_ON_BUILD=OFF \
-            -DPYTHON_EXECUTABLE=python3
+            -DPYTHON_EXECUTABLE:STRING=python3
 
       - name: Build and install
         run: |
