@@ -1,6 +1,6 @@
 # PROGRESS — macOS support
 
-Status: Ready to start
+Status: In progress (M1 done)
 
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
@@ -17,16 +17,16 @@ Status: Ready to start
 
 ### M1: macOS library and CI
 
-- [ ] M1-T01: `src/platform/apple/Platform.cmake`, selected for Darwin.
-- [ ] M1-T02: `-ffp-contract=off` for Apple targets.
-- [ ] M1-T03: Universal static and shared builds for macOS 11;
+- [x] M1-T01: `src/platform/apple/Platform.cmake`, selected for Darwin.
+- [x] M1-T02: `-ffp-contract=off` for Apple targets.
+- [x] M1-T03: Universal static and shared builds for macOS 11;
   `platform_posix.cpp` compiles with `-Werror=unguarded-availability-new`.
-- [ ] M1-T04: Minimum-version audit (`minos 11.0`) and export audit.
-- [ ] M1-T05: CTest passes on macOS 15 and 26, Apple Silicon and Intel,
+- [x] M1-T04: Minimum-version audit (`minos 11.0`) and export audit.
+- [x] M1-T05: CTest passes on macOS 15 and 26, Apple Silicon and Intel,
   including `vectorwar_state_contract`.
-- [ ] M1-T06: `macos-compatibility.yml` with its aggregate check, Xcode
-  pinned.
-- [ ] M1-T07: `macos` area in `affected_areas.py`, with tests.
+- [x] M1-T06: `macos-compatibility.yml` with its aggregate check, Xcode
+  16.4 pinned.
+- [x] M1-T07: `macos` area in `affected_areas.py`, with tests.
 
 ### M2: Release package (depends: M1)
 
@@ -57,3 +57,4 @@ Status: Ready to start
 ## Log
 
 - 2026-11-17: Plan drafted for macOS; iOS deferred. D1–D3 decided; D2 revised the same day to a macOS 11 baseline, tested on 15 and 26.
+- 2026-11-18: M1 done. Universal build on macos-15 (Xcode 16.4): arm64 and x86_64 slices, minos 11.0 in libGGPO.dylib and libGGPO.a. 36/36 CTest tests pass on macOS 15 and 26, Apple Silicon and Intel, including `vectorwar_state_contract` and `macos_exports`. Every other workflow stayed green.

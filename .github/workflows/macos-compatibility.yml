@@ -17,6 +17,7 @@ env:
   # build-time checks (availability warnings as errors, the minos audit)
   # cover them; tests run on macOS 15 and 26.
   MACOS_DEPLOYMENT_TARGET: "11.0"
+  XCODE_VERSION: "16.4"
   BUILD_DIR: build/macos
 
 jobs:
@@ -37,8 +38,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Record the toolchain
+      - name: Select and record the toolchain
+        # Pinned so a runner image update cannot silently change the compiler
+        # or drop the macOS 11 deployment target; bump deliberately.
         run: |
+          sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
           sw_vers
           xcodebuild -version
           cmake --version
