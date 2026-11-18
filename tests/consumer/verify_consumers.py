@@ -6,6 +6,8 @@ configures tests/consumer, builds the C11 and C++98 programs, runs them, and
 proves the binary's real dependency on the GGPO shared library:
 
 - Linux: readelf -d must (shared) or must not (static) list libGGPO.so.
+- macOS: otool -L must (shared) or must not (static) list libGGPO.dylib; shared
+  programs find it through the build-tree rpath CMake records.
 - Windows: the static programs must run with the SDK's bin directory removed
   from PATH; shared programs run with it added.
 - Android (GGPO_TEST_LAUNCHER set): programs run on the device through the adb
@@ -24,6 +26,7 @@ import sys
 from pathlib import Path
 
 WINDOWS = platform.system() == "Windows"
+MACOS = platform.system() == "Darwin"
 PROGRAMS = ("ggpo_installed_c11", "ggpo_installed_cpp98")
 
 
@@ -63,6 +66,10 @@ def executable(build, config, name):
 
 
 def needs_shared_ggpo(program):
+    if MACOS:
+        libraries = subprocess.run(["otool", "-L", str(program)], check=True,
+                                   text=True, stdout=subprocess.PIPE).stdout
+        return re.search(r"libGGPO(\.\d+)*\.dylib", libraries) is not None
     dynamic = subprocess.run(["readelf", "-d", str(program)], check=True,
                              text=True, stdout=subprocess.PIPE).stdout
     return re.search(r"NEEDED.*\[libGGPO\.so", dynamic) is not None
@@ -90,6 +97,8 @@ def run_program(program, prefix, expect):
         if expect == "shared":
             paths.insert(0, str(prefix / "bin"))
         environment["PATH"] = os.pathsep.join(paths)
+    elif MACOS:
+        environment.pop("DYLD_LIBRARY_PATH", None)
     elif expect == "shared":
         environment["LD_LIBRARY_PATH"] = str(prefix / "lib")
     else:

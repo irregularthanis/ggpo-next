@@ -290,6 +290,58 @@ jobs:
           path: build/ggpo-*-android.tar.gz
           if-no-files-found: error
 
+  package-macos:
+    # One universal (arm64 + x86_64) SDK for macOS 11 and later. Unsigned:
+    # a library needs no notarization; the consuming app signs it.
+    name: macOS universal SDK
+    runs-on: macos-15
+    env:
+      XCODE_VERSION: "16.4"
+      MACOS_DEPLOYMENT_TARGET: "11.0"
+    steps:
+      - name: Check out the tagged source
+        uses: actions/checkout@v4
+      - name: Build, test, install and audit the SDK
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+          if [ "${GITHUB_EVENT_NAME}" = push ]; then version="${GITHUB_REF_NAME#v}"; else version=dev; fi
+          name="ggpo-${version}-macos-universal"
+          stage="$PWD/build/stage/$name"
+          cmake -S . -B build/macos \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET="$MACOS_DEPLOYMENT_TARGET" \
+            -DGGPO_BUILD_VECTORWAR=OFF \
+            -DCMAKE_INSTALL_PREFIX="$stage"
+          # The default build runs CTest on this arm64 host.
+          cmake --build build/macos --parallel 3
+          cmake --install build/macos
+          python3 scripts/macos/audit_binaries.py "$stage" \
+            --arch arm64 --arch x86_64 --minos "$MACOS_DEPLOYMENT_TARGET"
+          cp LICENSE "$stage/"
+          tar -C build/stage -czf "build/$name.tar.gz" "$name"
+      - name: Validate the extracted release archive
+        run: |
+          set -euo pipefail
+          archive=$(find build -maxdepth 1 -name 'ggpo-*-macos-universal.tar.gz' -print -quit)
+          mkdir -p build/extracted
+          tar -C build/extracted -xzf "$archive"
+          root=$(find build/extracted -mindepth 1 -maxdepth 1 -type d -print -quit)
+          for file in include/ggponet.h lib/libGGPO.dylib lib/libGGPO.a lib/cmake/GGPO/GGPOConfig.cmake LICENSE; do
+            test -e "$root/$file" || { echo "macOS SDK is missing $file" >&2; exit 1; }
+          done
+          python3 tests/consumer/verify_consumers.py \
+            --prefix "$root" --work build/macos-consumers --jobs 3 \
+            --cmake-arg "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64" \
+            --cmake-arg "-DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_DEPLOYMENT_TARGET"
+      - name: Upload packaged SDK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-package-macos-universal
+          path: build/ggpo-*-macos-universal.tar.gz
+          if-no-files-found: error
+
   package-vectorwar-android:
     name: Android Vector War APK
     runs-on: ubuntu-24.04
@@ -412,7 +464,7 @@ jobs:
   publish-release:
     name: Publish release assets
     if: github.event_name == 'push'
-    needs: [package-windows, package-windows-mingw, package-linux, package-android, package-vectorwar-linux, package-vectorwar-windows, package-vectorwar-android]
+    needs: [package-windows, package-windows-mingw, package-linux, package-android, package-macos, package-vectorwar-linux, package-vectorwar-windows, package-vectorwar-android]
     runs-on: ubuntu-24.04
     permissions:
       contents: write

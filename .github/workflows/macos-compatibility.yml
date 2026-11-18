@@ -71,6 +71,16 @@ jobs:
           python3 scripts/macos/audit_binaries.py "$BUILD_DIR/install" \
             --arch arm64 --arch x86_64 --minos "$MACOS_DEPLOYMENT_TARGET"
 
+      - name: Build and run installed-SDK consumers
+        # C11 and C++98 programs link the installed SDK through
+        # find_package(GGPO): default, static and shared, each universal.
+        run: |
+          python3 tests/consumer/verify_consumers.py \
+            --prefix "$BUILD_DIR/install" --work build/macos-consumers \
+            --jobs 3 --report build/macos-consumers/report.json \
+            --cmake-arg "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64" \
+            --cmake-arg "-DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_DEPLOYMENT_TARGET"
+
       - name: Pack the build tree
         # A tarball keeps permissions and symlinks; the test runners unpack
         # it at the same absolute path, which CTest's files refer to.
