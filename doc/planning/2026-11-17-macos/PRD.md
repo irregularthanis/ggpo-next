@@ -61,12 +61,12 @@ settings, CI and packaging. Tests run natively, as on Linux.
 ### Packaging and release
 
 - Each release adds:
-  - `ggpo-<version>-macos.tar.gz`: installed CMake SDK with universal static
-    and shared libraries;
-  - `VectorWar-<version>-macos.zip`: the Vector War app bundle with SDL2
-    embedded.
-- Every archive is extracted and checked in CI before upload, as the existing
-  packages are.
+  - `ggpo-<version>-macos-universal.tar.gz`: installed CMake SDK with
+    universal static and shared libraries;
+  - `ggpo-<version>-vectorwar-macos.dmg`: an unsigned disk image with the
+    Vector War app (SDL2 linked in) and an Applications link.
+- Every package is extracted or mounted and checked in CI before upload, as
+  the existing packages are.
 - Packages are unsigned (D1). Players open Vector War the first time with
   right-click → Open; the SDK works unchanged.
 
