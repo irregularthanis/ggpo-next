@@ -56,15 +56,19 @@ int main()
    VwLegendInitDirect(&legend, 4, 1);
    legend.platforms[0] = kVwPlatformWindows;
    legend.platforms[1] = kVwPlatformAndroid;
-   legend.platforms[2] = kVwPlatformMacOS;
+   legend.platforms[2] = kVwPlatformLinux;
    legend.platforms[3] = 9;  // a future platform still renders
    legend.routes[1] = kVwRouteDirect;
    legend.routes[2] = kVwRouteRelay;
    legend.routes[3] = kVwRouteRelay;
    ExpectRow(legend, 0, "P1 Windows (you)");
    ExpectRow(legend, 1, "P2 Android direct");
-   ExpectRow(legend, 2, "P3 macOS relay");
+   ExpectRow(legend, 2, "P3 Linux relay");
    ExpectRow(legend, 3, "P4 unknown relay");
+
+   // Every named platform renders its own name.
+   legend.platforms[3] = kVwPlatformMacOS;
+   ExpectRow(legend, 3, "P4 macOS relay");
 
    // Out-of-range sizes clamp; a spectator has no local row.
    VwLegendInitDirect(&legend, 9, 0);
