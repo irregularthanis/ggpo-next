@@ -606,7 +606,7 @@ embeds it signs it along with everything else in its bundle.
 ```text
 ggpo-<version>-macos-universal/
 ├── include/ggponet.h
-├── lib/libGGPO.dylib, libGGPO.0.dylib, libGGPO.a
+├── lib/libGGPO.a, libGGPO.<version>.dylib (+ libGGPO.0.dylib, libGGPO.dylib links)
 ├── lib/cmake/GGPO/
 └── LICENSE
 ```
