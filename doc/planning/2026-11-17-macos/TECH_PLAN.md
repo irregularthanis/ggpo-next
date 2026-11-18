@@ -84,8 +84,9 @@ Facts from `ee465d1` that constrain the design:
 ## Vector War
 
 - The SDL2 frontend builds as a `MACOSX_BUNDLE` app (`VectorWar.app`) with an
-  `Info.plist` and icon. SDL2 comes from Homebrew in CI builds and is built
-  from source as a universal framework for the release package.
+  `Info.plist`. SDL2 is built from pinned, checksummed source as a static
+  universal macOS 11 library for CI and release alike; Homebrew's SDL2 is
+  single-architecture and targets the build host's macOS.
 - `VectorWarHeadless` builds as a plain command-line tool for tests.
 - macOS asks the player to allow incoming network connections the first time
   an unsigned app listens; direct and hole-punched play need that, relay play
@@ -146,9 +147,9 @@ New jobs in `release-packages.yml` on `macos-15`:
 - `package-macos`: universal Release build, `cmake --install` to a stage,
   export audit, `tar.gz`; validate by extracting and building a small consumer
   with `find_package(GGPO)` against both the static and the shared library.
-- `package-vectorwar-macos`: `VectorWar.app` with SDL2 embedded in
-  `Contents/Frameworks` (`@rpath`), zipped with `ditto -c -k --keepParent`;
-  validate by extracting and launching the headless peer from the bundle.
+- `package-vectorwar-macos`: `VectorWar.app` with SDL2 linked statically,
+  on an unsigned `.dmg` with an Applications link; validate by mounting it,
+  auditing the binary and running `--frontend-smoke` from the image.
 - Unsigned (D1): no signing or notarization. Release notes say to open the
   app the first time with right-click → Open.
 

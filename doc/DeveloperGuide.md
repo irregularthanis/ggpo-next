@@ -810,6 +810,7 @@ Release pages also attach Vector War builds, independent of the SDK linkage:
 | Windows x64 / x86 | `vectorwar-windows-x64.zip`, `vectorwar-windows-x86.zip` (Win32/GDI) | `VectorWar.exe`, same arguments as Linux |
 | Linux x86_64 | `vectorwar-linux-x86_64.tar.gz` (SDL2) | See below |
 | Android, all ABIs | `vectorwar-android.apk` (SDL2) | `adb install ggpo-0.6.0-vectorwar-android.apk` |
+| macOS 11+, Apple Silicon and Intel | `vectorwar-macos.dmg` (SDL2), from the first release after 0.6.0 | See below |
 
 On Linux, install the SDL2 runtime, extract the archive, and launch two local
 players in separate terminals:
@@ -818,6 +819,17 @@ players in separate terminals:
 sudo apt install libsdl2-2.0-0
 ./vectorwar 7000 2 local 127.0.0.1:7001
 ./vectorwar 7001 2 127.0.0.1:7000 local
+```
+
+On macOS, open the `.dmg` and drag Vector War to Applications. The app is
+unsigned, so open it the first time with right-click → Open, then Open again
+in the dialog. When macOS asks whether Vector War may accept incoming network
+connections, allow it for direct or hole-punched play; relay play works
+either way. Launched from Finder it shows the start screen; for the command
+line, run the executable inside the bundle:
+
+```bash
+"/Applications/Vector War.app/Contents/MacOS/VectorWar" 7000 2 local 127.0.0.1:7001
 ```
 
 Arrow keys steer, `D` fires, `S` bombs, function keys disconnect players, and

@@ -83,7 +83,10 @@ builds portable `VectorWarCore` and the `VectorWarHeadless` fixture whenever
 portable targets while skipping SDL2 discovery and the interactive frontend.
 The `VectorWar` GUI executable is built from
 the same core with the Win32 host on Windows and with the SDL2 host on Linux
-(SDL2 development files are required). Android's Gradle project calls the same
+(SDL2 development files are required) and macOS. On macOS it is an app bundle,
+`VectorWar.app`, statically linked with the pinned SDL2 that
+[`build_sdl2.sh`](../../scripts/macos/build_sdl2.sh) builds (universal,
+macOS 11); pass its prefix in `CMAKE_PREFIX_PATH`. Android's Gradle project calls the same
 CMake graph and packages the SDL frontend for all supported ABIs. The SDK's Windows platform layer carries
 `winmm` and `ws2_32` transitively.
 
@@ -518,9 +521,15 @@ native window and lifecycle. [`sdl_touch_controls.h`](../../src/apps/vectorwar/s
 maps screen regions to the existing steering, fire, and bomb input bits; it
 does not change the deterministic simulation or GGPO callback contract.
 
+macOS uses the same SDL host and renderer as Linux, built as
+`VectorWar.app`. It is unsigned, so the first launch needs right-click → Open,
+and macOS asks once whether the app may accept incoming connections: direct
+and hole-punched play need that, relay play does not.
+
 Release tags attach standalone GUI archives for Windows x64/x86 and Linux
-x86-64 plus one multi-ABI Android APK alongside the SDK packages. The Linux
-executable requires the distribution SDL2 runtime; the APK bundles SDL2.
+x86-64, one multi-ABI Android APK, and a macOS `.dmg` alongside the SDK
+packages. The Linux executable requires the distribution SDL2 runtime; the APK
+and the macOS app include SDL2.
 
 ## End-to-end two-player example
 

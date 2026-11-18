@@ -1,6 +1,6 @@
 # PROGRESS — macOS support
 
-Status: In progress (M1–M3 done)
+Status: In progress (M1–M4 done)
 
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
@@ -40,8 +40,8 @@ Status: In progress (M1–M3 done)
 
 ### M4: Vector War app (depends: M1, M3)
 
-- [ ] M4-T01: `VectorWar.app` with SDL2.
-- [ ] M4-T02: Unsigned app release package.
+- [x] M4-T01: `VectorWar.app` with SDL2 (pinned source, static, universal).
+- [x] M4-T02: Unsigned app release package (`.dmg`).
 
 ### M5: Live tests (depends: M4)
 
@@ -60,3 +60,4 @@ Status: In progress (M1–M3 done)
 - 2026-11-18: M1 done. Universal build on macos-15 (Xcode 16.4): arm64 and x86_64 slices, minos 11.0 in libGGPO.dylib and libGGPO.a. 36/36 CTest tests pass on macOS 15 and 26, Apple Silicon and Intel, including `vectorwar_state_contract` and `macos_exports`. Every other workflow stayed green.
 - 2026-11-18: M2 done. `package-macos` in `release-packages.yml` builds, tests, audits and archives `ggpo-<version>-macos-universal.tar.gz`, then runs the C11/C++98 consumers (default, static, shared) against the extracted archive; a manual dry run passed. The per-PR workflow runs the same consumers. DeveloperGuide gains a macOS section.
 - 2026-11-18: M3 done. Platform ID 4 = macOS in the server constants, the C++ codec and the legend; the legend contract shows a macOS row and the matchmaker test proves IDs 4 and 9 pass through unchanged. The server never interprets platform IDs, so the live image needs no update.
+- 2026-11-18: M4 done. SDL2 2.30.9 from pinned, checksummed source as a static universal macOS 11 library (Homebrew's is single-arch and host-targeted, so the plan's Homebrew CI build was dropped). `VectorWar.app` runs `macos_vectorwar_frontend_smoke` and `macos_vectorwar_gui_host_contract` on all four runners (38/38). Packaged as an unsigned `.dmg` (owner's choice over a zip), validated mounted. No app icon yet.
