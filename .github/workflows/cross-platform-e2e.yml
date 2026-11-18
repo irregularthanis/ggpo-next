@@ -406,6 +406,10 @@ jobs:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ggpo-ci
+          # On macOS, Tailscale's DNS (MagicDNS) replaces the system resolver
+          # and api.github.com stops resolving, which breaks the rendezvous.
+          # Peers use tailnet IPs only, so keep the runner's own DNS.
+          args: --accept-dns=false
       - name: Record the Tailscale IPv4 address
         id: address
         shell: bash
