@@ -32,6 +32,12 @@ The GGPO Network Library Developer Guide is for developers who are integrating t
     - [Android: dynamic linking](#android-dynamic-linking)
     - [Android: static linking](#android-static-linking)
     - [Android: deploy](#android-deploy)
+  - [macOS](#macos)
+    - [macOS: release SDK](#macos-release-sdk)
+    - [macOS: build from source](#macos-build-from-source)
+    - [macOS: dynamic linking](#macos-dynamic-linking)
+    - [macOS: static linking](#macos-static-linking)
+    - [macOS: deploy](#macos-deploy)
 - [Common to all platforms](#common-to-all-platforms)
   - [SDK contents](#sdk-contents)
   - [Link GGPO into an application](#link-ggpo-into-an-application)
@@ -94,6 +100,7 @@ flowchart TB
         direction TB
         LINUX["Linux x86_64<br/>libGGPO.so.0<br/>libGGPO.a<br/>DEB, RPM, tar.gz"]
         ANDROID["Android NDK<br/>API 21+<br/>libGGPO.so, libGGPO.a<br/>arm64-v8a<br/>armeabi-v7a<br/>x86_64"]
+        MACOS["macOS 11+<br/>universal<br/>arm64 + x86_64<br/>libGGPO.dylib<br/>libGGPO.a"]
     end
 
     PLAT --> WIN
@@ -106,7 +113,7 @@ structure is described in the [architecture docs](architecture/README.md).
 
 ## Install the SDK
 
-GGPO supports four platforms. Each has its own section below, with one
+GGPO supports five platforms. Each has its own section below, with one
 subsection per option: use a release SDK, build from source, link dynamically,
 link statically, and deploy. What applies to every platform (CMake usage, build
 options, floating point, Vector War) follows in
@@ -118,6 +125,7 @@ options, floating point, Vector War) follows in
 | [Windows with MinGW-w64](#windows-with-mingw-w64) (MSYS2, cross compilers) | `ggpo-0.6.0-windows-x64-mingw.zip`, `ggpo-0.6.0-windows-x86-mingw.zip` |
 | [Linux](#linux) (x86_64, GCC or Clang) | `ggpo-0.6.0-linux-x86_64.deb` / `.rpm` / `.tar.gz` |
 | [Android](#android) (arm64-v8a, armeabi-v7a, x86_64; API 21+) | `ggpo-0.6.0-android.tar.gz` |
+| [macOS](#macos) (universal arm64 + x86_64; macOS 11+) | `ggpo-<version>-macos-universal.tar.gz`, from the first release after 0.6.0 |
 
 Downloads are on [GGPO Next Releases](https://github.com/irregularthanis/ggpo-next/releases).
 Windows is supported in both 64-bit (`x64`/x86-64) and 32-bit (`x86`/Win32)
@@ -577,6 +585,89 @@ $triple-clang++ -I$HOME/ggpo-0.6.0-android/$abi/include main.cpp \
 - **Static:** no separate GGPO file; GGPO is linked into the application's
   native library.
 
+### macOS
+
+For macOS applications on Apple Silicon and Intel, macOS 11 Big Sur or newer.
+`GGPO_SHARED_LIB` is not used.
+
+| Dimension | Supported variants | Qualification |
+| --- | --- | --- |
+| Architecture | One universal binary: `arm64` and `x86_64` | Both slices ship in every library; CI runs the tests natively on both |
+| macOS version | macOS 11+ | Built for 11.0; calling a newer API without an availability check fails the build, and every slice is audited for minimum macOS 11.0. Tests run on macOS 15 and 26; GitHub offers no older runners, so 11–14 are not run |
+| Toolchain | Xcode 16.4 (Apple Clang), pinned in CI | Any Xcode that still accepts an 11.0 deployment target can build from source |
+
+The SDK is unsigned. A library needs no notarization: the application that
+embeds it signs it along with everything else in its bundle.
+
+#### macOS: release SDK
+
+`ggpo-<version>-macos-universal.tar.gz` is one CMake prefix:
+
+```text
+ggpo-<version>-macos-universal/
+├── include/ggponet.h
+├── lib/libGGPO.dylib, libGGPO.0.dylib, libGGPO.a
+├── lib/cmake/GGPO/
+└── LICENSE
+```
+
+Pass `-DCMAKE_PREFIX_PATH=/path/to/ggpo-<version>-macos-universal` to the
+application's configure. The archive's libraries are universal, so an
+application can build for either architecture or both.
+
+#### macOS: build from source
+
+Install Xcode or the Command Line Tools, and CMake:
+
+```bash
+cmake -S . -B build/macos -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+  -DGGPO_BUILD_VECTORWAR=OFF -DCMAKE_INSTALL_PREFIX="$PWD/build/macos-install"
+cmake --build build/macos --parallel
+cmake --install build/macos
+```
+
+The deployment target defaults to 11.0. The default build also runs the test
+suite; add `-DGGPO_RUN_TESTS_ON_BUILD=OFF` to skip it.
+
+#### macOS: dynamic linking
+
+Link `lib/libGGPO.dylib`. Its install name is `@rpath/libGGPO.0.dylib`, so the
+application needs an rpath entry that points at wherever it ships the library.
+
+```bash
+# CMake
+cmake -S . -B build -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+  -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+  -DCMAKE_PREFIX_PATH=$HOME/ggpo-<version>-macos-universal
+
+# Without CMake
+clang++ -arch arm64 -arch x86_64 -mmacosx-version-min=11.0 \
+  -I$SDK/include main.cpp -L$SDK/lib -lGGPO -Wl,-rpath,@executable_path
+```
+
+#### macOS: static linking
+
+Link `lib/libGGPO.a`.
+
+```bash
+# CMake: the dynamic command plus
+  -DGGPO_USE_STATIC=ON
+
+# Without CMake
+clang++ -arch arm64 -arch x86_64 -mmacosx-version-min=11.0 \
+  -I$SDK/include main.cpp $SDK/lib/libGGPO.a
+```
+
+#### macOS: deploy
+
+- **Dynamic:** copy `libGGPO.0.dylib` into the app bundle's
+  `Contents/Frameworks/` and link with
+  `-Wl,-rpath,@executable_path/../Frameworks` (CMake: `INSTALL_RPATH`). For a
+  plain command-line tool, put it next to the executable and use
+  `@executable_path`.
+- **Static:** no separate GGPO file; GGPO is linked into the executable.
+
 ## Common to all platforms
 
 Everything in this section applies to every platform above.
@@ -654,6 +745,7 @@ CMake, the static column is the dynamic configure command plus
 | [Windows, MSVC](#msvc-dynamic-linking) | `cl /MD /I C:\ggpo-sdk\include /DGGPO_SHARED_LIB main.cpp /link /LIBPATH:C:\ggpo-sdk\lib GGPO.lib` | `cl /MD /I C:\ggpo-sdk\include main.cpp /link /LIBPATH:C:\ggpo-sdk\lib libGGPO.lib ws2_32.lib winmm.lib` |
 | [Windows, MinGW-w64](#mingw-dynamic-linking) | `g++ -DGGPO_SHARED_LIB -I/c/ggpo-sdk-mingw/include main.cpp -L/c/ggpo-sdk-mingw/lib -lGGPO` | `g++ -I/c/ggpo-sdk-mingw/include main.cpp /c/ggpo-sdk-mingw/lib/libGGPO.a -lws2_32 -lwinmm -static` |
 | [Linux](#linux-dynamic-linking) | `g++ -I$SDK/include main.cpp -L$SDK/lib -lGGPO -Wl,-rpath,'$ORIGIN'` | `g++ -I$SDK/include main.cpp $SDK/lib/libGGPO.a` |
+| [macOS](#macos-dynamic-linking) (universal) | `clang++ -arch arm64 -arch x86_64 -I$SDK/include main.cpp -L$SDK/lib -lGGPO -Wl,-rpath,@executable_path` | `clang++ -arch arm64 -arch x86_64 -I$SDK/include main.cpp $SDK/lib/libGGPO.a` |
 | [Android](#android-dynamic-linking) (arm64-v8a) | `aarch64-linux-android21-clang++ -I$SDK/arm64-v8a/include main.cpp -L$SDK/arm64-v8a/lib -lGGPO` | `aarch64-linux-android21-clang++ -I$SDK/arm64-v8a/include main.cpp $SDK/arm64-v8a/lib/libGGPO.a` |
 
 `$SDK` is the extracted SDK directory. What changes between the columns is the
@@ -699,6 +791,7 @@ the same flags for its simulation code:
 | --- | --- | --- |
 | 32-bit MinGW | `-msse2 -mfpmath=sse` | GCC's x87 default rounds differently from MSVC, x64 and Linux |
 | Android | `-ffp-contract=off` | Clang fuses multiply-add (FMA) on ARM, changing results |
+| macOS | `-ffp-contract=off` | Apple Clang fuses multiply-add on Apple Silicon, as on Android |
 
 ### Deployment and license
 

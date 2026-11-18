@@ -384,6 +384,12 @@ at the same path and runs CTest on those exact binaries. The four test runners
 run two at a time, so with the build the workflow uses all five macOS jobs the
 account allows without holding them all at once.
 
+The build job also builds and runs the C11 and C++98
+[installed-SDK consumers](../../tests/consumer/verify_consumers.py) as
+universal binaries for the default, static and shared linkages; `otool -L`
+proves each one's dependency on `libGGPO.dylib` (or its absence). The release
+workflow's `package-macos` job repeats them against the extracted archive.
+
 ### Android
 
 The Android contract separates CPU ABI, device API level, and NDK revision:

@@ -182,7 +182,8 @@ Each ABI prefix contains both shared and static libraries. MinGW
 zips end in `-mingw.zip` and carry `share/GGPO/TOOLCHAIN.txt`; validation
 rejects `.lib` files in MinGW zips and `.a` files in MSVC zips. It also publishes standalone interactive Vector War archives
 for Windows x64/x86 and Linux x86-64, plus a multi-ABI Android APK. Windows
-publishes ZIP files; Android publishes a tar.gz SDK and APK; Linux publishes
+publishes ZIP files; Android publishes a tar.gz SDK and APK; macOS publishes a
+universal (arm64 + x86_64) tar.gz SDK, consumer-tested after extraction; Linux publishes
 the GUI as a tarball and the SDK in these formats:
 
 | Format | Install shape | Validation |
@@ -204,7 +205,7 @@ the GitHub Release.
 | Windows | Supported SDK and Vector War build | Existing reference platform |
 | Linux | SDK and SDL2 Vector War GUI supported through the Ubuntu 24.04 container | Additional distribution formats remain follow-up work |
 | Android | NDK SDK and SDL2/touch Vector War APK for arm64-v8a, armeabi-v7a, and x86_64 | Physical-device qualification remains follow-up work |
-| macOS | Universal SDK (arm64 + x86_64) built for macOS 11, tested in CI on macOS 15 and 26 | Release package, Vector War app, E2E pairs and the public game remain ([plan](../planning/2026-11-17-macos/PRD.md)) |
+| macOS | Universal SDK (arm64 + x86_64) built for macOS 11, tested in CI on macOS 15 and 26, released as a tar.gz | Vector War app, E2E pairs and the public game remain ([plan](../planning/2026-11-17-macos/PRD.md)) |
 | Other mobile platforms and consoles | No build target | Platform services, lifecycle, socket policy, packaging, and validation absent |
 
 The build-port roadmap should preserve the public API while moving OS facilities

@@ -1,6 +1,6 @@
 # PROGRESS — macOS support
 
-Status: In progress (M1 done)
+Status: In progress (M1, M2 done)
 
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
@@ -30,7 +30,7 @@ Status: In progress (M1 done)
 
 ### M2: Release package (depends: M1)
 
-- [ ] M2-T01: macOS SDK archive, extracted and consumer-tested.
+- [x] M2-T01: macOS SDK archive, extracted and consumer-tested.
 
 ### M3: Matchmaking platform ID (parallel with M1–M2)
 
@@ -58,3 +58,4 @@ Status: In progress (M1 done)
 
 - 2026-11-17: Plan drafted for macOS; iOS deferred. D1–D3 decided; D2 revised the same day to a macOS 11 baseline, tested on 15 and 26.
 - 2026-11-18: M1 done. Universal build on macos-15 (Xcode 16.4): arm64 and x86_64 slices, minos 11.0 in libGGPO.dylib and libGGPO.a. 36/36 CTest tests pass on macOS 15 and 26, Apple Silicon and Intel, including `vectorwar_state_contract` and `macos_exports`. Every other workflow stayed green.
+- 2026-11-18: M2 done. `package-macos` in `release-packages.yml` builds, tests, audits and archives `ggpo-<version>-macos-universal.tar.gz`, then runs the C11/C++98 consumers (default, static, shared) against the extracted archive; a manual dry run passed. The per-PR workflow runs the same consumers. DeveloperGuide gains a macOS section.
