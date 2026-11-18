@@ -385,9 +385,9 @@ builds once on `macos-15`, installs the SDK, and runs
 [`audit_binaries.py`](../../scripts/macos/audit_binaries.py): every installed
 Mach-O file must carry both slices, and every object in each slice must record
 minimum macOS 11.0. The build tree is packed and every test runner unpacks it
-at the same path and runs CTest on those exact binaries. The four test runners
-run two at a time, so with the build the workflow uses all five macOS jobs the
-account allows without holding them all at once.
+at the same path and runs CTest, three tests at a time, on those exact
+binaries. The four test runners start together after the build, so the
+workflow holds at most four of the account's five macOS jobs at once.
 
 The build job also builds and runs the C11 and C++98
 [installed-SDK consumers](../../tests/consumer/verify_consumers.py) as

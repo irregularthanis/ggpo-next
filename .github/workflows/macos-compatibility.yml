@@ -111,9 +111,9 @@ jobs:
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
-      # Five macOS jobs run per workflow (build plus four test runners) against
-      # the account-wide limit of five; two at a time leaves room for others.
-      max-parallel: 2
+      # The four test runners start together once the build is done (the
+      # build has finished, so at most four of the account's five macOS jobs
+      # run at once).
       matrix:
         runner: [macos-15, macos-26, macos-15-intel, macos-26-intel]
     steps:
@@ -135,7 +135,8 @@ jobs:
           sysctl -n machdep.cpu.brand_string
 
       - name: Run every test
-        run: ctest --test-dir "$BUILD_DIR" --output-on-failure --timeout 300
+        # Network tests bind ephemeral ports, so they run side by side.
+        run: ctest --test-dir "$BUILD_DIR" --output-on-failure --timeout 300 --parallel 3
 
       - name: Upload test evidence
         if: always()

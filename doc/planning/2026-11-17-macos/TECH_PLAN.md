@@ -130,9 +130,9 @@ Facts from `ee465d1` that constrain the design:
 - `macos-compatibility.yml`: universal build (static and shared) on
   `macos-15`, minimum-version and export audits, then CTest and an
   installed-consumer test on `macos-15`, `macos-26`, `macos-15-intel` and
-  `macos-26-intel`; aggregate check "Complete macOS compatibility". Five macOS
-  jobs, exactly the Free plan's macOS limit, so the test matrix uses
-  `max-parallel: 2` and leaves room for other workflows.
+  `macos-26-intel`; aggregate check "Complete macOS compatibility". The four
+  test runners start together after the build (at most four macOS jobs at
+  once) and run CTest three tests at a time; a run takes about 3 minutes.
 - `affected_areas.py`: new area `macos`; `platform_posix.cpp` maps to Linux,
   Android and macOS; `src/platform/apple/*` to macOS; the new workflow to its
   area.
