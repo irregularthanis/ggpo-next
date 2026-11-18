@@ -32,9 +32,10 @@ The reason this fork exists as it is right now is to:
 | macOS | 11+, universal arm64 + x86_64 | SDL2 app | macOS 15 and 26, Apple Silicon and Intel |
 
 All platforms share one portable core behind a small OS adapter, use the same
-public API and wire format, and play each other: every ordered pair of
-platforms is tested in CI over a real network, and so is a live four-platform
-match.
+public API and wire format, and play each other. CI plays every ordered pair
+of Linux, Windows (MSVC), Android and macOS, each also against itself, across
+two hosts over a real network, plus MinGW against the others; and a live
+four-platform match through the deployed server.
 
 **SDK and packaging**
 

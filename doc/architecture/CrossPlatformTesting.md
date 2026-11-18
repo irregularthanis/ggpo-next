@@ -69,7 +69,7 @@ flowchart TB
 
     subgraph COMMON["Common to all<br/>platforms"]
         direction TB
-        MATRIX["68 role jobs<br/>34 ordered<br/>scenarios<br/>generic +<br/>Vector War"]
+        MATRIX["72 role jobs<br/>36 ordered<br/>scenarios<br/>generic +<br/>Vector War"]
         NET["Ephemeral<br/>tailnet<br/>HMAC control,<br/>GGPO over UDP"]
         ORACLE["Independent<br/>canonical oracle"]
         MAN["Fail-closed<br/>complete<br/>manifest"]
@@ -113,12 +113,13 @@ fixture, run as two jobs.
 | **Windows (MSVC)** | G V | G V | — | G V | G V |
 | **MinGW** | G | G | — | G | — |
 | **Android** | G V | G V | G | G V | G V |
-| **macOS** | G V | G V | — | G V | — |
+| **macOS** | G V | G V | — | G V | G V |
 
-That is 19 generic and 15 Vector War scenarios, 68 role jobs in total. Vector
+That is 20 generic and 16 Vector War scenarios, 72 role jobs in total. Vector
 War has no MinGW build, so MinGW pairs are generic only. MinGW is paired with
 MSVC and Linux as player 1 only, and with Android in both orders. macOS plays
-Linux, Windows and Android in both orders with both fixtures.
+Linux, Windows and Android in both orders, and itself, with both fixtures.
+Every platform except MinGW also plays itself across two hosts.
 
 [`validate_manifest.py`](../../tests/e2e/validate_manifest.py) defines the
 required assignments. The workflow names generic scenarios `linux-linux`,
@@ -185,9 +186,10 @@ with the pinned Xcode on `macos-15`, and uploads them as `e2e-peer-macos`.
 #### macOS: execution
 
 macOS roles run on `macos-15` in a separate matrix job, `execute-macos`,
-capped at four jobs (two pairs). Each pair has one macOS role, so the matrix
-holds at most two of the account's five macOS runners and leaves the rest to
-the macOS compatibility workflow. Both matrices list each pair's roles
+capped at four jobs (two pairs). Every pair has a macOS role and the two
+`macos-macos` pairs have two, so at worst (both of those at once) the matrix
+holds four of the account's five macOS runners and other macOS work briefly
+queues. Both matrices list each pair's roles
 adjacently, and their caps sum to 16, below the 20-job account limit (checked
 by [`test_e2e_matrix.py`](../../.github/ci/tests/test_e2e_matrix.py)). The
 runners' application firewall is off, so no port rules are needed. On macOS the

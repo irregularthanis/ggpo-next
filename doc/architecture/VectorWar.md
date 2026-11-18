@@ -582,8 +582,9 @@ For frame 120:
 - The sample uses a full peer mesh rather than an authoritative server; the
   matchmaking server only groups and relays players.
 - Automated tests cover the application core, native GUI lifecycle, two
-  native processes over loopback UDP, every ordered platform pair across two
-  hosts, and a four-platform match through the deployed server; see
+  native processes over loopback UDP, every ordered pair of the four
+  platforms that build it (each also against itself) across two hosts, and a
+  four-platform match through the deployed server; see
   [Testing](Testing.md).
 
 Continue with the general [Runtime](Runtime.md), [Synchronization](Synchronization.md),

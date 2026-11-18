@@ -82,7 +82,7 @@ flowchart TB
         MACOS["macOS<br/>universal,<br/>built for 11,<br/>tested on 15 / 26<br/>SDK audit,<br/>.dmg smoke"]
     end
 
-    E2E["Cross-platform<br/>E2E<br/>every ordered<br/>pair<br/>over UDP"]
+    E2E["Cross-platform<br/>E2E<br/>ordered pairs<br/>across hosts<br/>over UDP"]
 
     COMMON --> WIN
     COMMON --> POSIX
@@ -1035,7 +1035,7 @@ established by the frame, checksum, callback, and lifecycle assertions.
 - The cross-platform E2E workflow remains a clean-link test; deterministic
   impairment belongs to the Linux namespace NAT workflow.
 - macOS runs the library, its tests, Vector War's GUI contracts, generic and
-  Vector War E2E pairs against Linux, Windows and Android, and plays the
+  Vector War E2E pairs against Linux, Windows, Android and itself, and plays the
   public game as the fourth player; macOS 11–14 are covered only by
   build-time checks.
 - Android ASan+UBSan is scheduled on an x86_64 emulator; Linux Clang and MSVC

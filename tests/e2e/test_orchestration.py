@@ -143,7 +143,8 @@ class MatrixTests(unittest.TestCase):
             # macOS plays Linux, Windows and Android in both orders, with
             # both fixtures; each missing set leaves the manifest incomplete.
             macos = ("macos-linux", "linux-macos", "macos-windows",
-                     "windows-macos", "macos-android", "android-macos")
+                     "windows-macos", "macos-android", "android-macos",
+                     "macos-macos")
             with self.assertRaisesRegex(ValueError, "incomplete"):
                 build_manifest(root)
             for scenario in macos:
