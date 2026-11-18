@@ -140,14 +140,19 @@ class MatrixTests(unittest.TestCase):
                              "android-windows", "windows-android"):
                 write_report(f"avw-{scenario}", f"vectorwar-{scenario}",
                              fixture="vectorwar")
-            # macOS plays Vector War only, against Linux, Windows and
-            # Android in both orders.
+            # macOS plays Linux, Windows and Android in both orders, with
+            # both fixtures; each missing set leaves the manifest incomplete.
+            macos = ("macos-linux", "linux-macos", "macos-windows",
+                     "windows-macos", "macos-android", "android-macos")
             with self.assertRaisesRegex(ValueError, "incomplete"):
                 build_manifest(root)
-            for scenario in ("macos-linux", "linux-macos", "macos-windows",
-                             "windows-macos", "macos-android", "android-macos"):
+            for scenario in macos:
                 write_report(f"mvw-{scenario}", f"vectorwar-{scenario}",
                              fixture="vectorwar")
+            with self.assertRaisesRegex(ValueError, "incomplete"):
+                build_manifest(root)
+            for scenario in macos:
+                write_report(f"m-{scenario}", scenario)
             self.assertEqual(build_manifest(root)["result"], "pass")
             write_report("duplicate", "linux-linux")
             with self.assertRaisesRegex(ValueError, "duplicate"):

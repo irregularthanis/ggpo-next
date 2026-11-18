@@ -104,17 +104,16 @@ fixture, run as two jobs.
 
 | Player 1 ↓ / Player 2 → | Linux | Windows (MSVC) | MinGW | Android | macOS |
 | --- | --- | --- | --- | --- | --- |
-| **Linux** | G V | G V | — | G V | V |
-| **Windows (MSVC)** | G V | G V | — | G V | V |
+| **Linux** | G V | G V | — | G V | G V |
+| **Windows (MSVC)** | G V | G V | — | G V | G V |
 | **MinGW** | G | G | — | G | — |
-| **Android** | G V | G V | G | G V | V |
-| **macOS** | V | V | — | V | — |
+| **Android** | G V | G V | G | G V | G V |
+| **macOS** | G V | G V | — | G V | — |
 
-That is 13 generic and 15 Vector War scenarios, 56 role jobs in total. Vector
+That is 19 generic and 15 Vector War scenarios, 68 role jobs in total. Vector
 War has no MinGW build, so MinGW pairs are generic only. MinGW is paired with
 MSVC and Linux as player 1 only, and with Android in both orders. macOS plays
-Vector War, the real game, against Linux, Windows and Android in both orders;
-its generic peer is covered by the macOS loopback tests.
+Linux, Windows and Android in both orders with both fixtures.
 
 [`validate_manifest.py`](../../tests/e2e/validate_manifest.py) defines the
 required assignments. The workflow names generic scenarios `linux-linux`,

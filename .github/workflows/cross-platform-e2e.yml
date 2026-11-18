@@ -357,7 +357,7 @@ jobs:
           if-no-files-found: warn
 
   execute-macos:
-    name: macos / ${{ matrix.scenario }} / role ${{ matrix.role }}
+    name: macos / ${{ matrix.fixture }} / ${{ matrix.scenario }} / role ${{ matrix.role }}
     if: >-
       needs.changes.outputs.code == 'true' &&
       (github.event_name != 'pull_request' ||
@@ -376,6 +376,18 @@ jobs:
       max-parallel: 4
       matrix:
         include:
+          - {fixture: smoke, scenario: macos-linux, role: 1, platform: macos, os: macos-15, player1: macos, player2: linux, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: macos-linux, role: 2, platform: linux, os: ubuntu-24.04, player1: macos, player2: linux, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: linux-macos, role: 1, platform: linux, os: ubuntu-24.04, player1: linux, player2: macos, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: linux-macos, role: 2, platform: macos, os: macos-15, player1: linux, player2: macos, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: macos-windows, role: 1, platform: macos, os: macos-15, player1: macos, player2: windows, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: macos-windows, role: 2, platform: windows, os: windows-2022, player1: macos, player2: windows, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: windows-macos, role: 1, platform: windows, os: windows-2022, player1: windows, player2: macos, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke.exe}
+          - {fixture: smoke, scenario: windows-macos, role: 2, platform: macos, os: macos-15, player1: windows, player2: macos, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke.exe}
+          - {fixture: smoke, scenario: macos-android, role: 1, platform: macos, os: macos-15, player1: macos, player2: android, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: macos-android, role: 2, platform: android, os: ubuntu-24.04-arm, player1: macos, player2: android, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: android-macos, role: 1, platform: android, os: ubuntu-24.04-arm, player1: android, player2: macos, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: android-macos, role: 2, platform: macos, os: macos-15, player1: android, player2: macos, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
           - {fixture: vectorwar, scenario: vectorwar-macos-linux, role: 1, platform: macos, os: macos-15, player1: macos, player2: linux, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
           - {fixture: vectorwar, scenario: vectorwar-macos-linux, role: 2, platform: linux, os: ubuntu-24.04, player1: macos, player2: linux, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
           - {fixture: vectorwar, scenario: vectorwar-linux-macos, role: 1, platform: linux, os: ubuntu-24.04, player1: linux, player2: macos, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}

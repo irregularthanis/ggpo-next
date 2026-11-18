@@ -19,10 +19,10 @@ ANDROID_SMOKE_SCENARIOS = ("android-android", "android-linux", "linux-android",
 ANDROID_VECTORWAR_SCENARIOS = ("android-android", "android-linux", "linux-android",
                                "android-windows", "windows-android")
 
-# macOS peers play Vector War against Linux, Windows and Android in both
-# player orders (their own capped matrix job).
-MACOS_VECTORWAR_SCENARIOS = ("macos-linux", "linux-macos", "macos-windows",
-                             "windows-macos", "macos-android", "android-macos")
+# macOS peers against Linux, Windows and Android in both player orders, with
+# both fixtures (their own capped matrix job).
+MACOS_SCENARIOS = ("macos-linux", "linux-macos", "macos-windows",
+                   "windows-macos", "macos-android", "android-macos")
 
 
 def build_manifest(root):
@@ -41,8 +41,9 @@ def build_manifest(root):
                 {("smoke", scenario) for scenario in ANDROID_SMOKE_SCENARIOS} |
                 {("vectorwar", f"vectorwar-{scenario}")
                  for scenario in ANDROID_VECTORWAR_SCENARIOS} |
+                {("smoke", scenario) for scenario in MACOS_SCENARIOS} |
                 {("vectorwar", f"vectorwar-{scenario}")
-                 for scenario in MACOS_VECTORWAR_SCENARIOS})
+                 for scenario in MACOS_SCENARIOS})
     identities = [
         (report.get("fixture"), report.get("scenario")) for report in reports
     ]
