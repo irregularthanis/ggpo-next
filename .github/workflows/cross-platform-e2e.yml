@@ -406,10 +406,30 @@ jobs:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ggpo-ci
-          # On macOS, Tailscale's DNS (MagicDNS) replaces the system resolver
-          # and api.github.com stops resolving, which breaks the rendezvous.
-          # Peers use tailnet IPs only, so keep the runner's own DNS.
+          # Peers use tailnet IPs only, so they need no tailnet DNS.
           args: --accept-dns=false
+      - name: Restore the macOS runner's DNS
+        # On macOS the Tailscale action also points every network service's
+        # DNS at 100.100.100.100, which then answers nothing, so
+        # api.github.com (the rendezvous) stops resolving. Put the runner's
+        # own servers back and prove the lookup works.
+        if: runner.os == 'macOS'
+        run: |
+          networksetup -listallnetworkservices | tail -n +2 | sed 's/^\*//' |
+            while IFS= read -r service; do
+              sudo networksetup -setdnsservers "$service" Empty
+              sudo networksetup -setsearchdomains "$service" Empty
+            done
+          sudo dscacheutil -flushcache
+          sudo killall -HUP mDNSResponder || true
+          for attempt in 1 2 3 4 5; do
+            if python3 -c 'import socket; socket.getaddrinfo("api.github.com", 443)'; then
+              exit 0
+            fi
+            sleep 2
+          done
+          scutil --dns | head -40
+          exit 1
       - name: Record the Tailscale IPv4 address
         id: address
         shell: bash

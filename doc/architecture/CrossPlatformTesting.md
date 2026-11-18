@@ -186,11 +186,12 @@ holds at most two of the account's five macOS runners and leaves the rest to
 the macOS compatibility workflow. Both matrices list each pair's roles
 adjacently, and their caps sum to 16, below the 20-job account limit (checked
 by [`test_e2e_matrix.py`](../../.github/ci/tests/test_e2e_matrix.py)). The
-runners' application firewall is off, so no port rules are needed. The job joins
-the tailnet with `--accept-dns=false`: on macOS, Tailscale's DNS replaces the
-system resolver and `api.github.com`, which the rendezvous needs, stops
-resolving. Peers address each other by tailnet IP, so they need no tailnet
-DNS.
+runners' application firewall is off, so no port rules are needed. On macOS the
+Tailscale action points every network service's DNS at 100.100.100.100 even
+with `--accept-dns=false`, and `api.github.com`, which the rendezvous needs,
+stops resolving. A step after joining restores the runner's own DNS servers
+and checks that the lookup works. Peers address each other by tailnet IP, so
+they need no tailnet DNS.
 
 ### Android
 
