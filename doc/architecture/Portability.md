@@ -8,7 +8,7 @@
 - [Required adapter contracts](#required-adapter-contracts)
 - [Protocol considerations](#protocol-considerations)
 - [Follow-up platform contract](#follow-up-platform-contract)
-- [Recommended port sequence](#recommended-port-sequence)
+- [Port sequence](#port-sequence)
 
 ## Current boundary
 
@@ -17,12 +17,17 @@ The core consumes semantic services declared by
 [`platform_windows.cpp`](../../src/lib/ggpo/platform_windows.cpp) owns Win32,
 Winsock, native error mapping, and socket representation. The Linux
 implementation in [`platform_posix.cpp`](../../src/lib/ggpo/platform_posix.cpp)
-provides the same contracts with POSIX facilities. Platform CMake modules own
-their native source and build inputs; Apple remains follow-up work.
+provides the same contracts with POSIX facilities and serves Linux, Android and
+macOS. Platform CMake modules
+([`windows`](../../src/platform/windows/Platform.cmake),
+[`linux`](../../src/platform/linux/Platform.cmake),
+[`android`](../../src/platform/android/Platform.cmake),
+[`apple`](../../src/platform/apple/Platform.cmake)) own their native source and
+build inputs.
 
 ## Platform dependencies
 
-| Concern | Core contract | Windows | Linux |
+| Concern | Core contract | Windows | Linux, Android, macOS (POSIX) |
 | --- | --- | --- | --- |
 | UDP sockets | `ok`, `would_block`, or `error` | Winsock | Nonblocking POSIX UDP |
 | Addresses | IPv4 octets and host-order port | `sockaddr_in` | `sockaddr_in` |
@@ -30,7 +35,12 @@ their native source and build inputs; Apple remains follow-up work.
 | Configuration | Value with explicit fallback | Environment | Environment |
 | Filesystem/diagnostics | Directory and assertion services | Win32/UI | `mkdir`/stderr |
 | Network lifetime | Balanced startup/shutdown | Winsock startup/cleanup | No-op process service |
-| Sample UI | Win32 messages, GDI/OpenGL, keyboard polling | [`src/apps/vectorwar`](../../src/apps/vectorwar) |
+
+The three POSIX platforms differ only in build settings: Android and macOS add
+`-ffp-contract=off` for cross-platform floating point, and macOS builds for a
+macOS 11 minimum with newer APIs as errors. Vector War's frontends (Win32/GDI
+on Windows, SDL2 elsewhere) are outside the SDK; see
+[Build: Vector War](Build.md#vector-war).
 
 ## Portable core
 
@@ -70,8 +80,9 @@ structures. A [deterministic fake adapter](../../tests/platform/fake/platform_fa
 uses the same contracts for rollback and failure/cleanup tests.
 
 Adapters expose semantic operations rather than reproducing Win32 names on
-Unix. That keeps Linux (`poll`/`epoll`), macOS (`poll`/`kqueue`), and future
-mobile event loops replaceable without changing rollback logic.
+Unix. The POSIX adapter waits with `nanosleep` and polls nonblocking sockets;
+a platform could move to `epoll`, `kqueue` or a mobile event loop without
+changing rollback logic.
 
 ## Protocol considerations
 
@@ -90,8 +101,9 @@ The [native E2E workflow](../../.github/workflows/cross-platform-e2e.yml) checks
 both same-platform assignments and both Windows/Linux role directions. Its
 portable result oracle validates explicit state bytes, while GGPO's existing
 packed UDP messages exercise the actual platform compiler layouts on the wire.
-This is compatibility evidence for the tested x64 little-endian hosts, not a
-claim that the implicit wire format is portable to every architecture.
+This is compatibility evidence for the tested little-endian hosts (x86, x64,
+32- and 64-bit ARM), not a claim that the implicit wire format is portable to
+every architecture.
 
 ## Follow-up platform contract
 
@@ -115,15 +127,19 @@ result and orchestration ownership remains with [PR #5](https://github.com/irreg
 The Windows [compatibility workflow](../../.github/workflows/windows-compatibility.yml)
 remains required while another adapter is introduced.
 
-## Recommended port sequence
+## Port sequence
+
+The order this fork followed, all steps now done; a further platform (for
+example iOS) would repeat steps 3–5:
 
 1. Freeze current Windows behavior with unit and loopback integration tests.
 2. Define clock, sleep, configuration, diagnostics, socket, and poll contracts.
 3. Build the SDK on Linux through the repository container while retaining Windows CI.
 4. Validate two Linux peers, then Windows-to-Linux interoperability.
-5. Add macOS adapters and cross-OS protocol tests.
-6. Replace the Win32-only Vector War host with a portable frontend while reusing
-   the same deterministic game state and GGPO callbacks.
+5. Add the other platforms (MinGW, Android, macOS) with their own CI and
+   cross-OS protocol tests.
+6. Replace the Win32-only Vector War host with a portable SDL2 frontend while
+   reusing the same deterministic game state and GGPO callbacks.
 7. Add mobile lifecycle/socket adapters only after desktop behavior is stable.
 
 Prior community work is available in upstream

@@ -1,6 +1,11 @@
 ![](doc/images/ggpo_header.png)
 
-&nbsp; _[![Appveyor build status](https://img.shields.io/appveyor/ci/pond3r/ggpo/master.svg?logo=appveyor)](https://ci.appveyor.com/project/pond3r/ggpo/branch/master)_
+[![Linux](https://github.com/irregularthanis/ggpo-next/actions/workflows/linux-compatibility.yml/badge.svg?branch=master)](https://github.com/irregularthanis/ggpo-next/actions/workflows/linux-compatibility.yml)
+[![Windows](https://github.com/irregularthanis/ggpo-next/actions/workflows/windows-compatibility.yml/badge.svg?branch=master)](https://github.com/irregularthanis/ggpo-next/actions/workflows/windows-compatibility.yml)
+[![MinGW](https://github.com/irregularthanis/ggpo-next/actions/workflows/mingw-compatibility.yml/badge.svg?branch=master)](https://github.com/irregularthanis/ggpo-next/actions/workflows/mingw-compatibility.yml)
+[![Android](https://github.com/irregularthanis/ggpo-next/actions/workflows/android-compatibility.yml/badge.svg?branch=master)](https://github.com/irregularthanis/ggpo-next/actions/workflows/android-compatibility.yml)
+[![macOS](https://github.com/irregularthanis/ggpo-next/actions/workflows/macos-compatibility.yml/badge.svg?branch=master)](https://github.com/irregularthanis/ggpo-next/actions/workflows/macos-compatibility.yml)
+[![Cross-platform E2E](https://github.com/irregularthanis/ggpo-next/actions/workflows/cross-platform-e2e.yml/badge.svg?branch=master)](https://github.com/irregularthanis/ggpo-next/actions/workflows/cross-platform-e2e.yml)
 
 (日本語ドキュメントは[こちら](README.ja.md))
 
@@ -11,8 +16,63 @@ This repository is a (maybe temporary?) fork of the [original GGPO](https://gith
 ### Why make this?
 The reason this fork exists as it is right now is to:
  - Document runtime, api reference and build systems.
- - Support multi-platform, beyond Windows (WIP).
+ - Support multi-platform, beyond Windows.
  - Proper release pipeline.
+
+### What's new compared to the original GGPO
+
+**Platforms**
+
+| Platform | SDK | Vector War sample | Tested in CI on |
+| --- | --- | --- | --- |
+| Windows, MSVC | x64, x86 | Win32/GDI | `windows-2022` |
+| Windows, MinGW-w64 | x64, x86 | — | `windows-2022` |
+| Linux | x86_64 (GCC or Clang) | SDL2 | Ubuntu 24.04 |
+| Android | arm64-v8a, armeabi-v7a, x86_64; API 21+ | SDL2 with touch controls (APK) | ARM and x86_64 runners, API 21 and 35 emulators |
+| macOS | 11+, universal arm64 + x86_64 | SDL2 app | macOS 15 and 26, Apple Silicon and Intel |
+
+All platforms share one portable core behind a small OS adapter, use the same
+public API and wire format, and play each other: every ordered pair of
+platforms is tested in CI over a real network, and so is a live four-platform
+match.
+
+**SDK and packaging**
+
+- One CMake project for every platform; every SDK ships both the shared and
+  the static library behind one `GGPO::GGPO` CMake package.
+- Tested release packages on every tag: Windows ZIPs (MSVC and MinGW), Linux
+  DEB, RPM and tar.gz, a multi-ABI Android SDK, a universal macOS SDK, and
+  ready-to-run Vector War builds (Windows, Linux, Android APK, macOS `.dmg`),
+  each extracted or installed and checked before upload, with `SHA256SUMS`.
+- The original Windows ABI, export list and packed wire layout are frozen and
+  checked on every change.
+
+**Internet play (Vector War)**
+
+- A start screen, and matchmaking for 2 to 4 players with optional lobby
+  codes, through a small UDP [matchmaking and relay server](services/matchmaking).
+- UDP hole punching with automatic relay fallback, chosen per pair of players;
+  an in-game legend shows each player's platform and route.
+- Cross-platform determinism: consistent floating-point settings on every
+  platform and a fixed trigonometry table, so different CPUs, compilers and
+  maths libraries stay in sync.
+- Terraform for a free-tier OCI server with a DuckDNS name; every deployment
+  is qualified by a real four-platform match through it.
+
+**Testing and CI**
+
+- Per-platform compatibility workflows, a native cross-platform E2E matrix,
+  emulated NAT topologies, weekly sanitizer runs (ASan and UBSan), and change
+  routing that runs only what a change affects. See
+  [CI workflows](doc/architecture/CIWorkflows.md).
+
+**Documentation**
+
+- [Architecture](doc/architecture/README.md), a complete
+  [API reference](doc/architecture/API.md), the
+  [Developer Guide](doc/DeveloperGuide.md) for every platform, the
+  [testing architecture](doc/architecture/Testing.md) and the
+  [CI workflows](doc/architecture/CIWorkflows.md).
 
 ### Are you merging back to upstream?
 Maybe. Once this is mature enough we will reach out. It will depend on the original maintainer.
@@ -68,13 +128,19 @@ and source-build commands are in the
 
 ## Sample Application
 
-The Vector War application in the source directory contains a simple application which uses GGPO to synchronize the two clients.  The command line arguments are:
+Vector War, in [`src/apps/vectorwar`](src/apps/vectorwar), is a small game that
+uses GGPO to keep 2 to 4 players in sync. Run it without arguments for the
+start screen, which offers matchmaking over the Internet (release builds
+already fill in the public server) or direct play by address. Direct play from
+the command line:
 
 ```
-vectorwar.exe  <localport>  <num players> ('local' | <remote ip>:<remote port>) for each player
+VectorWar <localport> <num players> ('local' | <remote ip>:<remote port>) for each player
 ```
 
-See the .cmd files in the bin directory for examples on how to start 2, 3, and 4 player games.
+The `.cmd` files in [`bin`](bin) start 2, 3 and 4 player games on one Windows
+machine. Release downloads, platform notes and the matchmaking command line
+are in the [Developer Guide](doc/DeveloperGuide.md#run-the-standalone-vector-war-sample).
 
 ## Licensing
 

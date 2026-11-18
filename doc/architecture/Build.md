@@ -17,12 +17,15 @@
 The root [`CMakeLists.txt`](../../CMakeLists.txt) configures two independent
 products. [`src/CMakeLists.txt`](../../src/CMakeLists.txt) builds the SDK library;
 [`src/apps/vectorwar/CMakeLists.txt`](../../src/apps/vectorwar/CMakeLists.txt)
-builds the Windows sample.
+builds the Vector War sample for every platform.
 
 | Product | CMake target | Inputs | Output |
 | --- | --- | --- | --- |
 | GGPO SDK | `GGPO_shared`, `GGPO_static` | Public header, backends, sync core, UDP protocol, platform source | Shared and/or static library |
-| Vector War | `VectorWar` | Sample game, Win32 loop, GDI/OpenGL renderer, `GGPO` | Windows executable |
+| Vector War core | `VectorWarCore`, `VectorWarNet` | Portable game state, GGPO session, matchmaking and path selection | Static libraries shared by every frontend |
+| Vector War | `VectorWar` | Win32/GDI frontend on Windows; SDL2 frontend on Linux and macOS | Windows executable, Linux executable, `VectorWar.app` on macOS |
+| Vector War (Android) | `VectorWarAndroid` | SDL2 frontend with touch controls, built by the Gradle project | `libmain.so` inside the APK |
+| Vector War headless | `VectorWarHeadless` | The same core without a window; used by tests and CI peers | Command-line executable |
 
 ## Build graph
 
@@ -36,10 +39,13 @@ flowchart TD
     Platform{"Supported<br/>platform layer?"}
     Windows["platform/<br/>windows/<br/>Platform.cmake<br/>Windows source,<br/>defines and libs"]
     Linux["platform/linux/<br/>Platform.cmake<br/>POSIX source<br/>and flags"]
+    Android["platform/android/<br/>Platform.cmake<br/>POSIX source,<br/>NDK flags"]
+    Apple["platform/apple/<br/>Platform.cmake<br/>POSIX source,<br/>macOS 11 checks"]
     Unsupported["Configuration<br/>error<br/>unsupported<br/>platform"]
     Library["GGPO libraries<br/>shared and<br/>static"]
-    SampleList["Vector War<br/>CMakeLists.txt<br/>Windows only"]
-    Sample["VectorWar<br/>executable"]
+    SampleList["Vector War<br/>CMakeLists.txt"]
+    Sample["VectorWar<br/>Win32 or SDL2<br/>frontend"]
+    Headless["VectorWarHeadless"]
 
     Root -->|"GGPO_BUILD_<br/>SDK"| SDKList
     SDKList --> Sources
@@ -48,14 +54,19 @@ flowchart TD
     Sources --> Platform
     Platform -->|"Windows"| Windows
     Platform -->|"Linux"| Linux
+    Platform -->|"Android"| Android
+    Platform -->|"Darwin"| Apple
     Platform -->|"Other"| Unsupported
     Public --> Library
     Core --> Library
     Windows --> Library
     Linux --> Library
-    Root -->|"GGPO_BUILD_<br/>VECTORWAR<br/>and WIN32"| SampleList
+    Android --> Library
+    Apple --> Library
+    Root -->|"GGPO_BUILD_<br/>VECTORWAR"| SampleList
     SampleList --> Library
     SampleList --> Sample
+    SampleList --> Headless
 ```
 
 The root selects exactly one supported platform layer. The incomplete legacy
@@ -112,19 +123,29 @@ In-tree and installed consumers link the `GGPO::GGPO` target.
 
 ## Vector War
 
-Vector War is a reference integration, not part of the public SDK contract. Its
-build is Windows-specific:
+Vector War is a reference integration, not part of the public SDK contract. A
+portable core is shared by every frontend:
 
-- [`main.cpp`](../../src/apps/vectorwar/main.cpp) owns the Win32 message loop,
-  Winsock initialization, command-line parsing, and 60 Hz scheduling.
 - [`vectorwar.cpp`](../../src/apps/vectorwar/vectorwar.cpp) integrates the API
   and separates game state from rendering.
 - [`gamestate.cpp`](../../src/apps/vectorwar/gamestate.cpp) advances the sample
-  simulation.
-- [`gdi_renderer.cpp`](../../src/apps/vectorwar/gdi_renderer.cpp) presents the
-  current state.
-- [`ggpo_perfmon.cpp`](../../src/apps/vectorwar/ggpo_perfmon.cpp) displays
-  network statistics.
+  simulation, with cos/sin from a fixed table
+  ([`vw_trig.h`](../../src/apps/vectorwar/vw_trig.h)) so every platform agrees.
+- [`matchmade.cpp`](../../src/apps/vectorwar/matchmade.cpp) and
+  [`net/`](../../src/apps/vectorwar/net) handle matchmaking, hole punching and
+  the relay.
+
+Frontends: Windows uses [`main.cpp`](../../src/apps/vectorwar/main.cpp) (the
+Win32 message loop) with
+[`gdi_renderer.cpp`](../../src/apps/vectorwar/gdi_renderer.cpp) and
+[`ggpo_perfmon.cpp`](../../src/apps/vectorwar/ggpo_perfmon.cpp) (network
+statistics); Linux, macOS and Android use the SDL2 host in
+[`sdl_main.cpp`](../../src/apps/vectorwar/sdl_main.cpp) and
+[`sdl_renderer.cpp`](../../src/apps/vectorwar/sdl_renderer.cpp); tests and CI
+peers use [`headless_main.cpp`](../../src/apps/vectorwar/headless_main.cpp).
+On macOS, SDL2 comes from
+[`build_sdl2.sh`](../../scripts/macos/build_sdl2.sh) (pinned source, static,
+universal) and the app is a bundle with its own `Info.plist` and icon.
 
 See [Vector War](VectorWar.md) for the end-to-end build and runtime walkthrough.
 

@@ -11,4 +11,7 @@ Linux runs the same frozen layout assertions as the
 | `linux_vectorwar_gui_host_contract` | Runs the SDL host and renderer under `SDL_VIDEODRIVER=dummy` | SDL window/renderer creation, bounds, neutral input, clock, and diagnostics regressions |
 
 `exports.txt` matches the Windows `exports-x64.txt` manifest: the public API is
-the same 16 functions on both platforms.
+the same 16 functions on every platform. Android and macOS reuse these files:
+their `android_*` and `macos_*` layout and export tests build the same sources,
+and `check_exports.py` also reads Mach-O (`libGGPO.dylib`, whose C symbols
+carry a leading underscore).
