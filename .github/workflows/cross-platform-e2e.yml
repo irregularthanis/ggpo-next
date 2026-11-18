@@ -365,9 +365,11 @@ jobs:
       github.actor == github.repository_owner))
     needs: [changes, build-linux, build-windows, build-android, build-macos]
     runs-on: ${{ matrix.os }}
-    # Role jobs are scheduled independently across three runner pools. Keep a
-    # bounded window for queue skew, but fail a missing pair promptly.
-    timeout-minutes: 15
+    # macOS runners can take many minutes to be assigned while the partner's
+    # Linux or Windows runner starts at once, so each role waits up to 20
+    # minutes for its partner (10 in the other matrix); the job allows that
+    # wait plus setup and the match.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       # Its own matrix so macOS pairs are capped apart from the rest: four
@@ -471,7 +473,7 @@ jobs:
           python tests/e2e/host_agent.py \
             --workspace "$GITHUB_WORKSPACE" \
             --address "${{ steps.address.outputs.ipv4 }}" \
-            --session-id "${{ matrix.scenario }}" --timeout 600
+            --session-id "${{ matrix.scenario }}" --timeout 1200
       - name: Coordinate player 2 and validate the session
         if: matrix.role == 2
         shell: bash
@@ -485,7 +487,7 @@ jobs:
             --player1-executable "${{ matrix.player1_executable }}" \
             --local-address "${{ steps.address.outputs.ipv4 }}" \
             --session-id "${{ matrix.scenario }}" \
-            --rendezvous-timeout 600 \
+            --rendezvous-timeout 1200 \
             --scenario "${{ matrix.scenario }}" \
             --fixture "${{ matrix.fixture }}" \
             --player1-platform "${{ matrix.player1 }}" \

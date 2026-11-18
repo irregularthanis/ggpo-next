@@ -191,7 +191,10 @@ on Apple Silicon (`macos-15`), so both architectures play across hosts. It is
 capped at four jobs (two pairs). Every pair has a macOS role and the two
 `macos-macos` pairs have two, so at worst (both of those at once) the matrix
 holds four of the account's five macOS runners and other macOS work briefly
-queues. Both matrices list each pair's roles
+queues. Because macOS runners can take many minutes to be assigned while
+their Linux or Windows partner starts at once, each role in this matrix waits
+up to 20 minutes for its partner (10 in the other matrix), and its jobs time
+out after 30 minutes instead of 15. Both matrices list each pair's roles
 adjacently, and their caps sum to 16, below the 20-job account limit (checked
 by [`test_e2e_matrix.py`](../../.github/ci/tests/test_e2e_matrix.py)). The
 runners' application firewall is off, so no port rules are needed. On macOS the
@@ -409,7 +412,7 @@ pushes, or manual dispatch. The workflow does not use `pull_request_target`.
 | Agent authentication or identity mismatch | Control or rendezvous validation fails closed | Supervisor cancellation and action cleanup run |
 | Peer startup/crash | Nonzero process status before the completion barrier | Surviving child is terminated |
 | Peer timeout | Bounded rendezvous, control, execution, and job deadlines | Child, server, firewall, and ephemeral node cleanup run |
-| Missing paired role | Role 1 and role 2 fail after the 10-minute rendezvous deadline | Published endpoint is retired and the surviving agent is stopped |
+| Missing paired role | Role 1 and role 2 fail after the rendezvous deadline: 10 minutes, or 20 in the macOS matrix | Published endpoint is retired and the surviving agent is stopped |
 | GitHub API 5xx | Lookups, retiring and deleting retry three times (1 s, 3 s, 9 s); creating the deployment never retries, so a pair cannot publish twice | A persistent error still fails the role |
 | State divergence | Live snapshot never reaches the oracle or final schema validation fails | Scenario report is absent or non-passing |
 | Missing or duplicate scenario | [`validate_manifest.py`](../../tests/e2e/validate_manifest.py) rejects the evidence set | Final job fails even if other scenarios passed |
