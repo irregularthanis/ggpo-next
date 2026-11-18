@@ -51,6 +51,14 @@ class RendezvousTests(unittest.TestCase):
             ("DELETE", "/deployments/1", None),
         )
 
+    def test_environment_is_stable_across_runs_and_attempts(self):
+        # The workflow token cannot delete environments, so their number
+        # must not grow with each run.
+        later = DeploymentRendezvous(
+            self.transport, "owner/repo", "def456", "99", "3", "linux-windows")
+        self.assertEqual(self.rendezvous.environment, later.environment)
+        self.assertEqual(self.rendezvous.environment, "ggpo-e2e-linux-windows")
+
     def test_each_scenario_has_an_isolated_deployment_environment(self):
         other = DeploymentRendezvous(
             self.transport, "owner/repo", "abc123", "42", "1",

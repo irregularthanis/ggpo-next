@@ -62,6 +62,15 @@ class _ServerError(RuntimeError):
     """A 5xx from GitHub: transient, so repeatable requests try again."""
 
 
+def environment_for(session_id):
+    """The stable deployment environment for one scenario."""
+    safe_session = "".join(
+        character if character.isalnum() or character in "-_." else "-"
+        for character in session_id
+    )[:64]
+    return f"ggpo-e2e-{safe_session}"
+
+
 class DeploymentRendezvous:
     """Publish, discover, and retire one exact workflow-run endpoint record."""
 
@@ -72,16 +81,13 @@ class DeploymentRendezvous:
         self.run_id = str(run_id)
         self.attempt = str(attempt)
         self.session_id = session_id
-        # GitHub returns only one page of deployments. Give every scenario its
-        # own environment so a large matrix cannot hide an older peer record
-        # behind newer, unrelated rendezvous deployments.
-        safe_session = "".join(
-            character if character.isalnum() or character in "-_." else "-"
-            for character in session_id
-        )[:64]
-        self.environment = (
-            f"ggpo-e2e-{self.run_id}-{self.attempt}-{safe_session}"
-        )
+        # One environment per scenario, the same in every run, so a large
+        # matrix cannot hide a peer record behind unrelated scenarios and the
+        # repository's environments do not grow with each run (the workflow
+        # token cannot delete environments). Runs sharing an environment are
+        # told apart by commit, run and attempt in the payload, and each run's
+        # final job deletes its deployments (rendezvous_cleanup.py).
+        self.environment = environment_for(session_id)
 
     def publish(self, address, control_port):
         record = {
@@ -130,7 +136,7 @@ class DeploymentRendezvous:
     def discover(self, deadline_seconds=120, poll_seconds=2):
         deadline = time.monotonic() + deadline_seconds
         query = urllib.parse.urlencode({"environment": self.environment,
-                                        "ref": self.sha, "per_page": 10})
+                                        "ref": self.sha, "per_page": 100})
         while time.monotonic() < deadline:
             matches = self._matching(
                 self.transport.request("GET", f"/deployments?{query}")

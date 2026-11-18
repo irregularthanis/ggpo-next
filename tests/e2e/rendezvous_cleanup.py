@@ -4,8 +4,9 @@
 Role jobs delete their own record when they finish, but a cancelled or
 crashed job never reaches that code. The workflow's final job, which also runs
 on cancellation, calls this to remove whatever the run left behind. It only
-touches deployments whose environment carries this run's exact
-``ggpo-e2e-<run>-<attempt>-`` prefix.
+touches rendezvous deployments (environment ``ggpo-e2e-*``) whose payload
+names this exact run and attempt; environments are stable per scenario and
+shared between runs, so the payload is what identifies the run.
 """
 
 import argparse
@@ -19,28 +20,30 @@ except ImportError:  # Direct script execution from tests/e2e.
     from rendezvous import GitHubTransport
 
 
-def run_prefix(run_id, attempt):
-    return f"ggpo-e2e-{run_id}-{attempt}-"
+def belongs_to_run(deployment, run_id, attempt):
+    payload = deployment.get("payload") or {}
+    return (str(deployment.get("environment", "")).startswith("ggpo-e2e-")
+            and str(payload.get("run_id")) == str(run_id)
+            and str(payload.get("attempt")) == str(attempt))
 
 
-def leftovers(transport, sha, prefix):
-    """This run's deployments for the commit, newest first, all pages."""
+def leftovers(transport, sha, run_id, attempt):
+    """This run's rendezvous deployments for the commit, all pages."""
     found = []
     page = 1
     while True:
         query = urllib.parse.urlencode({"ref": sha, "per_page": 100, "page": page})
         batch = transport.request("GET", f"/deployments?{query}") or []
-        found += [d for d in batch if str(d.get("environment", "")).startswith(prefix)]
+        found += [d for d in batch if belongs_to_run(d, run_id, attempt)]
         if len(batch) < 100:
             return found
         page += 1
 
 
 def cleanup(transport, sha, run_id, attempt):
-    prefix = run_prefix(run_id, attempt)
     removed = 0
     failures = []
-    for deployment in leftovers(transport, sha, prefix):
+    for deployment in leftovers(transport, sha, run_id, attempt):
         identifier = deployment["id"]
         try:
             # Only inactive deployments can be deleted.
