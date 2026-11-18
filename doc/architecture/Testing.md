@@ -973,8 +973,7 @@ The `master` ruleset requires one stable aggregate check per workflow rather
 than individual lanes: `Complete Linux compatibility`, `Complete MinGW
 compatibility`, `Complete Windows compatibility`, `Complete Android
 compatibility`, `Complete native E2E matrix`, and `Complete NAT traversal
-checks`, plus `Fork owner approval`. `Complete macOS compatibility` reports
-the same way and joins the ruleset at the end of the macOS rollout.
+checks`, `Complete macOS compatibility`, plus `Fork owner approval`.
 Each aggregate covers every lane of its workflow. Individual matrix lanes cannot
 be required directly: a lane skipped on a documentation-only change never
 reports its expanded name, so the requirement would wait forever. Each aggregate

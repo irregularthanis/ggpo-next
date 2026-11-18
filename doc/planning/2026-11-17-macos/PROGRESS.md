@@ -1,6 +1,6 @@
 # PROGRESS — macOS support
 
-Status: In progress (M1–M5 done; M6 needs the owner)
+Status: In progress (M1–M5 and M6-T01 done)
 
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
@@ -51,7 +51,7 @@ Status: In progress (M1–M5 done; M6 needs the owner)
 
 ### M6: Finish
 
-- [ ] M6-T01: Ruleset requires the macOS aggregate check (owner).
+- [x] M6-T01: Ruleset requires the macOS aggregate check (owner).
 - [ ] M6-T02: Developer guide, Testing.md and README updated.
 
 ## Log
@@ -62,3 +62,4 @@ Status: In progress (M1–M5 done; M6 needs the owner)
 - 2026-11-18: M3 done. Platform ID 4 = macOS in the server constants, the C++ codec and the legend; the legend contract shows a macOS row and the matchmaker test proves IDs 4 and 9 pass through unchanged. The server never interprets platform IDs, so the live image needs no update.
 - 2026-11-18: M4 done. SDL2 2.30.9 from pinned, checksummed source as a static universal macOS 11 library (Homebrew's is single-arch and host-targeted, so the plan's Homebrew CI build was dropped). `VectorWar.app` runs `macos_vectorwar_frontend_smoke` and `macos_vectorwar_gui_host_contract` on all four runners (38/38). Packaged as an unsigned `.dmg` (owner's choice over a zip), validated mounted. No app icon yet.
 - 2026-11-18: M5 done. macOS E2E pairs against Linux, Windows and Android in both orders with both fixtures (24 jobs, capped matrix); the macOS runner's DNS is restored after joining the tailnet. macOS is the public game's fourth player: a four-player forced-relay match through the DuckDNS server (passes once run after merge; see log).
+- 2026-11-18: M6-T01 done at the owner's request: ruleset 26776893 ("Master PR and CI baseline") requires "Complete macOS compatibility"; other rules unchanged.
