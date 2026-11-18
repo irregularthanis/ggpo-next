@@ -11,6 +11,11 @@ on:
 permissions:
   contents: read
 
+# The public matchmaking server, pre-filled (and still editable) on every
+# Vector War release's start screen; port 7100 is the app's default.
+env:
+  VW_MATCHMAKING_HOST: ${{ vars.DUCKDNS_SUBDOMAIN && format('{0}.duckdns.org', vars.DUCKDNS_SUBDOMAIN) || '' }}
+
 jobs:
   package-linux:
     # One SDK containing libGGPO.so and libGGPO.a.
@@ -365,6 +370,7 @@ jobs:
             -DCMAKE_OSX_DEPLOYMENT_TARGET="$MACOS_DEPLOYMENT_TARGET" \
             -DCMAKE_PREFIX_PATH="$PWD/build/sdl2" \
             -DBUILD_SHARED_LIBS=OFF -DGGPO_BUILD_VECTORWAR=ON \
+            -DGGPO_VECTORWAR_MATCHMAKING_HOST="$VW_MATCHMAKING_HOST" \
             -DGGPO_RUN_TESTS_ON_BUILD=OFF -DBUILD_TESTING=ON
           cmake --build build/vectorwar --target VectorWar --parallel 3
       - name: Make the disk image
@@ -427,7 +433,8 @@ jobs:
       - name: Build and stage the APK
         run: |
           set -euo pipefail
-          gradle -p src/apps/vectorwar/android assembleDebug --no-daemon
+          gradle -p src/apps/vectorwar/android assembleDebug --no-daemon \
+            -PmatchmakingHost="$VW_MATCHMAKING_HOST"
           if [ "${GITHUB_EVENT_NAME}" = push ]; then version="${GITHUB_REF_NAME#v}"; else version=dev; fi
           cp src/apps/vectorwar/android/app/build/outputs/apk/debug/app-debug.apk \
             "build/ggpo-${version}-vectorwar-android.apk"
@@ -462,10 +469,12 @@ jobs:
           docker run --rm --user "$(id -u):$(id -g)" \
             -e HOME=/tmp -e SDL_VIDEODRIVER=dummy \
             -v "$PWD:/src:ro" -v "$PWD/build/vectorwar-linux:/out" \
+            -e VW_MATCHMAKING_HOST \
             -w /src ggpo-vectorwar-release sh -euxc '
               cmake -S /src -B /out/build -G Ninja \
                 -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
                 -DGGPO_BUILD_SDK=ON -DGGPO_BUILD_VECTORWAR=ON \
+                -DGGPO_VECTORWAR_MATCHMAKING_HOST="$VW_MATCHMAKING_HOST" \
                 -DGGPO_RUN_TESTS_ON_BUILD=OFF -DBUILD_TESTING=ON
               cmake --build /out/build --target VectorWar --parallel 2
               /out/build/bin/x64/Release/VectorWar --frontend-smoke
@@ -505,6 +514,7 @@ jobs:
           cmake -S . -B build/vectorwar -A "${{ matrix.architecture }}" `
             -DBUILD_SHARED_LIBS=OFF -DGGPO_BUILD_SDK=ON `
             -DGGPO_BUILD_VECTORWAR=ON -DGGPO_RUN_TESTS_ON_BUILD=OFF `
+            "-DGGPO_VECTORWAR_MATCHMAKING_HOST=$env:VW_MATCHMAKING_HOST" `
             -DBUILD_TESTING=ON
           cmake --build build/vectorwar --config Release `
             --target VectorWar --parallel 2

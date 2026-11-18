@@ -460,9 +460,12 @@ version", "could not reach the relay". In the SDL frontend `--matchmaking`
 from the command line or the Android launcher shows the same progress screen,
 and on Android a failure stays on screen until Back.
 
-The default server is a build setting, empty until the server's DuckDNS name
-is chosen: `-DGGPO_VECTORWAR_MATCHMAKING_HOST=name.duckdns.org` (CMake) or
-`-PmatchmakingHost=name.duckdns.org` (the APK).
+The default server is a build setting:
+`-DGGPO_VECTORWAR_MATCHMAKING_HOST=name.duckdns.org` (CMake) or
+`-PmatchmakingHost=name.duckdns.org` (the APK); empty in a plain source build.
+Release builds on every platform set it to the public server, the repository
+variable `DUCKDNS_SUBDOMAIN` + `.duckdns.org`, so players only press Play; the
+field stays editable.
 
 ### Legend
 

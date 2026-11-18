@@ -121,11 +121,11 @@ options, floating point, Vector War) follows in
 
 | Platform | Release download |
 | --- | --- |
-| [Windows with MSVC](#windows-with-msvc) (Visual Studio, clang-cl) | `ggpo-0.6.0-windows-x64.zip`, `ggpo-0.6.0-windows-x86.zip` |
-| [Windows with MinGW-w64](#windows-with-mingw-w64) (MSYS2, cross compilers) | `ggpo-0.6.0-windows-x64-mingw.zip`, `ggpo-0.6.0-windows-x86-mingw.zip` |
-| [Linux](#linux) (x86_64, GCC or Clang) | `ggpo-0.6.0-linux-x86_64.deb` / `.rpm` / `.tar.gz` |
-| [Android](#android) (arm64-v8a, armeabi-v7a, x86_64; API 21+) | `ggpo-0.6.0-android.tar.gz` |
-| [macOS](#macos) (universal arm64 + x86_64; macOS 11+) | `ggpo-<version>-macos-universal.tar.gz`, from the first release after 0.6.0 |
+| [Windows with MSVC](#windows-with-msvc) (Visual Studio, clang-cl) | `ggpo-0.7.0-windows-x64.zip`, `ggpo-0.7.0-windows-x86.zip` |
+| [Windows with MinGW-w64](#windows-with-mingw-w64) (MSYS2, cross compilers) | `ggpo-0.7.0-windows-x64-mingw.zip`, `ggpo-0.7.0-windows-x86-mingw.zip` |
+| [Linux](#linux) (x86_64, GCC or Clang) | `ggpo-0.7.0-linux-x86_64.deb` / `.rpm` / `.tar.gz` |
+| [Android](#android) (arm64-v8a, armeabi-v7a, x86_64; API 21+) | `ggpo-0.7.0-android.tar.gz` |
+| [macOS](#macos) (universal arm64 + x86_64; macOS 11+) | `ggpo-0.7.0-macos-universal.tar.gz` |
 
 Downloads are on [GGPO Next Releases](https://github.com/irregularthanis/ggpo-next/releases).
 Windows is supported in both 64-bit (`x64`/x86-64) and 32-bit (`x86`/Win32)
@@ -389,9 +389,9 @@ For x86_64 applications built with GCC or Clang. `GGPO_SHARED_LIB` is not used.
 
 ```bash
 # Debian or Ubuntu
-sudo apt install ./ggpo-0.6.0-linux-x86_64.deb
+sudo apt install ./ggpo-0.7.0-linux-x86_64.deb
 # Fedora or another RPM-family system
-sudo dnf install ./ggpo-0.6.0-linux-x86_64.rpm
+sudo dnf install ./ggpo-0.7.0-linux-x86_64.rpm
 ```
 
 The package is named `ggpo-sdk` and installs under `/usr`: the public header in
@@ -407,15 +407,15 @@ Use the raw archive for an unprivileged, application-local, or CI installation:
 
 ```bash
 sha256sum --check SHA256SUMS --ignore-missing
-tar -xzf ggpo-0.6.0-linux-x86_64.tar.gz
+tar -xzf ggpo-0.7.0-linux-x86_64.tar.gz
 ```
 
 ```text
-ggpo-0.6.0-linux-x86_64/
+ggpo-0.7.0-linux-x86_64/
 ├── include/ggponet.h
 ├── lib/libGGPO.so -> libGGPO.so.0
-├── lib/libGGPO.so.0 -> libGGPO.so.0.6.0
-├── lib/libGGPO.so.0.6.0
+├── lib/libGGPO.so.0 -> libGGPO.so.0.7.0
+├── lib/libGGPO.so.0.7.0
 ├── lib/libGGPO.a
 ├── lib/cmake/GGPO/
 └── share/GGPO/
@@ -459,12 +459,12 @@ Link `lib/libGGPO.so`. For a DEB/RPM install, omit `CMAKE_PREFIX_PATH` and the
 
 ```bash
 # CMake
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$HOME/ggpo-0.6.0-linux-x86_64
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$HOME/ggpo-0.7.0-linux-x86_64
 cmake --build build --parallel
 
 # Without CMake
-g++ -I$HOME/ggpo-0.6.0-linux-x86_64/include main.cpp \
-  -L$HOME/ggpo-0.6.0-linux-x86_64/lib -lGGPO -Wl,-rpath,'$ORIGIN'
+g++ -I$HOME/ggpo-0.7.0-linux-x86_64/include main.cpp \
+  -L$HOME/ggpo-0.7.0-linux-x86_64/lib -lGGPO -Wl,-rpath,'$ORIGIN'
 ```
 
 #### Linux: static linking
@@ -473,12 +473,12 @@ Link `lib/libGGPO.a`.
 
 ```bash
 # CMake
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$HOME/ggpo-0.6.0-linux-x86_64 \
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$HOME/ggpo-0.7.0-linux-x86_64 \
   -DGGPO_USE_STATIC=ON
 cmake --build build --parallel
 
 # Without CMake
-g++ -I$HOME/ggpo-0.6.0-linux-x86_64/include main.cpp $HOME/ggpo-0.6.0-linux-x86_64/lib/libGGPO.a
+g++ -I$HOME/ggpo-0.7.0-linux-x86_64/include main.cpp $HOME/ggpo-0.7.0-linux-x86_64/lib/libGGPO.a
 ```
 
 #### Linux: deploy
@@ -491,7 +491,7 @@ g++ -I$HOME/ggpo-0.6.0-linux-x86_64/include main.cpp $HOME/ggpo-0.6.0-linux-x86_
       INSTALL_RPATH "$ORIGIN/../lib")
   ```
 
-  During development, `LD_LIBRARY_PATH=$HOME/ggpo-0.6.0-linux-x86_64/lib ./application_x`
+  During development, `LD_LIBRARY_PATH=$HOME/ggpo-0.7.0-linux-x86_64/lib ./application_x`
   also works.
 - **Static:** no GGPO file.
 
@@ -516,10 +516,10 @@ targets API 35 while retaining `minSdk 21`.
 
 #### Android: release SDK
 
-`ggpo-0.6.0-android.tar.gz` contains one complete CMake prefix per ABI:
+`ggpo-0.7.0-android.tar.gz` contains one complete CMake prefix per ABI:
 
 ```text
-ggpo-0.6.0-android/
+ggpo-0.7.0-android/
 ├── arm64-v8a/{include,lib,share}/
 ├── armeabi-v7a/{include,lib,share}/
 └── x86_64/{include,lib,share}/
@@ -527,7 +527,7 @@ ggpo-0.6.0-android/
 
 Always select the directory matching the application's `ANDROID_ABI`. In a
 Gradle `externalNativeBuild`, pass
-`-DCMAKE_PREFIX_PATH=/path/to/ggpo-0.6.0-android/${ANDROID_ABI}` so each ABI
+`-DCMAKE_PREFIX_PATH=/path/to/ggpo-0.7.0-android/${ANDROID_ABI}` so each ABI
 finds its own prefix.
 
 #### Android: build from source
@@ -558,11 +558,11 @@ Link `lib/libGGPO.so` from the ABI's prefix.
 cmake -S . -B build -G Ninja \
   -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
   -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=21 \
-  -DCMAKE_PREFIX_PATH=$HOME/ggpo-0.6.0-android/arm64-v8a
+  -DCMAKE_PREFIX_PATH=$HOME/ggpo-0.7.0-android/arm64-v8a
 
 # Without CMake ($triple = aarch64-linux-android21, etc.; $abi = arm64-v8a, etc.)
-$triple-clang++ -I$HOME/ggpo-0.6.0-android/$abi/include main.cpp \
-  -L$HOME/ggpo-0.6.0-android/$abi/lib -lGGPO
+$triple-clang++ -I$HOME/ggpo-0.7.0-android/$abi/include main.cpp \
+  -L$HOME/ggpo-0.7.0-android/$abi/lib -lGGPO
 ```
 
 #### Android: static linking
@@ -574,8 +574,8 @@ Link `lib/libGGPO.a` from the ABI's prefix.
   -DGGPO_USE_STATIC=ON
 
 # Without CMake
-$triple-clang++ -I$HOME/ggpo-0.6.0-android/$abi/include main.cpp \
-  $HOME/ggpo-0.6.0-android/$abi/lib/libGGPO.a
+$triple-clang++ -I$HOME/ggpo-0.7.0-android/$abi/include main.cpp \
+  $HOME/ggpo-0.7.0-android/$abi/lib/libGGPO.a
 ```
 
 #### Android: deploy
@@ -601,17 +601,17 @@ embeds it signs it along with everything else in its bundle.
 
 #### macOS: release SDK
 
-`ggpo-<version>-macos-universal.tar.gz` is one CMake prefix:
+`ggpo-0.7.0-macos-universal.tar.gz` is one CMake prefix:
 
 ```text
-ggpo-<version>-macos-universal/
+ggpo-0.7.0-macos-universal/
 ├── include/ggponet.h
-├── lib/libGGPO.a, libGGPO.<version>.dylib (+ libGGPO.0.dylib, libGGPO.dylib links)
+├── lib/libGGPO.a, libGGPO.0.7.0.dylib (+ libGGPO.0.dylib, libGGPO.dylib links)
 ├── lib/cmake/GGPO/
 └── LICENSE
 ```
 
-Pass `-DCMAKE_PREFIX_PATH=/path/to/ggpo-<version>-macos-universal` to the
+Pass `-DCMAKE_PREFIX_PATH=/path/to/ggpo-0.7.0-macos-universal` to the
 application's configure. The archive's libraries are universal, so an
 application can build for either architecture or both.
 
@@ -639,7 +639,7 @@ application needs an rpath entry that points at wherever it ships the library.
 # CMake
 cmake -S . -B build -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
   -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
-  -DCMAKE_PREFIX_PATH=$HOME/ggpo-<version>-macos-universal
+  -DCMAKE_PREFIX_PATH=$HOME/ggpo-0.7.0-macos-universal
 
 # Without CMake
 clang++ -arch arm64 -arch x86_64 -mmacosx-version-min=11.0 \
@@ -809,8 +809,8 @@ Release pages also attach Vector War builds, independent of the SDK linkage:
 | --- | --- | --- |
 | Windows x64 / x86 | `vectorwar-windows-x64.zip`, `vectorwar-windows-x86.zip` (Win32/GDI) | `VectorWar.exe`, same arguments as Linux |
 | Linux x86_64 | `vectorwar-linux-x86_64.tar.gz` (SDL2) | See below |
-| Android, all ABIs | `vectorwar-android.apk` (SDL2) | `adb install ggpo-0.6.0-vectorwar-android.apk` |
-| macOS 11+, Apple Silicon and Intel | `vectorwar-macos.dmg` (SDL2), from the first release after 0.6.0 | See below |
+| Android, all ABIs | `vectorwar-android.apk` (SDL2) | `adb install ggpo-0.7.0-vectorwar-android.apk` |
+| macOS 11+, Apple Silicon and Intel | `vectorwar-macos.dmg` (SDL2) | See below |
 
 On Linux, install the SDL2 runtime, extract the archive, and launch two local
 players in separate terminals:
@@ -845,7 +845,9 @@ license and the detailed [Vector War architecture guide](architecture/VectorWar.
 
 Vector War supports direct `IP:PORT` play and matchmade Internet play. Run the
 GUI without arguments and choose **Matchmaking**, then enter the same server,
-player count (2–4), and optional lobby code on every device. The server places
+player count (2–4), and optional lobby code on every device. Release downloads
+already fill in the public server; a source build leaves it empty unless
+built with `GGPO_VECTORWAR_MATCHMAKING_HOST`. The server places
 players in the lobby, starts every peer pair on its relay, and the clients then
 try an authenticated direct UDP path while keeping the relay available.
 

@@ -115,7 +115,8 @@ Status: In progress
 - [ ] M6-T01: First `terraform apply` (deploy workflow or local); record the
   plan and outputs, verify the service, and leave it deployed. Use the manual
   `destroy` action only when intentionally taking the service down.
-- [ ] M6-T02: Set the compiled default server to the DuckDNS name.
+- [x] M6-T02: Set the compiled default server to the DuckDNS name
+  (release builds on every platform, from `DUCKDNS_SUBDOMAIN`; 2026-11-18).
 - [ ] M6-T03: Friends trial (checklist below), every platform pair in both
   player orders.
 - [ ] M6-T04: Add **Complete infrastructure checks** to the `master` ruleset.
