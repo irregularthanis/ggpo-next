@@ -19,6 +19,10 @@
     - [Linux: registered tests](#linux-registered-tests)
     - [Linux: run locally](#linux-run-locally)
     - [Linux: CI lanes](#linux-ci-lanes)
+  - [macOS](#macos)
+    - [macOS: registered tests](#macos-registered-tests)
+    - [macOS: run locally](#macos-run-locally)
+    - [macOS: CI lanes](#macos-ci-lanes)
   - [Android](#android)
     - [Android: registered tests](#android-registered-tests)
     - [Android: run locally](#android-run-locally)
@@ -46,7 +50,7 @@
 ## Overview
 
 GGPO's tests freeze Windows compatibility while qualifying the shared core and
-the Windows, Linux, MinGW, and Android platform paths. They protect public ABI,
+the Windows, Linux, MinGW, Android, and macOS platform paths. They protect public ABI,
 packed protocol data, deterministic rollback, packages, and real loopback
 sessions without requiring the interactive Vector War frontend.
 
@@ -75,6 +79,7 @@ flowchart TB
         direction TB
         LINUX["Linux<br/>GCC, Clang<br/>packages,<br/>ABI ceiling<br/>ASan + UBSan"]
         ANDROID["Android<br/>3 ABIs,<br/>API 21 / 35<br/>SDK audit,<br/>APK smoke<br/>ASan + UBSan"]
+        MACOS["macOS<br/>universal,<br/>built for 11,<br/>tested on 15 / 26<br/>(not yet in E2E)"]
     end
 
     E2E["Cross-platform<br/>E2E<br/>every ordered<br/>pair<br/>over UDP"]
@@ -164,6 +169,7 @@ not (`readelf -d` on Linux; on Windows the static programs run with the SDK's
 | [Windows with MSVC](#windows-with-msvc) | `GGPO.dll`, import/static `.lib`, CMake package | x64/Win32 layouts, exports, frozen baseline compatibility and installed consumers |
 | [Windows with MinGW-w64](#windows-with-mingw-w64) | `libGGPO.dll`, `.dll.a`, static `.a` | x86/x64 exports, no external MinGW runtime DLLs, consumers and MSVC isolation |
 | [Linux](#linux) | `libGGPO.so`, static `.a`, DEB/RPM/tar SDKs | GCC/Clang builds, SONAME/glibc audit, consumers and package layout |
+| [macOS](#macos) | Universal (arm64 + x86_64) `libGGPO.dylib`, static `.a` | Every slice records minimum macOS 11.0, unguarded newer APIs fail the build, Mach-O exports |
 | [Android](#android) | Per-ABI `libGGPO.so`, static `.a`, CMake SDK | API-21 ceiling, ELF exports/dependencies, 16 KB alignment, consumers and cross-toolchain rejection |
 
 Both Windows toolchains qualify and package 32-bit x86 and 64-bit x86-64
@@ -328,6 +334,56 @@ The Clang C++ gate suppresses only `-Wextern-c-compat`: C requires the documente
 one-byte `GGPOPlayer.local` placeholder while C++ retains the frozen empty-member
 Windows ABI. All other pedantic diagnostics remain errors.
 
+### macOS
+
+The library is built for macOS 11 and later and tested on macOS 15 and 26, the
+only versions GitHub-hosted runners offer:
+
+| Dimension | Covered by | Meaning |
+| --- | --- | --- |
+| Architecture | One universal build (arm64 + x86_64) | Both slices ship in every binary and both run in CI |
+| Tested runtime | `macos-15`, `macos-26` (Apple Silicon); `macos-15-intel`, `macos-26-intel` | The same binaries run natively on each; no Rosetta |
+| macOS 11–14 | Build-time checks only | `-Werror=unguarded-availability-new` and the `minos 11.0` audit; behaviour on 11–14 is not run |
+| Toolchain | Xcode 16.4, pinned in the workflow | Bumped deliberately; a newer Xcode that drops the 11.0 target fails the build |
+
+Apple Clang contracts `a*b+c` into fused multiply-add on arm64, so Apple builds
+use `-ffp-contract=off` like Android.
+
+#### macOS: registered tests
+
+Runs every [shared test](#shared-tests) with the `macos_` prefix, plus:
+
+| Test | Code | What it tests |
+| --- | --- | --- |
+| `macos_exports` | [`check_exports.py`](../../tests/baseline/linux/check_exports.py), [`exports.txt`](../../tests/baseline/linux/exports.txt) | `libGGPO.dylib` exports exactly the frozen `ggpo_*` symbols (Mach-O names without the leading underscore) |
+
+The Vector War GUI is not built on macOS yet, so no GUI host contract runs.
+
+#### macOS: run locally
+
+```bash
+cmake -S . -B build/macos -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DGGPO_BUILD_VECTORWAR_GUI=OFF
+cmake --build build/macos --parallel
+cmake --install build/macos --prefix build/macos/install
+python3 scripts/macos/audit_binaries.py build/macos/install \
+  --arch arm64 --arch x86_64 --minos 11.0
+```
+
+The deployment target defaults to 11.0. With `GGPO_RUN_TESTS_ON_BUILD` on (the
+default), the build runs CTest.
+
+#### macOS: CI lanes
+
+[`macos-compatibility.yml`](../../.github/workflows/macos-compatibility.yml)
+builds once on `macos-15`, installs the SDK, and runs
+[`audit_binaries.py`](../../scripts/macos/audit_binaries.py): every installed
+Mach-O file must carry both slices, and every object in each slice must record
+minimum macOS 11.0. The build tree is packed and every test runner unpacks it
+at the same path and runs CTest on those exact binaries. The four test runners
+run two at a time, so with the build the workflow uses all five macOS jobs the
+account allows without holding them all at once.
+
 ### Android
 
 The Android contract separates CPU ABI, device API level, and NDK revision:
@@ -409,7 +465,7 @@ API 35, then waits for the application's explicit frontend-ready log marker.
 Every platform runs these tests from the same source. The platform sections
 list only what a platform adds or skips.
 
-**Platform-prefixed:** one copy per platform, named `windows_`, `linux_` or
+**Platform-prefixed:** one copy per platform, named `windows_`, `linux_`, `macos_` or
 `android_` (MinGW uses `windows_`). The `static_` rows need a build with both
 libraries, which is the default.
 
@@ -898,7 +954,8 @@ The `master` ruleset requires one stable aggregate check per workflow rather
 than individual lanes: `Complete Linux compatibility`, `Complete MinGW
 compatibility`, `Complete Windows compatibility`, `Complete Android
 compatibility`, `Complete native E2E matrix`, and `Complete NAT traversal
-checks`, plus `Fork owner approval`.
+checks`, plus `Fork owner approval`. `Complete macOS compatibility` reports
+the same way and joins the ruleset at the end of the macOS rollout.
 Each aggregate covers every lane of its workflow. Individual matrix lanes cannot
 be required directly: a lane skipped on a documentation-only change never
 reports its expanded name, so the requirement would wait forever. Each aggregate
@@ -947,7 +1004,9 @@ established by the frame, checksum, callback, and lifecycle assertions.
   but not SteamOS hardware.
 - The cross-platform E2E workflow remains a clean-link test; deterministic
   impairment belongs to the Linux namespace NAT workflow.
-- No macOS adapter or build exists.
+- macOS runs the library and its tests but not yet Vector War's GUI, the
+  cross-platform E2E pairs, or the public game; macOS 11–14 are covered only
+  by build-time checks.
 - Android ASan+UBSan is scheduled on an x86_64 emulator; Linux Clang and MSVC
   sanitizer configurations remain in the same qualification workflow.
 - Android physical devices are not yet part of required CI; current device
