@@ -487,15 +487,19 @@ qualification when its cost becomes excessive.
   physical devices.
 - It uses two players and does not cover spectators or disconnect/resume.
 - Clean qualification injects no latency or packet loss.
-- It does not test NAT traversal, relay selection, matchmaking, encryption, or
-  public-Internet reachability; see [Matchmaking: testing](Matchmaking.md#testing)
-  for controlled matchmaking, relay and hole-punching tests, and the
-  [public multi-platform game](Testing.md#public-multi-platform-game) for the
-  deployed DuckDNS/OCI path.
+- Peers are given each other's tailnet address directly, so it does not test
+  matchmaking, relay selection, or Vector War's own NAT traversal (Tailscale
+  connects the runners). Packets travel inside Tailscale's encrypted tunnel;
+  GGPO's own traffic is unencrypted, and the suite does not test that
+  either. See [Matchmaking: testing](Matchmaking.md#testing) for controlled
+  matchmaking, relay, hole-punching and impairment tests, and the
+  [public multi-platform game](Testing.md#public-multi-platform-game) for a
+  match through the deployed server over the public Internet.
 - It is a correctness suite, not a throughput or latency benchmark.
 
-Seeded impairment is the next independent nightly tier; it is not part of the
-completed clean interoperability gate.
+Network impairment (delay, jitter, loss, reordering) is tested separately by
+the [NAT traversal](Matchmaking.md#nat-matrix-results) workflow with `tc
+netem`; this cross-host gate stays a clean-link test.
 
 ### References
 
