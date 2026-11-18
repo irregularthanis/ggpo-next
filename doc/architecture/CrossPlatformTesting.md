@@ -92,7 +92,7 @@ spectators, more than two players, or arbitrary application determinism.
 Matchmaking, the relay and hole punching have their own tests
 ([Matchmaking: testing](Matchmaking.md#testing)). The separate
 [public multi-platform game](Testing.md#public-multi-platform-game) joins
-Linux, Windows/MSVC and Android in one deployed forced-relay session. MinGW is
+Linux, Windows/MSVC, Android and macOS in one deployed forced-relay session. MinGW is
 covered by the generic peer because Vector War is not built with MinGW.
 
 ### Scenario matrix
@@ -102,16 +102,18 @@ input timing, and platform-specific behavior. **G** is the generic peer
 fixture and **V** the Vector War fixture; each cell is one scenario per
 fixture, run as two jobs.
 
-| Player 1 ↓ / Player 2 → | Linux | Windows (MSVC) | MinGW | Android |
-| --- | --- | --- | --- | --- |
-| **Linux** | G V | G V | — | G V |
-| **Windows (MSVC)** | G V | G V | — | G V |
-| **MinGW** | G | G | — | G |
-| **Android** | G V | G V | G | G V |
+| Player 1 ↓ / Player 2 → | Linux | Windows (MSVC) | MinGW | Android | macOS |
+| --- | --- | --- | --- | --- | --- |
+| **Linux** | G V | G V | — | G V | G V |
+| **Windows (MSVC)** | G V | G V | — | G V | G V |
+| **MinGW** | G | G | — | G | — |
+| **Android** | G V | G V | G | G V | G V |
+| **macOS** | G V | G V | — | G V | — |
 
-That is 13 generic and 9 Vector War scenarios, 44 role jobs in total. Vector
+That is 19 generic and 15 Vector War scenarios, 68 role jobs in total. Vector
 War has no MinGW build, so MinGW pairs are generic only. MinGW is paired with
-MSVC and Linux as player 1 only, and with Android in both orders.
+MSVC and Linux as player 1 only, and with Android in both orders. macOS plays
+Linux, Windows and Android in both orders with both fixtures.
 
 [`validate_manifest.py`](../../tests/e2e/validate_manifest.py) defines the
 required assignments. The workflow names generic scenarios `linux-linux`,
@@ -166,6 +168,29 @@ as `e2e-peer-mingw`. Vector War is not built with MinGW.
 MinGW roles run on `windows-2022` with the same firewall handling as MSVC.
 Scenarios: `mingw-windows` and `mingw-linux` (MinGW as player 1), and
 `android-mingw` / `mingw-android`. All are generic-fixture only.
+
+### macOS
+
+#### macOS: peer build
+
+The `Build native macOS peer` job compiles `ggpo_macos_peer_smoke` and
+`VectorWarHeadless` as static Release universal (arm64 + x86_64) executables
+with the pinned Xcode on `macos-15`, and uploads them as `e2e-peer-macos`.
+
+#### macOS: execution
+
+macOS roles run on `macos-15` in a separate matrix job, `execute-macos`,
+capped at four jobs (two pairs). Each pair has one macOS role, so the matrix
+holds at most two of the account's five macOS runners and leaves the rest to
+the macOS compatibility workflow. Both matrices list each pair's roles
+adjacently, and their caps sum to 16, below the 20-job account limit (checked
+by [`test_e2e_matrix.py`](../../.github/ci/tests/test_e2e_matrix.py)). The
+runners' application firewall is off, so no port rules are needed. On macOS the
+Tailscale action points every network service's DNS at 100.100.100.100 even
+with `--accept-dns=false`, and `api.github.com`, which the rendezvous needs,
+stops resolving. A step after joining restores the runner's own DNS servers
+and checks that the lookup works. Peers address each other by tailnet IP, so
+they need no tailnet DNS.
 
 ### Android
 
@@ -376,9 +401,14 @@ pushes, or manual dispatch. The workflow does not use `pull_request_target`.
 | Peer startup/crash | Nonzero process status before the completion barrier | Surviving child is terminated |
 | Peer timeout | Bounded rendezvous, control, execution, and job deadlines | Child, server, firewall, and ephemeral node cleanup run |
 | Missing paired role | Role 1 and role 2 fail after the 10-minute rendezvous deadline | Published endpoint is retired and the surviving agent is stopped |
+| GitHub API 5xx | Lookups, retiring and deleting retry three times (1 s, 3 s, 9 s); creating the deployment never retries, so a pair cannot publish twice | A persistent error still fails the role |
 | State divergence | Live snapshot never reaches the oracle or final schema validation fails | Scenario report is absent or non-passing |
 | Missing or duplicate scenario | [`validate_manifest.py`](../../tests/e2e/validate_manifest.py) rejects the evidence set | Final job fails even if other scenarios passed |
 | Role job failure | `needs.execute.result` is not `success` | Final job fails unconditionally |
+
+To retry a failed scenario, re-run the whole workflow, not "Re-run failed
+jobs": the latter restarts only the failed role, whose partner already
+finished, so it waits out the rendezvous deadline and fails again.
 
 Focused regressions live in
 [`test_orchestration.py`](../../tests/e2e/test_orchestration.py),

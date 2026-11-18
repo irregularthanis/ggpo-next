@@ -83,7 +83,10 @@ builds portable `VectorWarCore` and the `VectorWarHeadless` fixture whenever
 portable targets while skipping SDL2 discovery and the interactive frontend.
 The `VectorWar` GUI executable is built from
 the same core with the Win32 host on Windows and with the SDL2 host on Linux
-(SDL2 development files are required). Android's Gradle project calls the same
+(SDL2 development files are required) and macOS. On macOS it is an app bundle,
+`VectorWar.app`, statically linked with the pinned SDL2 that
+[`build_sdl2.sh`](../../scripts/macos/build_sdl2.sh) builds (universal,
+macOS 11); pass its prefix in `CMAKE_PREFIX_PATH`. Android's Gradle project calls the same
 CMake graph and packages the SDL frontend for all supported ABIs. The SDK's Windows platform layer carries
 `winmm` and `ws2_32` transitively.
 
@@ -393,9 +396,9 @@ Deployment record) is described in
 
 After a production infrastructure apply, the
 [public multi-platform workflow](../../.github/workflows/public-multiplatform-game.yml)
-runs Linux, Windows/MSVC and Android headless peers in one three-player lobby through
-the DuckDNS name. It forces every pair through the OCI relay, then requires all
-three peers to reach frame 180 with equal state and rollback evidence. See the
+runs Linux, Windows/MSVC, Android and macOS headless peers in one four-player lobby
+through the DuckDNS name. It forces every pair through the OCI relay, then requires
+all four peers to reach frame 180 with equal state and rollback evidence. See the
 [testing contract](Testing.md#public-multi-platform-game).
 
 ## Internet play
@@ -457,9 +460,12 @@ version", "could not reach the relay". In the SDL frontend `--matchmaking`
 from the command line or the Android launcher shows the same progress screen,
 and on Android a failure stays on screen until Back.
 
-The default server is a build setting, empty until the server's DuckDNS name
-is chosen: `-DGGPO_VECTORWAR_MATCHMAKING_HOST=name.duckdns.org` (CMake) or
-`-PmatchmakingHost=name.duckdns.org` (the APK).
+The default server is a build setting:
+`-DGGPO_VECTORWAR_MATCHMAKING_HOST=name.duckdns.org` (CMake) or
+`-PmatchmakingHost=name.duckdns.org` (the APK); empty in a plain source build.
+Release builds on every platform set it to the public server, the repository
+variable `DUCKDNS_SUBDOMAIN` + `.duckdns.org`, so players only press Play; the
+field stays editable.
 
 ### Legend
 
@@ -518,9 +524,16 @@ native window and lifecycle. [`sdl_touch_controls.h`](../../src/apps/vectorwar/s
 maps screen regions to the existing steering, fire, and bomb input bits; it
 does not change the deterministic simulation or GGPO callback contract.
 
+macOS uses the same SDL host and renderer as Linux, built as
+`VectorWar.app`. It is unsigned, so the first launch must be approved: on
+macOS 15 and later with Open Anyway in System Settings → Privacy & Security,
+on macOS 11–14 with right-click → Open. macOS also asks once whether the app may accept incoming connections: direct
+and hole-punched play need that, relay play does not.
+
 Release tags attach standalone GUI archives for Windows x64/x86 and Linux
-x86-64 plus one multi-ABI Android APK alongside the SDK packages. The Linux
-executable requires the distribution SDL2 runtime; the APK bundles SDL2.
+x86-64, one multi-ABI Android APK, and a macOS `.dmg` alongside the SDK
+packages. The Linux executable requires the distribution SDL2 runtime; the APK
+and the macOS app include SDL2.
 
 ## End-to-end two-player example
 

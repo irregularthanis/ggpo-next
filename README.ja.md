@@ -12,11 +12,11 @@
 
 ## SDKのインストールまたはビルド
 
-SDKのビルドは現在Windowsのみをサポートしています。LinuxおよびApple向けのプラットフォームアダプターは今後の作業です。
+SDKは、Windows（MSVCおよびMinGW-w64、x64とx86）、Linux、Android（arm64-v8a、armeabi-v7a、x86_64）、macOS 11以降（arm64とx86_64のユニバーサルバイナリ。macOS 15と26でテスト済み）をサポートしています。Vector WarはWindows（Win32/GDI）、Linux（SDL2）、Android（SDL2/タッチ操作）、macOS（SDL2）で動作します。iOSなど未対応のターゲットでは、構成時に明示的にエラーになります。
 
-### Windows
+[Releases](https://github.com/irregularthanis/ggpo-next/releases)からテスト済みのSDK（WindowsのZIP、Linuxのパッケージ、AndroidおよびmacOSのtar.gz）を利用する方法と、ソースからCMakeでビルドする方法があります。アーカイブの選択、インストール、CMakeパッケージ、および統合手順については、英語版の[開発者ガイド](doc/DeveloperGuide.md#install-the-sdk)を参照してください。
 
-[Releases](https://github.com/irregularthanis/ggpo-next/releases)からテスト済みのSDK ZIPを利用する方法と、ソースからCMakeでビルドする方法があります。アーカイブの選択、インストール、CMakeパッケージ、および統合手順については、英語版の[開発者ガイド](doc/DeveloperGuide.md#install-the-sdk)を参照してください。
+macOS版Vector War（`.dmg`）は署名されていないため、初回起動時に許可が必要です。macOS 15以降では、システム設定の「プライバシーとセキュリティ」で「このまま開く」を選択します。macOS 11～14では、右クリックして「開く」を選択します。
 
 ## サンプルアプリケーション
 

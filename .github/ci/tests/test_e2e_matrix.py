@@ -35,10 +35,21 @@ class E2EMatrix(unittest.TestCase):
         self.assertEqual(len(scenarios), len(set(scenarios)))
 
     def test_parallelism_is_capped_even_and_below_the_account_limit(self):
+        # One cap per matrix job (the main matrix and the macOS one); their
+        # sum stays below the 20-job account limit.
         caps = [int(value) for value in MAX_PARALLEL.findall(self.text)]
-        self.assertEqual(len(caps), 1)
-        self.assertEqual(caps[0] % 2, 0)
-        self.assertLess(caps[0], 20)
+        self.assertEqual(len(caps), 2)
+        for cap in caps:
+            self.assertEqual(cap % 2, 0)
+        self.assertLess(sum(caps), 20)
+
+    def test_macos_pairs_hold_at_most_two_macos_runners(self):
+        # The account runs five macOS jobs at once; the macOS matrix's cap
+        # (two pairs) times macOS roles per pair must stay well below that.
+        macos_entries = re.findall(r"^\s*-\s*\{.*\bos:\s*macos-[^,}]*", self.text, re.MULTILINE)
+        self.assertTrue(macos_entries)
+        caps = [int(value) for value in MAX_PARALLEL.findall(self.text)]
+        self.assertLessEqual(min(caps) // 2, 2)
 
 
 if __name__ == "__main__":

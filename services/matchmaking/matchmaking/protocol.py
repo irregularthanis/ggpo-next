@@ -41,11 +41,15 @@ PLATFORM_UNKNOWN = 0
 PLATFORM_WINDOWS = 1
 PLATFORM_LINUX = 2
 PLATFORM_ANDROID = 3
+PLATFORM_MACOS = 4
+# The server never interprets platform IDs: it copies each player's byte
+# into MATCH, so a new ID needs no server update.
 PLATFORM_NAMES = {
     PLATFORM_UNKNOWN: "unknown",
     PLATFORM_WINDOWS: "Windows",
     PLATFORM_LINUX: "Linux",
     PLATFORM_ANDROID: "Android",
+    PLATFORM_MACOS: "macOS",
 }
 
 ERROR_VERSION_MISMATCH = 1

@@ -174,6 +174,41 @@ jobs:
           path: build/evidence/peer
           if-no-files-found: error
 
+  build-macos:
+    needs: changes
+    name: Build native macOS peer
+    if: >-
+      needs.changes.outputs.code == 'true' &&
+      (github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == github.repository_owner))
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the Release static fixtures (universal, macOS 11)
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app
+          cmake -S . -B build/e2e \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DGGPO_BUILD_VECTORWAR_GUI=OFF -DGGPO_RUN_TESTS_ON_BUILD=OFF
+          cmake --build build/e2e \
+            --target ggpo_macos_peer_smoke VectorWarHeadless --parallel 3
+          mkdir -p build/evidence/peer
+          install -m 0755 build/e2e/bin/x64/Release/ggpo_macos_peer_smoke \
+            build/evidence/peer/ggpo_peer_smoke
+          install -m 0755 build/e2e/bin/x64/Release/VectorWarHeadless \
+            build/evidence/peer/vectorwar_headless
+          shasum -a 256 build/evidence/peer/ggpo_peer_smoke \
+            build/evidence/peer/vectorwar_headless \
+            > build/evidence/peer/sha256.txt
+          xcodebuild -version > build/evidence/peer/toolchain.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e2e-peer-macos
+          path: build/evidence/peer
+          if-no-files-found: error
+
   execute:
     name: ${{ matrix.fixture }} / ${{ matrix.scenario }} / role ${{ matrix.role }}
     if: >-
@@ -254,8 +289,8 @@ jobs:
         with:
           name: e2e-peer-${{ matrix.platform }}
           path: peer
-      - name: Make the Linux peer executable
-        if: runner.os == 'Linux'
+      - name: Make the POSIX peer executable
+        if: runner.os != 'Windows'
         run: chmod 0755 peer/ggpo_peer_smoke peer/vectorwar_headless
       - name: Join the ephemeral E2E tailnet
         uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c
@@ -321,6 +356,150 @@ jobs:
           path: evidence
           if-no-files-found: warn
 
+  execute-macos:
+    name: macos / ${{ matrix.fixture }} / ${{ matrix.scenario }} / role ${{ matrix.role }}
+    if: >-
+      needs.changes.outputs.code == 'true' &&
+      (github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == github.repository_owner))
+    needs: [changes, build-linux, build-windows, build-android, build-macos]
+    runs-on: ${{ matrix.os }}
+    # Role jobs are scheduled independently across three runner pools. Keep a
+    # bounded window for queue skew, but fail a missing pair promptly.
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      # Its own matrix so macOS pairs are capped apart from the rest: four
+      # jobs are two pairs, so at most two macOS runners (of the account's
+      # five) are held at once. Roles stay adjacent, as above.
+      max-parallel: 4
+      matrix:
+        include:
+          - {fixture: smoke, scenario: macos-linux, role: 1, platform: macos, os: macos-15, player1: macos, player2: linux, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: macos-linux, role: 2, platform: linux, os: ubuntu-24.04, player1: macos, player2: linux, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: linux-macos, role: 1, platform: linux, os: ubuntu-24.04, player1: linux, player2: macos, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: linux-macos, role: 2, platform: macos, os: macos-15, player1: linux, player2: macos, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: macos-windows, role: 1, platform: macos, os: macos-15, player1: macos, player2: windows, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: macos-windows, role: 2, platform: windows, os: windows-2022, player1: macos, player2: windows, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: windows-macos, role: 1, platform: windows, os: windows-2022, player1: windows, player2: macos, executable: peer/ggpo_peer_smoke.exe, player1_executable: peer/ggpo_peer_smoke.exe}
+          - {fixture: smoke, scenario: windows-macos, role: 2, platform: macos, os: macos-15, player1: windows, player2: macos, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke.exe}
+          - {fixture: smoke, scenario: macos-android, role: 1, platform: macos, os: macos-15, player1: macos, player2: android, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: macos-android, role: 2, platform: android, os: ubuntu-24.04-arm, player1: macos, player2: android, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: android-macos, role: 1, platform: android, os: ubuntu-24.04-arm, player1: android, player2: macos, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: android-macos, role: 2, platform: macos, os: macos-15, player1: android, player2: macos, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: vectorwar, scenario: vectorwar-macos-linux, role: 1, platform: macos, os: macos-15, player1: macos, player2: linux, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-macos-linux, role: 2, platform: linux, os: ubuntu-24.04, player1: macos, player2: linux, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-linux-macos, role: 1, platform: linux, os: ubuntu-24.04, player1: linux, player2: macos, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-linux-macos, role: 2, platform: macos, os: macos-15, player1: linux, player2: macos, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-macos-windows, role: 1, platform: macos, os: macos-15, player1: macos, player2: windows, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-macos-windows, role: 2, platform: windows, os: windows-2022, player1: macos, player2: windows, executable: peer/vectorwar_headless.exe, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-windows-macos, role: 1, platform: windows, os: windows-2022, player1: windows, player2: macos, executable: peer/vectorwar_headless.exe, player1_executable: peer/vectorwar_headless.exe}
+          - {fixture: vectorwar, scenario: vectorwar-windows-macos, role: 2, platform: macos, os: macos-15, player1: windows, player2: macos, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless.exe}
+          - {fixture: vectorwar, scenario: vectorwar-macos-android, role: 1, platform: macos, os: macos-15, player1: macos, player2: android, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-macos-android, role: 2, platform: android, os: ubuntu-24.04-arm, player1: macos, player2: android, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-android-macos, role: 1, platform: android, os: ubuntu-24.04-arm, player1: android, player2: macos, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-android-macos, role: 2, platform: macos, os: macos-15, player1: android, player2: macos, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: e2e-peer-${{ matrix.platform }}
+          path: peer
+      - name: Make the POSIX peer executable
+        if: runner.os != 'Windows'
+        run: chmod 0755 peer/ggpo_peer_smoke peer/vectorwar_headless
+      - name: Join the ephemeral E2E tailnet
+        uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ggpo-ci
+          # Peers use tailnet IPs only, so they need no tailnet DNS.
+          args: --accept-dns=false
+      - name: Restore the macOS runner's DNS
+        # On macOS the Tailscale action also points every network service's
+        # DNS at 100.100.100.100, which then answers nothing, so
+        # api.github.com (the rendezvous) stops resolving. Put the runner's
+        # own servers back and prove the lookup works.
+        if: runner.os == 'macOS'
+        run: |
+          networksetup -listallnetworkservices | tail -n +2 | sed 's/^\*//' |
+            while IFS= read -r service; do
+              sudo networksetup -setdnsservers "$service" Empty
+              sudo networksetup -setsearchdomains "$service" Empty
+            done
+          sudo dscacheutil -flushcache
+          sudo killall -HUP mDNSResponder || true
+          for attempt in 1 2 3 4 5; do
+            if python3 -c 'import socket; socket.getaddrinfo("api.github.com", 443)'; then
+              exit 0
+            fi
+            sleep 2
+          done
+          scutil --dns | head -40
+          exit 1
+      - name: Record the Tailscale IPv4 address
+        id: address
+        shell: bash
+        run: echo "ipv4=$(tailscale ip -4 | head -n 1)" >> "$GITHUB_OUTPUT"
+      - name: Allow the bounded E2E ports on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-NetFirewallRule -DisplayName "GGPO E2E $env:GITHUB_RUN_ID ${{ matrix.scenario }}" `
+            -Direction Inbound -Action Allow -Protocol TCP -LocalPort 24871
+          New-NetFirewallRule -DisplayName "GGPO E2E UDP $env:GITHUB_RUN_ID ${{ matrix.scenario }}" `
+            -Direction Inbound -Action Allow -Protocol UDP -LocalPort 24872-24873
+      - name: Serve player 1
+        if: matrix.role == 1
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GGPO_E2E_SESSION_SECRET: ${{ secrets.GGPO_E2E_SESSION_SECRET }}
+        run: |
+          python tests/e2e/host_agent.py \
+            --workspace "$GITHUB_WORKSPACE" \
+            --address "${{ steps.address.outputs.ipv4 }}" \
+            --session-id "${{ matrix.scenario }}" --timeout 600
+      - name: Coordinate player 2 and validate the session
+        if: matrix.role == 2
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GGPO_E2E_SESSION_SECRET: ${{ secrets.GGPO_E2E_SESSION_SECRET }}
+        run: |
+          python tests/e2e/execute_pair.py \
+            --workspace "$GITHUB_WORKSPACE" \
+            --executable "${{ matrix.executable }}" \
+            --player1-executable "${{ matrix.player1_executable }}" \
+            --local-address "${{ steps.address.outputs.ipv4 }}" \
+            --session-id "${{ matrix.scenario }}" \
+            --rendezvous-timeout 600 \
+            --scenario "${{ matrix.scenario }}" \
+            --fixture "${{ matrix.fixture }}" \
+            --player1-platform "${{ matrix.player1 }}" \
+            --player2-platform "${{ matrix.player2 }}" \
+            --out "evidence/report.json"
+      - name: Remove Windows firewall rules
+        if: always() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Remove-NetFirewallRule -DisplayName "GGPO E2E $env:GITHUB_RUN_ID ${{ matrix.scenario }}" `
+            -ErrorAction SilentlyContinue
+          Remove-NetFirewallRule -DisplayName "GGPO E2E UDP $env:GITHUB_RUN_ID ${{ matrix.scenario }}" `
+            -ErrorAction SilentlyContinue
+      - name: Upload role evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ matrix.scenario }}-role${{ matrix.role }}
+          path: evidence
+          if-no-files-found: warn
+
   final-report:
     name: Complete native E2E matrix
     if: >-
@@ -328,7 +507,7 @@ jobs:
       (github.event_name != 'pull_request' ||
       (github.event.pull_request.head.repo.full_name == github.repository &&
       github.actor == github.repository_owner))
-    needs: [changes, build-linux, build-windows, build-mingw, build-android, execute]
+    needs: [changes, build-linux, build-windows, build-mingw, build-android, build-macos, execute, execute-macos]
     runs-on: ubuntu-24.04
     steps:
       - name: Require a successful change classifier
@@ -349,13 +528,17 @@ jobs:
           BUILD_WINDOWS: ${{ needs.build-windows.result }}
           BUILD_MINGW: ${{ needs.build-mingw.result }}
           BUILD_ANDROID: ${{ needs.build-android.result }}
+          BUILD_MACOS: ${{ needs.build-macos.result }}
           EXECUTE: ${{ needs.execute.result }}
+          EXECUTE_MACOS: ${{ needs.execute-macos.result }}
         run: |
           test "$BUILD_LINUX" = success
           test "$BUILD_WINDOWS" = success
           test "$BUILD_MINGW" = success
           test "$BUILD_ANDROID" = success
+          test "$BUILD_MACOS" = success
           test "$EXECUTE" = success
+          test "$EXECUTE_MACOS" = success
           python3 tests/e2e/validate_manifest.py evidence --out manifest.json
       - name: Upload the complete manifest
         if: always() && needs.changes.outputs.code == 'true'

@@ -86,14 +86,61 @@ elseif(GGPO_BUILD_VECTORWAR_GUI AND ANDROID)
 	endif()
 elseif(GGPO_BUILD_VECTORWAR_GUI)
 	find_package(SDL2 REQUIRED)
-	add_executable(VectorWar ${GGPO_EXAMPLES_VECTORWAR_SDL_SRC})
+	# macOS links the static SDL2 built by scripts/macos/build_sdl2.sh, so the
+	# app bundle is self-contained; elsewhere SDL2 is the system's shared one.
+	if(TARGET SDL2::SDL2)
+		set(GGPO_VECTORWAR_SDL2 SDL2::SDL2)
+	else()
+		set(GGPO_VECTORWAR_SDL2 SDL2::SDL2-static)
+	endif()
+	set(GGPO_VECTORWAR_SDL2 ${GGPO_VECTORWAR_SDL2} PARENT_SCOPE)
+	if(APPLE)
+		set(GGPO_VECTORWAR_TEST_PREFIX macos)
+		# VectorWar.app: unsigned (plan decision D1), built for the
+		# deployment target recorded as LSMinimumSystemVersion.
+		# The app icon is the GGPO mark from the README header, as a .icns
+		# built from one 1024 px PNG with the system's sips and iconutil.
+		set(GGPO_VECTORWAR_ICONSET ${CMAKE_CURRENT_BINARY_DIR}/VectorWar.iconset)
+		set(GGPO_VECTORWAR_ICNS ${CMAKE_CURRENT_BINARY_DIR}/VectorWar.icns)
+		set(GGPO_VECTORWAR_ICON_PNG ${CMAKE_CURRENT_SOURCE_DIR}/macos/VectorWar.png)
+		set(GGPO_VECTORWAR_ICON_COMMANDS)
+		foreach(size 16 32 128 256 512)
+			math(EXPR double "${size} * 2")
+			list(APPEND GGPO_VECTORWAR_ICON_COMMANDS
+				COMMAND sips -z ${size} ${size} ${GGPO_VECTORWAR_ICON_PNG}
+					--out ${GGPO_VECTORWAR_ICONSET}/icon_${size}x${size}.png
+				COMMAND sips -z ${double} ${double} ${GGPO_VECTORWAR_ICON_PNG}
+					--out ${GGPO_VECTORWAR_ICONSET}/icon_${size}x${size}@2x.png)
+		endforeach()
+		add_custom_command(OUTPUT ${GGPO_VECTORWAR_ICNS}
+			COMMAND ${CMAKE_COMMAND} -E make_directory ${GGPO_VECTORWAR_ICONSET}
+			${GGPO_VECTORWAR_ICON_COMMANDS}
+			COMMAND iconutil -c icns ${GGPO_VECTORWAR_ICONSET} -o ${GGPO_VECTORWAR_ICNS}
+			DEPENDS ${GGPO_VECTORWAR_ICON_PNG}
+			COMMENT "Building VectorWar.icns"
+			VERBATIM)
+		set_source_files_properties(${GGPO_VECTORWAR_ICNS} PROPERTIES
+			MACOSX_PACKAGE_LOCATION Resources)
+		add_executable(VectorWar MACOSX_BUNDLE ${GGPO_EXAMPLES_VECTORWAR_SDL_SRC}
+			${GGPO_VECTORWAR_ICNS})
+		set_target_properties(VectorWar PROPERTIES
+			MACOSX_BUNDLE_ICON_FILE VectorWar.icns
+			MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/macos/Info.plist.in
+			MACOSX_BUNDLE_BUNDLE_NAME "Vector War"
+			MACOSX_BUNDLE_GUI_IDENTIFIER "net.ggpo.vectorwar"
+			MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
+			MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION})
+	else()
+		set(GGPO_VECTORWAR_TEST_PREFIX linux)
+		add_executable(VectorWar ${GGPO_EXAMPLES_VECTORWAR_SDL_SRC})
+	endif()
 	add_common_flags(VectorWar)
-	target_link_libraries(VectorWar PRIVATE VectorWarCore SDL2::SDL2)
+	target_link_libraries(VectorWar PRIVATE VectorWarCore ${GGPO_VECTORWAR_SDL2})
 	target_compile_options(VectorWar PRIVATE -Wall -Wextra)
 	if(BUILD_TESTING)
-		add_test(NAME linux_vectorwar_frontend_smoke
+		add_test(NAME ${GGPO_VECTORWAR_TEST_PREFIX}_vectorwar_frontend_smoke
 			COMMAND VectorWar --frontend-smoke)
-		set_tests_properties(linux_vectorwar_frontend_smoke PROPERTIES
+		set_tests_properties(${GGPO_VECTORWAR_TEST_PREFIX}_vectorwar_frontend_smoke PROPERTIES
 			ENVIRONMENT "SDL_VIDEODRIVER=dummy"
 			LABELS "native;sample;vectorwar-host")
 	endif()

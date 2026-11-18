@@ -19,6 +19,10 @@
     - [Linux: registered tests](#linux-registered-tests)
     - [Linux: run locally](#linux-run-locally)
     - [Linux: CI lanes](#linux-ci-lanes)
+  - [macOS](#macos)
+    - [macOS: registered tests](#macos-registered-tests)
+    - [macOS: run locally](#macos-run-locally)
+    - [macOS: CI lanes](#macos-ci-lanes)
   - [Android](#android)
     - [Android: registered tests](#android-registered-tests)
     - [Android: run locally](#android-run-locally)
@@ -46,7 +50,7 @@
 ## Overview
 
 GGPO's tests freeze Windows compatibility while qualifying the shared core and
-the Windows, Linux, MinGW, and Android platform paths. They protect public ABI,
+the Windows, Linux, MinGW, Android, and macOS platform paths. They protect public ABI,
 packed protocol data, deterministic rollback, packages, and real loopback
 sessions without requiring the interactive Vector War frontend.
 
@@ -75,6 +79,7 @@ flowchart TB
         direction TB
         LINUX["Linux<br/>GCC, Clang<br/>packages,<br/>ABI ceiling<br/>ASan + UBSan"]
         ANDROID["Android<br/>3 ABIs,<br/>API 21 / 35<br/>SDK audit,<br/>APK smoke<br/>ASan + UBSan"]
+        MACOS["macOS<br/>universal,<br/>built for 11,<br/>tested on 15 / 26<br/>SDK audit,<br/>.dmg smoke"]
     end
 
     E2E["Cross-platform<br/>E2E<br/>every ordered<br/>pair<br/>over UDP"]
@@ -164,6 +169,7 @@ not (`readelf -d` on Linux; on Windows the static programs run with the SDK's
 | [Windows with MSVC](#windows-with-msvc) | `GGPO.dll`, import/static `.lib`, CMake package | x64/Win32 layouts, exports, frozen baseline compatibility and installed consumers |
 | [Windows with MinGW-w64](#windows-with-mingw-w64) | `libGGPO.dll`, `.dll.a`, static `.a` | x86/x64 exports, no external MinGW runtime DLLs, consumers and MSVC isolation |
 | [Linux](#linux) | `libGGPO.so`, static `.a`, DEB/RPM/tar SDKs | GCC/Clang builds, SONAME/glibc audit, consumers and package layout |
+| [macOS](#macos) | Universal (arm64 + x86_64) `libGGPO.dylib`, static `.a` | Every slice records minimum macOS 11.0, unguarded newer APIs fail the build, Mach-O exports |
 | [Android](#android) | Per-ABI `libGGPO.so`, static `.a`, CMake SDK | API-21 ceiling, ELF exports/dependencies, 16 KB alignment, consumers and cross-toolchain rejection |
 
 Both Windows toolchains qualify and package 32-bit x86 and 64-bit x86-64
@@ -175,12 +181,13 @@ targets. MSVC names these `Win32` and `x64`; MinGW-w64 release artifacts use
 #### MSVC: registered tests
 
 Runs every [shared test](#shared-tests) with the `windows_` prefix, plus the
-test below. DLL exports are checked in the [CI lane](#msvc-ci-lanes) with
+tests below. DLL exports are checked in the [CI lane](#msvc-ci-lanes) with
 `dumpbin` rather than as a CTest test.
 
 | Test | Code | What it tests |
 | --- | --- | --- |
 | `windows_vectorwar_gui_host_contract` | [`win32_host_contract_test.cpp`](../../tests/vectorwar/win32_host_contract_test.cpp) | Real hidden Win32 window: client bounds, GDI renderer, diagnostics, the start dialog driven with synthetic input, the compiled `.rc`, and the legend drawn by GDI |
+| `windows_peer_loopback_default_timer` | [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py), [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp) | Peer loopback at Windows' default ~15.6 ms timer tick (`GGPO_SMOKE_DEFAULT_TIMER=1` skips `timeBeginPeriod`), as in a game that never raises the timer resolution; every other test runs at 1 ms |
 
 #### MSVC: run locally
 
@@ -254,7 +261,8 @@ the two headless Vector War tests: MinGW builds neither Vector War's Win32/GDI
 frontend nor its headless app. Exports and runtime imports are checked in the
 [CI lane](#mingw-ci-lanes).
 
-*No platform-only tests.*
+`windows_peer_loopback_default_timer` (see [MSVC](#msvc-registered-tests))
+also runs here.
 
 #### MinGW: run locally
 
@@ -327,6 +335,73 @@ consumers without linking an SDK. These remain header-portability gates.
 The Clang C++ gate suppresses only `-Wextern-c-compat`: C requires the documented
 one-byte `GGPOPlayer.local` placeholder while C++ retains the frozen empty-member
 Windows ABI. All other pedantic diagnostics remain errors.
+
+### macOS
+
+The library is built for macOS 11 and later and tested on macOS 15 and 26, the
+only versions GitHub-hosted runners offer:
+
+| Dimension | Covered by | Meaning |
+| --- | --- | --- |
+| Architecture | One universal build (arm64 + x86_64) | Both slices ship in every binary and both run in CI |
+| Tested runtime | `macos-15`, `macos-26` (Apple Silicon); `macos-15-intel`, `macos-26-intel` | The same binaries run natively on each; no Rosetta |
+| macOS 11–14 | Build-time checks only | `-Werror=unguarded-availability-new` and the `minos 11.0` audit; behaviour on 11–14 is not run |
+| Toolchain | Xcode 16.4, pinned in the workflow | Bumped deliberately; a newer Xcode that drops the 11.0 target fails the build |
+
+Apple Clang contracts `a*b+c` into fused multiply-add on arm64, so Apple builds
+use `-ffp-contract=off` like Android.
+
+#### macOS: registered tests
+
+Runs every [shared test](#shared-tests) with the `macos_` prefix, plus:
+
+| Test | Code | What it tests |
+| --- | --- | --- |
+| `macos_exports` | [`check_exports.py`](../../tests/baseline/linux/check_exports.py), [`exports.txt`](../../tests/baseline/linux/exports.txt) | `libGGPO.dylib` exports exactly the frozen `ggpo_*` symbols (Mach-O names without the leading underscore) |
+
+| `macos_vectorwar_gui_host_contract` | [`sdl_host_contract_test.cpp`](../../tests/vectorwar/sdl_host_contract_test.cpp) | The app's SDL2 frontend on the dummy driver: bounds, renderer, input, clock, start screen and legend |
+| `macos_vectorwar_frontend_smoke` | `VectorWar.app --frontend-smoke` | The real app bundle opens and closes its SDL window and renderer |
+
+SDL2 is the pinned 2.30.9 source built by
+[`build_sdl2.sh`](../../scripts/macos/build_sdl2.sh) as a static universal
+macOS 11 library (cached in CI), the same build the release app links.
+
+#### macOS: run locally
+
+```bash
+cmake -S . -B build/macos -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DGGPO_BUILD_VECTORWAR_GUI=OFF
+cmake --build build/macos --parallel
+cmake --install build/macos --prefix build/macos/install
+python3 scripts/macos/audit_binaries.py build/macos/install \
+  --arch arm64 --arch x86_64 --minos 11.0
+```
+
+The deployment target defaults to 11.0. With `GGPO_RUN_TESTS_ON_BUILD` on (the
+default), the build runs CTest.
+
+#### macOS: CI lanes
+
+[`macos-compatibility.yml`](../../.github/workflows/macos-compatibility.yml)
+builds once on `macos-15`, installs the SDK, and runs
+[`audit_binaries.py`](../../scripts/macos/audit_binaries.py): every installed
+Mach-O file must carry both slices, and every object in each slice must record
+minimum macOS 11.0. The build tree is packed and every test runner unpacks it
+at the same path and runs CTest, three tests at a time, on those exact
+binaries. The four test runners start together after the build, so the
+workflow holds at most four of the account's five macOS jobs at once.
+
+The build job also builds and runs the C11 and C++98
+[installed-SDK consumers](../../tests/consumer/verify_consumers.py) as
+universal binaries for the default, static and shared linkages; `otool -L`
+proves each one's dependency on `libGGPO.dylib` (or its absence). The release
+workflow's `package-macos` job repeats them against the extracted archive.
+
+The release workflow's `package-vectorwar-macos` job builds the unsigned
+`.dmg`, mounts it, and checks the app as a player gets it: both slices,
+minimum macOS 11.0 in the binary and in `LSMinimumSystemVersion`, the app
+icon (`VectorWar.icns`), no external
+SDL2 or GGPO library, and `--frontend-smoke` from inside the mounted image.
 
 ### Android
 
@@ -409,7 +484,7 @@ API 35, then waits for the application's explicit frontend-ready log marker.
 Every platform runs these tests from the same source. The platform sections
 list only what a platform adds or skips.
 
-**Platform-prefixed:** one copy per platform, named `windows_`, `linux_` or
+**Platform-prefixed:** one copy per platform, named `windows_`, `linux_`, `macos_` or
 `android_` (MinGW uses `windows_`). The `static_` rows need a build with both
 libraries, which is the default.
 
@@ -488,7 +563,7 @@ cannot reach the build host's loopback server.
 | Android compatibility | Three ABIs, API 21/current emulators, installed consumers, SDK audit, APK smoke, and sanitizer qualification | [`android-compatibility.yml`](../../.github/workflows/android-compatibility.yml), [`tests/android`](../../tests/android) | NDK builds, native ARM execution, and x86_64 Android emulators |
 | Matchmaking server | Protocol, lobbies, relay, candidates, abuse limits | [`services/matchmaking/tests`](../../services/matchmaking/tests) | Python server, unit and real-socket loopback |
 | Hole punching | Codec vs shared vectors, probe authentication, path selection, proxy forwarding, real sessions direct and relay-only | [`tests/vectorwar`](../../tests/vectorwar/net_contract_test.cpp), [`src/apps/vectorwar/net`](../../src/apps/vectorwar/net) | `VectorWarNet` on every platform; loopback sessions on native platforms |
-| Start screen and legend | Fields map to the command-line arguments on every screen; dialog and SDL form driven by synthetic input; legend rows, platform numbering, colors (SDL swatch read back) and font | [`start_form_contract_test.cpp`](../../tests/vectorwar/start_form_contract_test.cpp), [`legend_contract_test.cpp`](../../tests/vectorwar/legend_contract_test.cpp), the GUI host contracts, [`StartArgsTest.java`](../../tests/android/StartArgsTest.java) | Portable tests everywhere; Win32 dialog on MSVC; SDL form on Linux (dummy driver) and the Android emulator; plain Java in the APK job |
+| Start screen and legend | Fields map to the command-line arguments on every screen; dialog and SDL form driven by synthetic input; legend rows, platform numbering, colors (SDL swatch read back) and font | [`start_form_contract_test.cpp`](../../tests/vectorwar/start_form_contract_test.cpp), [`legend_contract_test.cpp`](../../tests/vectorwar/legend_contract_test.cpp), the GUI host contracts, [`StartArgsTest.java`](../../tests/android/StartArgsTest.java) | Portable tests everywhere; Win32 dialog on MSVC; SDL form on Linux and macOS (dummy driver) and the Android emulator; plain Java in the APK job |
 | NAT traversal | Two-to-four-player mixed NAT converges; cone and LAN paths can go direct, restrictive paths retain relay fallback, impairment selects a measured viable route, direct loss falls back, and server loss does not stop an established direct match | [`nat-traversal.yml`](../../.github/workflows/nat-traversal.yml), [`run_nat_matrix.py`](../../tests/nat/run_nat_matrix.py) | Linux network namespaces with emulated NAT routers and `tc netem` on a hosted runner |
 | Infrastructure | Terraform plan/state assertions, lint and server image on every relevant PR; trusted owner PRs add a real remote-state plan; matching `master` merges apply and verify DNS plus lobby health | [`infrastructure.yml`](../../.github/workflows/infrastructure.yml), [`deploy-matchmaking.yml`](../../.github/workflows/deploy-matchmaking.yml), [`infra/terraform`](../../infra/terraform/README.md) | Mocked providers for all PRs; repository secrets and the `matchmaking` approval boundary for real-cloud gates |
 | Cross-host | Linux, Windows, MinGW, and Android peers converge | [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml), [`tests/e2e`](../../tests/e2e) | Native hosted runners joined through ephemeral Tailscale nodes |
@@ -782,15 +857,18 @@ flowchart TD
     Linux["Linux<br/>peer"]
     Windows["Windows<br/>MSVC peer"]
     Android["Android<br/>peer"]
+    MacOS["macOS<br/>peer"]
     Result["Frame 180<br/>equal state<br/>relay routes"]
 
     DNS --> Relay
     Linux <--> Relay
     Windows <--> Relay
     Android <--> Relay
+    MacOS <--> Relay
     Linux --> Result
     Windows --> Result
     Android --> Result
+    MacOS --> Result
 ```
 
 Before launching any peer, the workflow freshly resolves the hostname and
@@ -807,7 +885,7 @@ independent oracle, while the namespace NAT suite supplies controlled direct,
 fallback and impairment coverage.
 [`validate_manifest.py`](../../tests/e2e/validate_manifest.py) rejects a run
 unless every required generic and Vector War scenario for Linux, Windows,
-MinGW, and Android produces a passing role-2 report.
+MinGW, Android and macOS produces a passing role-2 report.
 [`compare_peer_results.py`](../../tests/smoke/compare_peer_results.py) exposes
 that validator for standalone result files. Wine is not native Windows
 interoperability evidence.
@@ -898,7 +976,7 @@ The `master` ruleset requires one stable aggregate check per workflow rather
 than individual lanes: `Complete Linux compatibility`, `Complete MinGW
 compatibility`, `Complete Windows compatibility`, `Complete Android
 compatibility`, `Complete native E2E matrix`, and `Complete NAT traversal
-checks`, plus `Fork owner approval`.
+checks`, `Complete macOS compatibility`, plus `Fork owner approval`.
 Each aggregate covers every lane of its workflow. Individual matrix lanes cannot
 be required directly: a lane skipped on a documentation-only change never
 reports its expanded name, so the requirement would wait forever. Each aggregate
@@ -947,7 +1025,10 @@ established by the frame, checksum, callback, and lifecycle assertions.
   but not SteamOS hardware.
 - The cross-platform E2E workflow remains a clean-link test; deterministic
   impairment belongs to the Linux namespace NAT workflow.
-- No macOS adapter or build exists.
+- macOS runs the library, its tests, Vector War's GUI contracts, generic and
+  Vector War E2E pairs against Linux, Windows and Android, and plays the
+  public game as the fourth player; macOS 11–14 are covered only by
+  build-time checks.
 - Android ASan+UBSan is scheduled on an x86_64 emulator; Linux Clang and MSVC
   sanitizer configurations remain in the same qualification workflow.
 - Android physical devices are not yet part of required CI; current device

@@ -27,7 +27,7 @@ enum MessageType {
    kHello = 6, kError = 7, kPeersRequest = 8, kPeers = 9
 };
 
-enum Platform { kPlatformUnknown = 0, kPlatformWindows = 1, kPlatformLinux = 2, kPlatformAndroid = 3 };
+enum Platform { kPlatformUnknown = 0, kPlatformWindows = 1, kPlatformLinux = 2, kPlatformAndroid = 3, kPlatformMacOS = 4 };
 enum ErrorCode { kErrorVersionMismatch = 1, kErrorRateLimited = 2, kErrorServerFull = 3 };
 
 /* One message; only the fields of its type are meaningful. */

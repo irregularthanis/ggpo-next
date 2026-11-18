@@ -12,7 +12,7 @@
 /* Same numbering as the matchmaking protocol's platform field. */
 enum VwPlatform {
    kVwPlatformUnknown = 0, kVwPlatformWindows = 1,
-   kVwPlatformLinux = 2, kVwPlatformAndroid = 3
+   kVwPlatformLinux = 2, kVwPlatformAndroid = 3, kVwPlatformMacOS = 4
 };
 
 enum VwRoute { kVwRouteNone = 0, kVwRouteRelay = 1, kVwRouteDirect = 2 };

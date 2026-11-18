@@ -19,6 +19,11 @@ ANDROID_SMOKE_SCENARIOS = ("android-android", "android-linux", "linux-android",
 ANDROID_VECTORWAR_SCENARIOS = ("android-android", "android-linux", "linux-android",
                                "android-windows", "windows-android")
 
+# macOS peers against Linux, Windows and Android in both player orders, with
+# both fixtures (their own capped matrix job).
+MACOS_SCENARIOS = ("macos-linux", "linux-macos", "macos-windows",
+                   "windows-macos", "macos-android", "android-macos")
+
 
 def build_manifest(root):
     """Validate one passing report per fixture/scenario and return the manifest."""
@@ -35,7 +40,10 @@ def build_manifest(root):
                 {("smoke", scenario) for scenario in MINGW_SCENARIOS} |
                 {("smoke", scenario) for scenario in ANDROID_SMOKE_SCENARIOS} |
                 {("vectorwar", f"vectorwar-{scenario}")
-                 for scenario in ANDROID_VECTORWAR_SCENARIOS})
+                 for scenario in ANDROID_VECTORWAR_SCENARIOS} |
+                {("smoke", scenario) for scenario in MACOS_SCENARIOS} |
+                {("vectorwar", f"vectorwar-{scenario}")
+                 for scenario in MACOS_SCENARIOS})
     identities = [
         (report.get("fixture"), report.get("scenario")) for report in reports
     ]

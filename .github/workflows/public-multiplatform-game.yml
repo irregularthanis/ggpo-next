@@ -1,6 +1,6 @@
 name: Public multi-platform game
 
-# One real Vector War match joins Linux, Windows/MSVC and Android through the
+# One real Vector War match joins Linux, Windows/MSVC, Android and macOS through the
 # DuckDNS production name. Forced relay makes the deployed OCI data path part
 # of the contract; deterministic namespace tests cover direct NAT traversal.
 on:
@@ -146,9 +146,33 @@ jobs:
           path: artifact
           if-no-files-found: error
 
+  build-macos:
+    name: Build macOS Vector War peer
+    needs: preflight
+    if: needs.preflight.outputs.run == 'true'
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the native static headless peer (universal, macOS 11)
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app
+          cmake -S . -B build/public-game \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DGGPO_BUILD_VECTORWAR_GUI=OFF -DGGPO_RUN_TESTS_ON_BUILD=OFF
+          cmake --build build/public-game --target VectorWarHeadless --parallel 3
+          mkdir -p artifact
+          install -m 0755 build/public-game/bin/x64/Release/VectorWarHeadless \
+            artifact/vectorwar_headless
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-game-binary-macos
+          path: artifact
+          if-no-files-found: error
+
   play:
     name: Play as ${{ matrix.platform }}
-    needs: [preflight, build-linux, build-windows, build-android]
+    needs: [preflight, build-linux, build-windows, build-android, build-macos]
     if: needs.preflight.outputs.run == 'true'
     # The Android role also boots an emulator.
     timeout-minutes: 25
@@ -159,6 +183,7 @@ jobs:
           - {platform: linux, os: ubuntu-24.04, executable: peer/vectorwar_headless}
           - {platform: windows, os: windows-2022, executable: peer/vectorwar_headless.exe}
           - {platform: android, os: ubuntu-24.04, executable: peer/vectorwar_headless}
+          - {platform: macos, os: macos-15, executable: peer/vectorwar_headless}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -170,7 +195,7 @@ jobs:
           name: public-game-binary-${{ matrix.platform }}
           path: peer
       - name: Make the Unix peer executable
-        if: runner.os == 'Linux'
+        if: runner.os != 'Windows'
         run: chmod 0755 peer/vectorwar_headless
       - name: Join the public multi-platform match
         if: matrix.platform != 'android'
@@ -229,7 +254,7 @@ jobs:
   final-report:
     name: Complete public multi-platform game
     if: always()
-    needs: [preflight, build-linux, build-windows, build-android, play]
+    needs: [preflight, build-linux, build-windows, build-android, build-macos, play]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -243,26 +268,28 @@ jobs:
         with:
           pattern: public-game-*
           path: evidence
-      - name: Validate all three peers and publish the manifest
+      - name: Validate all four peers and publish the manifest
         if: needs.preflight.outputs.run == 'true'
         env:
           PREFLIGHT: ${{ needs.preflight.result }}
           BUILD_LINUX: ${{ needs.build-linux.result }}
           BUILD_WINDOWS: ${{ needs.build-windows.result }}
           BUILD_ANDROID: ${{ needs.build-android.result }}
+          BUILD_MACOS: ${{ needs.build-macos.result }}
           PLAY: ${{ needs.play.result }}
         run: |
           test "$PREFLIGHT" = success
           test "$BUILD_LINUX" = success
           test "$BUILD_WINDOWS" = success
           test "$BUILD_ANDROID" = success
+          test "$BUILD_MACOS" = success
           test "$PLAY" = success
           python tests/e2e/public_multiplatform_game.py validate \
             --evidence evidence --output public-game-manifest.json
           {
             echo "### Public multi-platform game passed"
             echo ""
-            echo "Linux, Windows/MSVC and Android converged through the deployed relay."
+            echo "Linux, Windows/MSVC, Android and macOS converged through the deployed relay."
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Fail a required or otherwise broken preflight
         if: needs.preflight.result != 'success'

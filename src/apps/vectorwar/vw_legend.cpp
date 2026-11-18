@@ -9,6 +9,8 @@ int VwLocalPlatform()
    return kVwPlatformWindows;
 #elif defined(__ANDROID__)
    return kVwPlatformAndroid;
+#elif defined(__APPLE__)
+   return kVwPlatformMacOS;
 #else
    return kVwPlatformLinux;
 #endif
@@ -20,6 +22,7 @@ const char *VwPlatformName(int platform)
    case kVwPlatformWindows: return "Windows";
    case kVwPlatformLinux: return "Linux";
    case kVwPlatformAndroid: return "Android";
+   case kVwPlatformMacOS: return "macOS";
    default: return "unknown";
    }
 }

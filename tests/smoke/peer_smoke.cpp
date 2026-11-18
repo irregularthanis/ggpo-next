@@ -206,8 +206,12 @@ main(int argc, char **argv)
 #if defined(_WIN32)
    /* Windows sleeps in ~15.6 ms ticks by default, so the 1 ms waits below
     * would run about 15x slower than on other platforms. The process exit
-    * restores the system default. */
-   timeBeginPeriod(1);
+    * restores the system default. GGPO_SMOKE_DEFAULT_TIMER=1 keeps the
+    * default tick, so one test still covers games that never raise it. */
+   const char *default_timer = getenv("GGPO_SMOKE_DEFAULT_TIMER");
+   if (!default_timer || strcmp(default_timer, "1") != 0) {
+      timeBeginPeriod(1);
+   }
 #endif
 #if defined(_WIN32)
    WSADATA winsock_data;

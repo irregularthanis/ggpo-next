@@ -18,7 +18,7 @@ except ImportError:  # Direct script execution from tests/e2e.
     from rendezvous import DeploymentRendezvous, GitHubTransport
 
 
-PLATFORMS = ("linux", "windows", "android")
+PLATFORMS = ("linux", "windows", "android", "macos")
 PATH_LINE = re.compile(r"vectorwar-path: player=(\d+) peer=(\d+) route=(\w+)")
 
 

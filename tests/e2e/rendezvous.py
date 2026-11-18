@@ -11,12 +11,33 @@ import urllib.request
 class GitHubTransport:
     """Minimal GitHub REST transport with bounded request timeouts."""
 
-    def __init__(self, repository, token, api_url="https://api.github.com", timeout=15):
+    # GitHub's API returns occasional 5xx. Lookups, retiring and deleting are
+    # safe to repeat; creating a deployment is not (a retry could publish two
+    # records), so that POST is never retried.
+    RETRY_DELAYS = (1, 3, 9)
+
+    def __init__(self, repository, token, api_url="https://api.github.com", timeout=15,
+                 sleep=time.sleep):
         self.base = f"{api_url.rstrip('/')}/repos/{repository}"
         self.token = token
         self.timeout = timeout
+        self.sleep = sleep
+
+    @staticmethod
+    def repeatable(method, path):
+        return method in ("GET", "DELETE") or path.endswith("/statuses")
 
     def request(self, method, path, payload=None):
+        delays = self.RETRY_DELAYS if self.repeatable(method, path) else ()
+        for delay in delays:
+            try:
+                return self._send(method, path, payload)
+            except _ServerError as error:
+                print(f"{error}; retrying in {delay}s", flush=True)
+                self.sleep(delay)
+        return self._send(method, path, payload)
+
+    def _send(self, method, path, payload):
         data = None if payload is None else json.dumps(payload).encode("utf-8")
         request = urllib.request.Request(
             self.base + path, data=data, method=method,
@@ -33,7 +54,12 @@ class GitHubTransport:
                 return json.loads(body) if body else None
         except urllib.error.HTTPError as error:
             body = error.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"GitHub API {method} {path} failed: {error.code} {body}") from error
+            kind = _ServerError if error.code >= 500 else RuntimeError
+            raise kind(f"GitHub API {method} {path} failed: {error.code} {body}") from error
+
+
+class _ServerError(RuntimeError):
+    """A 5xx from GitHub: transient, so repeatable requests try again."""
 
 
 class DeploymentRendezvous:
