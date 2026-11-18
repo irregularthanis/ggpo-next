@@ -32,6 +32,12 @@ add_test(NAME cross_host_rendezvous_contract
             ${CMAKE_CURRENT_SOURCE_DIR}/e2e/test_rendezvous.py
 )
 
+# End-of-run cleanup removes exactly this run's rendezvous deployments.
+add_test(NAME cross_host_rendezvous_cleanup_contract
+    COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/e2e/test_rendezvous_cleanup.py
+)
+
 # Public multi-platform game harness: server parsing, peer command line and
 # the validator that decides whether the live match converged.
 add_test(NAME public_multiplatform_game_contract

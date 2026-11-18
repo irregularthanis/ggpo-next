@@ -516,6 +516,13 @@ jobs:
           CHANGES: ${{ needs.changes.result }}
         run: test "$CHANGES" = success
       - uses: actions/checkout@v4
+      - name: Remove this run's rendezvous deployments
+        # Also runs when the workflow is cancelled, so a superseded run's
+        # role jobs cannot leave "in progress" deployments behind.
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 tests/e2e/rendezvous_cleanup.py
       - uses: actions/download-artifact@v4
         if: needs.changes.outputs.code == 'true'
         with:

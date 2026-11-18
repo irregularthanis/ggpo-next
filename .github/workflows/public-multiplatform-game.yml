@@ -258,6 +258,13 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: Remove this run's rendezvous deployments
+        # Also runs when the workflow is cancelled, so a superseded run's
+        # role jobs cannot leave "in progress" deployments behind.
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 tests/e2e/rendezvous_cleanup.py
       - name: Report an optional preflight skip
         if: needs.preflight.result == 'success' && needs.preflight.outputs.run != 'true'
         run: |
