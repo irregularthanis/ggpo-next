@@ -6,7 +6,7 @@ if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND NOT DEFINED CMAKE_OSX_DEPLOYMENT
 endif()
 
 # TODO: SDK Versioning.
-project(GGPO VERSION 0.6.0)
+project(GGPO VERSION 0.7.0)
 
 include(CTest)
 
