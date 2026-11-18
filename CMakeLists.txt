@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
 
+# macOS binaries load on macOS 11 Big Sur and later. Must precede project().
+if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET)
+	set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version")
+endif()
+
 # TODO: SDK Versioning.
 project(GGPO VERSION 0.6.0)
 
@@ -21,8 +26,9 @@ endif()
 
 # Android (ARM in particular) contracts a*b+c into fused multiply-add, which
 # rounds differently from x86 and broke Vector War's frozen checksum on arm64.
+# Apple Clang contracts the same way on arm64 Macs.
 # Apply to every target: library, tests, and samples.
-if(ANDROID)
+if(ANDROID OR APPLE)
 	add_compile_options(-ffp-contract=off)
 endif()
 
@@ -72,6 +78,8 @@ if(BUILD_TESTING AND GGPO_BUILD_SDK)
 	if(GGPO_RUN_TESTS_ON_BUILD)
 		if(ANDROID)
 			set(GGPO_POSIX_TEST_PREFIX android)
+		elseif(APPLE)
+			set(GGPO_POSIX_TEST_PREFIX macos)
 		else()
 			set(GGPO_POSIX_TEST_PREFIX linux)
 		endif()

@@ -26,9 +26,11 @@ class Rules(unittest.TestCase):
             self.check(path, CORE)
 
     def test_os_adapters_run_their_family(self):
-        self.check("src/lib/ggpo/platform_posix.cpp", ("linux", "android", "e2e", "nat"))
+        self.check("src/lib/ggpo/platform_posix.cpp", ("linux", "android", "macos", "e2e", "nat"))
         self.check("src/lib/ggpo/platform_windows.cpp", ("windows", "mingw", "e2e"))
         self.check("src/platform/android/Platform.cmake", ("android", "e2e"))
+        self.check("src/platform/apple/Platform.cmake", ("macos",))
+        self.check("scripts/macos/audit_binaries.py", ("macos",))
 
     def test_vector_war_frontends(self):
         self.check("src/apps/vectorwar/win32_start_dialog.cpp", ("windows",))
@@ -49,6 +51,7 @@ class Rules(unittest.TestCase):
 
     def test_workflows_run_their_own_area(self):
         self.check(".github/workflows/windows-compatibility.yml", ("windows",))
+        self.check(".github/workflows/macos-compatibility.yml", ("macos",))
         self.check(".github/workflows/deploy-matchmaking.yml", ("infra",))
         self.check(".github/workflows/owner-approval.yml", ())
 

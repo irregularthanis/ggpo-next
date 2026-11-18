@@ -1,0 +1,141 @@
+name: macOS compatibility
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+# A newer push to the same pull request supersedes this run, so cancel it and
+# free the runners. Runs on master pushes and manual dispatches always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # The supported baseline. No GitHub-hosted runner offers macOS 11-14, so
+  # build-time checks (availability warnings as errors, the minos audit)
+  # cover them; tests run on macOS 15 and 26.
+  MACOS_DEPLOYMENT_TARGET: "11.0"
+  BUILD_DIR: build/macos
+
+jobs:
+  changes:
+    uses: ./.github/workflows/classify-changes.yml
+    with:
+      base: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+      force: ${{ github.event_name == 'workflow_dispatch' }}
+      area: macos
+
+  build:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    # One universal (arm64 + x86_64) build; every test runner executes these
+    # exact binaries.
+    name: macOS universal build
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Record the toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          cmake --version
+
+      - name: Configure
+        # Python is found on PATH at test time, so the tree runs unchanged on
+        # runners whose Python lives elsewhere.
+        run: |
+          cmake -S . -B "$BUILD_DIR" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET="$MACOS_DEPLOYMENT_TARGET" \
+            -DCMAKE_INSTALL_PREFIX="$PWD/$BUILD_DIR/install" \
+            -DGGPO_BUILD_VECTORWAR_GUI=OFF \
+            -DGGPO_RUN_TESTS_ON_BUILD=OFF \
+            -DPYTHON_EXECUTABLE=python3
+
+      - name: Build and install
+        run: |
+          cmake --build "$BUILD_DIR" --parallel 3
+          cmake --install "$BUILD_DIR"
+
+      - name: Audit architectures and minimum macOS
+        run: |
+          python3 scripts/macos/audit_binaries.py "$BUILD_DIR/install" \
+            --arch arm64 --arch x86_64 --minos "$MACOS_DEPLOYMENT_TARGET"
+
+      - name: Pack the build tree
+        # A tarball keeps permissions and symlinks; the test runners unpack
+        # it at the same absolute path, which CTest's files refer to.
+        run: tar -czf macos-build.tgz "$BUILD_DIR"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: macos-build.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  test:
+    needs: build
+    name: macOS tests (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      # Five macOS jobs run per workflow (build plus four test runners) against
+      # the account-wide limit of five; two at a time leaves room for others.
+      max-parallel: 2
+      matrix:
+        runner: [macos-15, macos-26, macos-15-intel, macos-26-intel]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-build
+
+      - name: Unpack and record the host
+        run: |
+          tar -xzf macos-build.tgz
+          sw_vers
+          uname -m
+          sysctl -n machdep.cpu.brand_string
+
+      - name: Run every test
+        run: ctest --test-dir "$BUILD_DIR" --output-on-failure --timeout 300
+
+      - name: Upload test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-tests-${{ matrix.runner }}
+          path: ${{ env.BUILD_DIR }}/Testing
+          if-no-files-found: ignore
+
+  final-report:
+    # One stable required check, as for the other platforms.
+    name: Complete macOS compatibility
+    if: always()
+    needs: [changes, build, test]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require the build and every test runner
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          CODE_CHANGED: ${{ needs.changes.outputs.code }}
+          BUILD: ${{ needs.build.result }}
+          TEST: ${{ needs.test.result }}
+        run: |
+          test "$CHANGES" = success
+          if test "$CODE_CHANGED" != true; then
+            echo "Documentation-only change: macOS qualification is not required."
+            exit 0
+          fi
+          test "$BUILD" = success
+          test "$TEST" = success

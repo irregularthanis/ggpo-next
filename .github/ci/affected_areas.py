@@ -14,7 +14,7 @@ import fnmatch
 import subprocess
 import sys
 
-PLATFORMS = ("linux", "windows", "mingw", "android")
+PLATFORMS = ("linux", "windows", "mingw", "android", "macos")
 AREAS = PLATFORMS + ("e2e", "nat", "infra")
 ALL = AREAS
 CORE = PLATFORMS + ("e2e", "nat")
@@ -24,6 +24,7 @@ WORKFLOW_AREAS = {
     "android-compatibility.yml": ("android",),
     "cross-platform-e2e.yml": ("e2e",),
     "linux-compatibility.yml": ("linux",),
+    "macos-compatibility.yml": ("macos",),
     "mingw-compatibility.yml": ("mingw",),
     "nat-traversal.yml": ("nat",),
     "windows-compatibility.yml": ("windows",),
@@ -44,7 +45,7 @@ RULES = (
     # The classifier itself and these rules: test everything.
     ((".github/ci/*", ".github/workflows/classify-changes.yml"), ALL),
     # One adapter per OS family.
-    (("src/lib/ggpo/platform_posix.cpp",), ("linux", "android", "e2e", "nat")),
+    (("src/lib/ggpo/platform_posix.cpp",), ("linux", "android", "macos", "e2e", "nat")),
     (("src/lib/ggpo/platform_windows.cpp", "src/lib/ggpo/platform_windows.h"),
      ("windows", "mingw", "e2e")),
     # Shared core, public header and build system.
@@ -53,6 +54,7 @@ RULES = (
     (("src/platform/linux/*",), ("linux", "e2e", "nat")),
     (("src/platform/windows/*",), ("windows", "mingw", "e2e")),
     (("src/platform/android/*",), ("android", "e2e")),
+    (("src/platform/apple/*",), ("macos",)),
     # Vector War frontends, then its portable core.
     (("src/apps/vectorwar/android/*",), ("android",)),
     (tuple("src/apps/vectorwar/" + p for p in WIN32_FRONTEND), ("windows",)),
@@ -71,6 +73,7 @@ RULES = (
     (("scripts/ci/*windows*", "scripts/ci/*.ps1", "bin/*.cmd",
       "configure_windows.cmd", "appveyor.yml"), ("windows",)),
     (("scripts/ci/*linux*",), ("linux",)),
+    (("scripts/macos/*",), ("macos",)),
 )
 
 

@@ -98,9 +98,11 @@ if(WIN32)
     set_tests_properties(windows_packet_layout PROPERTIES LABELS "native;abi;protocol")
     set(GGPO_SMOKE_PREFIX windows)
 else()
-    # POSIX platforms (Linux, Android) name native tests by platform.
+    # POSIX platforms (Linux, Android, macOS) name native tests by platform.
     if(ANDROID)
         set(GGPO_SMOKE_PREFIX android)
+    elseif(APPLE)
+        set(GGPO_SMOKE_PREFIX macos)
     else()
         set(GGPO_SMOKE_PREFIX linux)
     endif()

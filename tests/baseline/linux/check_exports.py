@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Compare libGGPO.so's dynamic ggpo_* exports with the frozen manifest."""
+"""Compare the shared library's dynamic ggpo_* exports with the frozen manifest.
+
+ELF (libGGPO.so) and Mach-O (libGGPO.dylib, whose C symbols carry a leading
+underscore) share one manifest.
+"""
 
 import argparse
 import re
@@ -14,10 +18,13 @@ def main():
     parser.add_argument("manifest", type=Path)
     args = parser.parse_args()
 
-    symbols = subprocess.run(
-        ["nm", "-D", "--defined-only", str(args.library)],
-        check=True, text=True, stdout=subprocess.PIPE).stdout
-    actual = sorted(set(re.findall(r"\b(ggpo_[A-Za-z0-9_]+)$", symbols,
+    if sys.platform == "darwin":
+        command, prefix = ["nm", "-gU", str(args.library)], r"\b_"
+    else:
+        command, prefix = ["nm", "-D", "--defined-only", str(args.library)], r"\b"
+    symbols = subprocess.run(command, check=True, text=True,
+                             stdout=subprocess.PIPE).stdout
+    actual = sorted(set(re.findall(prefix + r"(ggpo_[A-Za-z0-9_]+)$", symbols,
                                    re.MULTILINE)))
     expected = sorted(line.strip() for line in
                       args.manifest.read_text(encoding="utf-8").splitlines()
