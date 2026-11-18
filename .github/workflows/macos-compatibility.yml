@@ -78,8 +78,8 @@ jobs:
           python3 tests/consumer/verify_consumers.py \
             --prefix "$BUILD_DIR/install" --work build/macos-consumers \
             --jobs 3 --report build/macos-consumers/report.json \
-            --cmake-arg "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64" \
-            --cmake-arg "-DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_DEPLOYMENT_TARGET"
+            --cmake-arg="-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64" \
+            --cmake-arg="-DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_DEPLOYMENT_TARGET"
 
       - name: Pack the build tree
         # A tarball keeps permissions and symlinks; the test runners unpack

@@ -333,8 +333,8 @@ jobs:
           done
           python3 tests/consumer/verify_consumers.py \
             --prefix "$root" --work build/macos-consumers --jobs 3 \
-            --cmake-arg "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64" \
-            --cmake-arg "-DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_DEPLOYMENT_TARGET"
+            --cmake-arg="-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64" \
+            --cmake-arg="-DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_DEPLOYMENT_TARGET"
       - name: Upload packaged SDK
         uses: actions/upload-artifact@v4
         with:
