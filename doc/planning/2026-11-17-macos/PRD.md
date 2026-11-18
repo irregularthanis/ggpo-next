@@ -34,8 +34,8 @@ settings, CI and packaging. Tests run natively, as on Linux.
 
 - The SDL2 frontend runs as a normal Mac app, with the start screen,
   matchmaking and legend; the headless peer runs from the command line.
-- The legend and the matchmaking server know macOS as a platform, with its own
-  color.
+- The legend and the matchmaking protocol know macOS as platform 4; the
+  legend names it "macOS" (colors stay per ship).
 
 ### Testing
 

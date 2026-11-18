@@ -93,11 +93,12 @@ Facts from `ee465d1` that constrain the design:
 
 ## Matchmaking platform ID
 
-- Add `PLATFORM_MACOS = 4` to `protocol.py`, the C++ codec and
-  `protocol_vectors.json`; the legend gets a new color.
-- Older servers report unknown IDs as "unknown" and still match players, so
-  clients ship before the server. The live server image is updated by hand
-  (as decided for the pinned image), after which the legend names macOS.
+- Add `PLATFORM_MACOS = 4` to `protocol.py`, the C++ codec and the legend
+  (named "macOS"); tests cover the numbering and pass-through.
+- The server copies platform bytes into `MATCH` without interpreting them, so
+  the live server already relays ID 4 and needs no update. Legend colors are
+  per ship, not per platform, so no new color is needed. The protocol
+  vectors are unchanged: the wire format is the same.
 
 ## Testing
 
@@ -176,7 +177,7 @@ Each step is one PR, with these documents updated in the same PR.
    macOS 11 target and audits), CTest on macOS 15 and 26 (arm64 and Intel),
    `macos-compatibility.yml`, area routing.
 2. Release package: macOS SDK.
-3. Matchmaking platform ID for macOS (server, codecs, vectors, legend).
+3. Matchmaking platform ID for macOS (server constants, client codec, legend).
 4. Vector War macOS app and its package.
 5. macOS pairs in the cross-platform E2E matrix.
 6. macOS as the fourth player in the public game.

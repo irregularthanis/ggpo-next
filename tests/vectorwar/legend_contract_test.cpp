@@ -36,6 +36,8 @@ int main()
    Expect((int)kVwPlatformWindows == (int)vwnet::kPlatformWindows, "Windows numbering");
    Expect((int)kVwPlatformLinux == (int)vwnet::kPlatformLinux, "Linux numbering");
    Expect((int)kVwPlatformAndroid == (int)vwnet::kPlatformAndroid, "Android numbering");
+   Expect((int)kVwPlatformMacOS == (int)vwnet::kPlatformMacOS, "macOS numbering");
+   Expect(kVwPlatformMacOS == 4, "macOS is protocol platform 4");
 
    // Direct play: only the local platform is known; no routes.
    VwLegend legend;
@@ -54,14 +56,14 @@ int main()
    VwLegendInitDirect(&legend, 4, 1);
    legend.platforms[0] = kVwPlatformWindows;
    legend.platforms[1] = kVwPlatformAndroid;
-   legend.platforms[2] = kVwPlatformLinux;
+   legend.platforms[2] = kVwPlatformMacOS;
    legend.platforms[3] = 9;  // a future platform still renders
    legend.routes[1] = kVwRouteDirect;
    legend.routes[2] = kVwRouteRelay;
    legend.routes[3] = kVwRouteRelay;
    ExpectRow(legend, 0, "P1 Windows (you)");
    ExpectRow(legend, 1, "P2 Android direct");
-   ExpectRow(legend, 2, "P3 Linux relay");
+   ExpectRow(legend, 2, "P3 macOS relay");
    ExpectRow(legend, 3, "P4 unknown relay");
 
    // Out-of-range sizes clamp; a spectator has no local row.

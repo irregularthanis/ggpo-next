@@ -42,6 +42,15 @@ class Lobby(unittest.TestCase):
         self.assertEqual([replies[a].player for a in (A, B, C, D)], [1, 2, 3, 4])
         self.assertTrue(all(r.relay_ports == (7101, 7102, 7103, 7104) for r in replies.values()))
 
+    def test_platform_ids_pass_through_unchanged(self):
+        # The server copies platform bytes; macOS (4) and IDs it has never
+        # heard of reach every member as sent.
+        platforms = (p.PLATFORM_WINDOWS, p.PLATFORM_LINUX, p.PLATFORM_MACOS, 9)
+        for nonce, (address, platform) in enumerate(zip((A, B, C), platforms), start=1):
+            self.send(join(nonce, 4, platform=platform), address)
+        replies = self.send(join(4, 4, platform=platforms[3]), D)
+        self.assertTrue(all(r.platforms == platforms for r in replies.values()))
+
     def test_lobby_codes_and_sizes_keep_groups_apart(self):
         self.send(join(1, 2, "K7Q2"), A)
         self.assertEqual(self.send(join(2, 2), B), {B: p.Waiting(2, 1, 2)})       # public queue

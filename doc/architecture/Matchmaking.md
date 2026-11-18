@@ -97,6 +97,21 @@ reserved zero bytes. Integers are little-endian.
 | 8 | `PEERS_REQUEST` | 3 | client → lobby | Token, player, LAN address; padded to 68 bytes |
 | 9 | `PEERS` | 3 | lobby → client | Each member's public and LAN candidates (68 bytes) |
 
+`JOIN`, `MATCH` and `HELLO` carry a one-byte platform ID, used only for the
+legend:
+
+| ID | Platform |
+| --- | --- |
+| 0 | unknown |
+| 1 | Windows |
+| 2 | Linux |
+| 3 | Android |
+| 4 | macOS |
+
+The server never interprets the ID: it copies each player's byte into
+`MATCH`. A new platform therefore needs no server update, and a client that
+predates an ID shows that player as `unknown`.
+
 The shared vectors in
 [`protocol_vectors.json`](../../services/matchmaking/protocol_vectors.json)
 are decoded by both the Python server tests and the C++ client tests, so the

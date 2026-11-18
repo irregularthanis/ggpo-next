@@ -1,6 +1,6 @@
 # PROGRESS — macOS support
 
-Status: In progress (M1, M2 done)
+Status: In progress (M1–M3 done)
 
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
@@ -34,9 +34,9 @@ Status: In progress (M1, M2 done)
 
 ### M3: Matchmaking platform ID (parallel with M1–M2)
 
-- [ ] M3-T01: ID 4 (macOS) in server, C++ codec and vectors.
-- [ ] M3-T02: Legend color for macOS.
-- [ ] M3-T03: Live server image updated (owner).
+- [x] M3-T01: ID 4 (macOS) in server, C++ codec and legend.
+- [x] M3-T02: Legend names macOS; colors are per ship, so none added.
+- [x] M3-T03: No server update needed: the server passes platform IDs through.
 
 ### M4: Vector War app (depends: M1, M3)
 
@@ -59,3 +59,4 @@ Status: In progress (M1, M2 done)
 - 2026-11-17: Plan drafted for macOS; iOS deferred. D1–D3 decided; D2 revised the same day to a macOS 11 baseline, tested on 15 and 26.
 - 2026-11-18: M1 done. Universal build on macos-15 (Xcode 16.4): arm64 and x86_64 slices, minos 11.0 in libGGPO.dylib and libGGPO.a. 36/36 CTest tests pass on macOS 15 and 26, Apple Silicon and Intel, including `vectorwar_state_contract` and `macos_exports`. Every other workflow stayed green.
 - 2026-11-18: M2 done. `package-macos` in `release-packages.yml` builds, tests, audits and archives `ggpo-<version>-macos-universal.tar.gz`, then runs the C11/C++98 consumers (default, static, shared) against the extracted archive; a manual dry run passed. The per-PR workflow runs the same consumers. DeveloperGuide gains a macOS section.
+- 2026-11-18: M3 done. Platform ID 4 = macOS in the server constants, the C++ codec and the legend; the legend contract shows a macOS row and the matchmaker test proves IDs 4 and 9 pass through unchanged. The server never interprets platform IDs, so the live image needs no update.
