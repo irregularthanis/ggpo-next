@@ -1019,12 +1019,17 @@ established by the frame, checksum, callback, and lifecycle assertions.
 - No spectator or disconnect/resume automated session exists. Matchmaking
   loopback covers 2, 3 and 4 players; the NAT matrix covers mixed four-player
   routing and a paced latency/jitter/loss/reordering scenario.
-- The NAT matrix models symmetric NAT but not a real carrier-grade provider;
-  public mobile and carrier-grade networks remain part of the friends trial.
-- The matchmaking server is not deployed yet, so no test reaches a public
-  server; every matchmaking test uses a server on the runner.
-- The automated matrix covers native Linux, Windows, MinGW, and Android peers,
-  but not SteamOS hardware.
+- The NAT matrix models symmetric NAT but not a real carrier-grade provider.
+  Real home, mobile and carrier-grade networks are covered only by manual
+  trials: on 2026-11-18 a Linux desktop and an Android phone on one LAN
+  played direct while a macOS player in another country joined through the
+  relay.
+- Only the [public multi-platform game](#public-multi-platform-game) reaches
+  the deployed server, and it forces every pair onto the relay; hole punching
+  across the public Internet is not tested automatically. Every other
+  matchmaking test uses a server on the runner.
+- The automated matrix covers native Linux, Windows, MinGW, Android and macOS
+  peers, but not SteamOS hardware.
 - The cross-platform E2E workflow remains a clean-link test; deterministic
   impairment belongs to the Linux namespace NAT workflow.
 - macOS runs the library, its tests, Vector War's GUI contracts, generic and
