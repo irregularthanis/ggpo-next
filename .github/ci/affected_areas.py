@@ -58,7 +58,8 @@ RULES = (
     # Vector War frontends, then its portable core.
     (("src/apps/vectorwar/android/*",), ("android",)),
     (tuple("src/apps/vectorwar/" + p for p in WIN32_FRONTEND), ("windows",)),
-    (tuple("src/apps/vectorwar/" + p for p in SDL_FRONTEND), ("linux", "android")),
+    (("src/apps/vectorwar/macos/*",), ("macos",)),
+    (tuple("src/apps/vectorwar/" + p for p in SDL_FRONTEND), ("linux", "android", "macos")),
     (("src/apps/vectorwar/*",), CORE),
     # Tests.
     (("tests/android/*",), ("android",)),

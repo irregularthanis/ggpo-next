@@ -47,6 +47,17 @@ jobs:
           xcodebuild -version
           cmake --version
 
+      - name: Restore the pinned SDL2 build
+        id: sdl2
+        uses: actions/cache@v4
+        with:
+          path: build/sdl2
+          key: sdl2-${{ hashFiles('scripts/macos/build_sdl2.sh') }}-xcode${{ env.XCODE_VERSION }}-${{ env.MACOS_DEPLOYMENT_TARGET }}
+
+      - name: Build SDL2 (static, universal, macOS 11)
+        if: steps.sdl2.outputs.cache-hit != 'true'
+        run: scripts/macos/build_sdl2.sh "$PWD/build/sdl2" "$MACOS_DEPLOYMENT_TARGET"
+
       - name: Configure
         # A STRING (not FILEPATH) Python stays the bare name python3, found on
         # PATH at build and test time, so the tree runs unchanged on runners
@@ -57,7 +68,7 @@ jobs:
             -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
             -DCMAKE_OSX_DEPLOYMENT_TARGET="$MACOS_DEPLOYMENT_TARGET" \
             -DCMAKE_INSTALL_PREFIX="$PWD/$BUILD_DIR/install" \
-            -DGGPO_BUILD_VECTORWAR_GUI=OFF \
+            -DCMAKE_PREFIX_PATH="$PWD/build/sdl2" \
             -DGGPO_RUN_TESTS_ON_BUILD=OFF \
             -DPYTHON_EXECUTABLE:STRING=python3
 
@@ -69,6 +80,7 @@ jobs:
       - name: Audit architectures and minimum macOS
         run: |
           python3 scripts/macos/audit_binaries.py "$BUILD_DIR/install" \
+            "$BUILD_DIR/bin/x64/Release/VectorWar.app" \
             --arch arm64 --arch x86_64 --minos "$MACOS_DEPLOYMENT_TARGET"
 
       - name: Build and run installed-SDK consumers

@@ -35,7 +35,8 @@ class Rules(unittest.TestCase):
     def test_vector_war_frontends(self):
         self.check("src/apps/vectorwar/win32_start_dialog.cpp", ("windows",))
         self.check("src/apps/vectorwar/VectorWar.rc", ("windows",))
-        self.check("src/apps/vectorwar/sdl_start_screen.cpp", ("linux", "android"))
+        self.check("src/apps/vectorwar/sdl_start_screen.cpp", ("linux", "android", "macos"))
+        self.check("src/apps/vectorwar/macos/Info.plist.in", ("macos",))
         self.check("src/apps/vectorwar/android/app/build.gradle", ("android",))
         self.check("src/apps/vectorwar/gamestate.cpp", CORE)
         self.check("src/apps/vectorwar/vw_legend.cpp", CORE)

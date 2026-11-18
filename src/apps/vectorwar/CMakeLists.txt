@@ -86,14 +86,36 @@ elseif(GGPO_BUILD_VECTORWAR_GUI AND ANDROID)
 	endif()
 elseif(GGPO_BUILD_VECTORWAR_GUI)
 	find_package(SDL2 REQUIRED)
-	add_executable(VectorWar ${GGPO_EXAMPLES_VECTORWAR_SDL_SRC})
+	# macOS links the static SDL2 built by scripts/macos/build_sdl2.sh, so the
+	# app bundle is self-contained; elsewhere SDL2 is the system's shared one.
+	if(TARGET SDL2::SDL2)
+		set(GGPO_VECTORWAR_SDL2 SDL2::SDL2)
+	else()
+		set(GGPO_VECTORWAR_SDL2 SDL2::SDL2-static)
+	endif()
+	set(GGPO_VECTORWAR_SDL2 ${GGPO_VECTORWAR_SDL2} PARENT_SCOPE)
+	if(APPLE)
+		set(GGPO_VECTORWAR_TEST_PREFIX macos)
+		# VectorWar.app: unsigned (plan decision D1), built for the
+		# deployment target recorded as LSMinimumSystemVersion.
+		add_executable(VectorWar MACOSX_BUNDLE ${GGPO_EXAMPLES_VECTORWAR_SDL_SRC})
+		set_target_properties(VectorWar PROPERTIES
+			MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/macos/Info.plist.in
+			MACOSX_BUNDLE_BUNDLE_NAME "Vector War"
+			MACOSX_BUNDLE_GUI_IDENTIFIER "net.ggpo.vectorwar"
+			MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
+			MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION})
+	else()
+		set(GGPO_VECTORWAR_TEST_PREFIX linux)
+		add_executable(VectorWar ${GGPO_EXAMPLES_VECTORWAR_SDL_SRC})
+	endif()
 	add_common_flags(VectorWar)
-	target_link_libraries(VectorWar PRIVATE VectorWarCore SDL2::SDL2)
+	target_link_libraries(VectorWar PRIVATE VectorWarCore ${GGPO_VECTORWAR_SDL2})
 	target_compile_options(VectorWar PRIVATE -Wall -Wextra)
 	if(BUILD_TESTING)
-		add_test(NAME linux_vectorwar_frontend_smoke
+		add_test(NAME ${GGPO_VECTORWAR_TEST_PREFIX}_vectorwar_frontend_smoke
 			COMMAND VectorWar --frontend-smoke)
-		set_tests_properties(linux_vectorwar_frontend_smoke PROPERTIES
+		set_tests_properties(${GGPO_VECTORWAR_TEST_PREFIX}_vectorwar_frontend_smoke PROPERTIES
 			ENVIRONMENT "SDL_VIDEODRIVER=dummy"
 			LABELS "native;sample;vectorwar-host")
 	endif()

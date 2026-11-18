@@ -548,10 +548,10 @@ elseif(TARGET VectorWar)
         ${PROJECT_SOURCE_DIR}/src/apps/vectorwar
     )
     target_link_libraries(ggpo_vectorwar_sdl_host_contract PRIVATE
-        GGPO::GGPO SDL2::SDL2)
-    add_test(NAME linux_vectorwar_gui_host_contract
+        GGPO::GGPO ${GGPO_VECTORWAR_SDL2})
+    add_test(NAME ${GGPO_SMOKE_PREFIX}_vectorwar_gui_host_contract
         COMMAND ggpo_vectorwar_sdl_host_contract)
-    set_tests_properties(linux_vectorwar_gui_host_contract PROPERTIES
+    set_tests_properties(${GGPO_SMOKE_PREFIX}_vectorwar_gui_host_contract PROPERTIES
         ENVIRONMENT "SDL_VIDEODRIVER=dummy"
         LABELS "native;platform;sample;vectorwar-host")
 elseif(TARGET VectorWarAndroid)

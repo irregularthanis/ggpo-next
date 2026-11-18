@@ -342,6 +342,68 @@ jobs:
           path: build/ggpo-*-macos-universal.tar.gz
           if-no-files-found: error
 
+  package-vectorwar-macos:
+    # VectorWar.app (universal, macOS 11+, SDL2 linked in) on an unsigned
+    # disk image. Without an Apple Developer account (plan decision D1) the
+    # first launch needs right-click > Open.
+    name: macOS Vector War
+    runs-on: macos-15
+    env:
+      XCODE_VERSION: "16.4"
+      MACOS_DEPLOYMENT_TARGET: "11.0"
+    steps:
+      - name: Check out the tagged source
+        uses: actions/checkout@v4
+      - name: Build the app
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+          scripts/macos/build_sdl2.sh "$PWD/build/sdl2" "$MACOS_DEPLOYMENT_TARGET"
+          cmake -S . -B build/vectorwar \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET="$MACOS_DEPLOYMENT_TARGET" \
+            -DCMAKE_PREFIX_PATH="$PWD/build/sdl2" \
+            -DBUILD_SHARED_LIBS=OFF -DGGPO_BUILD_VECTORWAR=ON \
+            -DGGPO_RUN_TESTS_ON_BUILD=OFF -DBUILD_TESTING=ON
+          cmake --build build/vectorwar --target VectorWar --parallel 3
+      - name: Make the disk image
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = push ]; then version="${GITHUB_REF_NAME#v}"; else version=dev; fi
+          name="ggpo-${version}-vectorwar-macos"
+          stage="build/stage/Vector War"
+          mkdir -p "$stage"
+          cp -R build/vectorwar/bin/x64/Release/VectorWar.app "$stage/Vector War.app"
+          ln -s /Applications "$stage/Applications"
+          cp LICENSE "$stage/LICENSE.txt"
+          hdiutil create -volname "Vector War" -srcfolder "$stage" \
+            -fs HFS+ -format UDZO -ov "build/$name.dmg"
+      - name: Validate the disk image
+        # Mount the image and check the app exactly as a player gets it:
+        # self-contained (no SDL2 or GGPO dylib), both architectures,
+        # macOS 11 minimum, and it starts.
+        run: |
+          set -euo pipefail
+          image=$(find build -maxdepth 1 -name 'ggpo-*-vectorwar-macos.dmg' -print -quit)
+          hdiutil attach -nobrowse -readonly -mountpoint /tmp/vw "$image"
+          app="/tmp/vw/Vector War.app"
+          test -L /tmp/vw/Applications
+          plutil -p "$app/Contents/Info.plist"
+          test "$(plutil -extract LSMinimumSystemVersion raw "$app/Contents/Info.plist")" = "$MACOS_DEPLOYMENT_TARGET"
+          python3 scripts/macos/audit_binaries.py "$app" \
+            --arch arm64 --arch x86_64 --minos "$MACOS_DEPLOYMENT_TARGET"
+          if otool -L "$app/Contents/MacOS/VectorWar" | grep -E 'SDL2|libGGPO'; then
+            echo "VectorWar.app links a library it does not ship" >&2; exit 1
+          fi
+          SDL_VIDEODRIVER=dummy "$app/Contents/MacOS/VectorWar" --frontend-smoke
+          hdiutil detach /tmp/vw
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-package-vectorwar-macos
+          path: build/ggpo-*-vectorwar-macos.dmg
+          if-no-files-found: error
+
   package-vectorwar-android:
     name: Android Vector War APK
     runs-on: ubuntu-24.04
@@ -464,7 +526,7 @@ jobs:
   publish-release:
     name: Publish release assets
     if: github.event_name == 'push'
-    needs: [package-windows, package-windows-mingw, package-linux, package-android, package-macos, package-vectorwar-linux, package-vectorwar-windows, package-vectorwar-android]
+    needs: [package-windows, package-windows-mingw, package-linux, package-android, package-macos, package-vectorwar-linux, package-vectorwar-windows, package-vectorwar-android, package-vectorwar-macos]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -478,7 +540,7 @@ jobs:
 
       - name: Generate checksums
         working-directory: release-assets
-        run: sha256sum ggpo-*.zip ggpo-*.tar.gz ggpo-*.deb ggpo-*.rpm ggpo-*.apk > SHA256SUMS
+        run: sha256sum ggpo-*.zip ggpo-*.tar.gz ggpo-*.deb ggpo-*.rpm ggpo-*.apk ggpo-*.dmg > SHA256SUMS
 
       - name: Create or update the GitHub Release
         env:
@@ -493,4 +555,4 @@ jobs:
             fi
             gh release create "$TAG" --verify-tag --generate-notes --title "GGPO $TAG" "${prerelease_args[@]}"
           fi
-          gh release upload "$TAG" release-assets/ggpo-*.zip release-assets/ggpo-*.tar.gz release-assets/ggpo-*.deb release-assets/ggpo-*.rpm release-assets/ggpo-*.apk release-assets/SHA256SUMS --clobber
+          gh release upload "$TAG" release-assets/ggpo-*.zip release-assets/ggpo-*.tar.gz release-assets/ggpo-*.deb release-assets/ggpo-*.rpm release-assets/ggpo-*.apk release-assets/ggpo-*.dmg release-assets/SHA256SUMS --clobber
