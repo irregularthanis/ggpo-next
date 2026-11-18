@@ -376,9 +376,14 @@ pushes, or manual dispatch. The workflow does not use `pull_request_target`.
 | Peer startup/crash | Nonzero process status before the completion barrier | Surviving child is terminated |
 | Peer timeout | Bounded rendezvous, control, execution, and job deadlines | Child, server, firewall, and ephemeral node cleanup run |
 | Missing paired role | Role 1 and role 2 fail after the 10-minute rendezvous deadline | Published endpoint is retired and the surviving agent is stopped |
+| GitHub API 5xx | Lookups, retiring and deleting retry three times (1 s, 3 s, 9 s); creating the deployment never retries, so a pair cannot publish twice | A persistent error still fails the role |
 | State divergence | Live snapshot never reaches the oracle or final schema validation fails | Scenario report is absent or non-passing |
 | Missing or duplicate scenario | [`validate_manifest.py`](../../tests/e2e/validate_manifest.py) rejects the evidence set | Final job fails even if other scenarios passed |
 | Role job failure | `needs.execute.result` is not `success` | Final job fails unconditionally |
+
+To retry a failed scenario, re-run the whole workflow, not "Re-run failed
+jobs": the latter restarts only the failed role, whose partner already
+finished, so it waits out the rendezvous deadline and fails again.
 
 Focused regressions live in
 [`test_orchestration.py`](../../tests/e2e/test_orchestration.py),

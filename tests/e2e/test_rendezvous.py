@@ -3,7 +3,11 @@
 
 import unittest
 
-from rendezvous import DeploymentRendezvous
+import io
+import urllib.error
+from unittest import mock
+
+from rendezvous import DeploymentRendezvous, GitHubTransport
 
 
 class FakeTransport:
@@ -77,6 +81,55 @@ class RendezvousTests(unittest.TestCase):
         self.rendezvous.publish("100.64.0.2", 24871)
         with self.assertRaisesRegex(ValueError, "duplicate"):
             self.rendezvous.discover(deadline_seconds=0.1, poll_seconds=0)
+
+
+
+class TransportRetryTests(unittest.TestCase):
+    """GitHub 5xx responses: repeatable requests retry, creation does not."""
+
+    def failing(self, codes):
+        responses = iter(codes)
+
+        def urlopen(request, timeout):
+            code = next(responses)
+            if code >= 400:
+                raise urllib.error.HTTPError(request.full_url, code, "error", {},
+                                             io.BytesIO(b"oops"))
+            response = mock.MagicMock()
+            response.__enter__.return_value.read.return_value = b""
+            return response
+        return urlopen
+
+    def transport(self):
+        self.sleeps = []
+        return GitHubTransport("owner/repo", "token", sleep=self.sleeps.append)
+
+    def test_delete_retries_a_server_error(self):
+        transport = self.transport()
+        with mock.patch("urllib.request.urlopen", self.failing([500, 502, 200])):
+            self.assertIsNone(transport.request("DELETE", "/deployments/7"))
+        self.assertEqual(self.sleeps, [1, 3])
+
+    def test_retries_are_bounded(self):
+        transport = self.transport()
+        with mock.patch("urllib.request.urlopen", self.failing([500] * 4)):
+            with self.assertRaisesRegex(RuntimeError, "500"):
+                transport.request("GET", "/deployments?environment=x")
+        self.assertEqual(self.sleeps, [1, 3, 9])
+
+    def test_client_errors_are_not_retried(self):
+        transport = self.transport()
+        with mock.patch("urllib.request.urlopen", self.failing([404])):
+            with self.assertRaisesRegex(RuntimeError, "404"):
+                transport.request("DELETE", "/deployments/7")
+        self.assertEqual(self.sleeps, [])
+
+    def test_creating_a_deployment_is_never_retried(self):
+        transport = self.transport()
+        with mock.patch("urllib.request.urlopen", self.failing([500, 200])):
+            with self.assertRaisesRegex(RuntimeError, "500"):
+                transport.request("POST", "/deployments", {"ref": "abc"})
+        self.assertEqual(self.sleeps, [])
 
 
 if __name__ == "__main__":
