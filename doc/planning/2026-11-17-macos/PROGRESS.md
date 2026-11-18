@@ -65,3 +65,4 @@ Status: Done
 - 2026-11-18: M6-T01 done at the owner's request: ruleset 26776893 ("Master PR and CI baseline") requires "Complete macOS compatibility"; other rules unchanged.
 - 2026-11-18: M6-T02 done. Docs pass: release notes (`.github/release-notes.md`) explain the unsigned first launch, corrected for macOS 15+, where right-click → Open no longer bypasses Gatekeeper (Open Anyway in Privacy & Security); stale "not yet in E2E" removed. App icon: the GGPO mark from the README header, built into `VectorWar.icns`.
 - 2026-11-18: macOS–macOS E2E pairs added at the owner's request (generic and Vector War), so macOS plays itself across two hosts like the other platforms. The macOS matrix is now 28 jobs; at worst four macOS runners are held at once.
+- 2026-11-18: the macOS–macOS E2E pairs run on Intel Macs (`macos-15-intel`) and the other macOS roles on Apple Silicon, at the owner's request, so both architectures play across hosts.

@@ -185,7 +185,9 @@ with the pinned Xcode on `macos-15`, and uploads them as `e2e-peer-macos`.
 
 #### macOS: execution
 
-macOS roles run on `macos-15` in a separate matrix job, `execute-macos`,
+macOS roles run in a separate matrix job, `execute-macos`: the
+`macos-macos` pairs on Intel Macs (`macos-15-intel`) and every other macOS role
+on Apple Silicon (`macos-15`), so both architectures play across hosts. It is
 capped at four jobs (two pairs). Every pair has a macOS role and the two
 `macos-macos` pairs have two, so at worst (both of those at once) the matrix
 holds four of the account's five macOS runners and other macOS work briefly

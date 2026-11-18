@@ -325,7 +325,7 @@ flowchart LR
     BM["Build native<br/>MinGW peer"]
     BMac["Build native<br/>macOS peer"]
     X["Matrix: execute<br/>44 jobs, max 12 at once<br/>Linux, Windows, MinGW,<br/>Android pairs"]
-    XM["Matrix: execute-macos<br/>28 jobs, max 4 at once<br/>macOS against Linux,<br/>Windows, Android, macOS"]
+    XM["Matrix: execute-macos<br/>28 jobs, max 4 at once<br/>macOS against Linux,<br/>Windows, Android, macOS<br/>(macOS–macOS on Intel)"]
     F["Complete native<br/>E2E matrix"]
     C --> Builds
     C --> BM

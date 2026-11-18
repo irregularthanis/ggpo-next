@@ -374,7 +374,8 @@ jobs:
       # jobs are two pairs. Every pair has a macOS role and the two
       # macos-macos pairs have two each, so at worst (both of those at once)
       # four of the account's five macOS runners are held. Roles stay
-      # adjacent, as above.
+      # adjacent, as above. The macos-macos pairs run on Intel Macs and the
+      # rest on Apple Silicon, so both architectures play across hosts.
       max-parallel: 4
       matrix:
         include:
@@ -390,8 +391,8 @@ jobs:
           - {fixture: smoke, scenario: macos-android, role: 2, platform: android, os: ubuntu-24.04-arm, player1: macos, player2: android, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
           - {fixture: smoke, scenario: android-macos, role: 1, platform: android, os: ubuntu-24.04-arm, player1: android, player2: macos, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
           - {fixture: smoke, scenario: android-macos, role: 2, platform: macos, os: macos-15, player1: android, player2: macos, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
-          - {fixture: smoke, scenario: macos-macos, role: 1, platform: macos, os: macos-15, player1: macos, player2: macos, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
-          - {fixture: smoke, scenario: macos-macos, role: 2, platform: macos, os: macos-15, player1: macos, player2: macos, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: macos-macos, role: 1, platform: macos, os: macos-15-intel, player1: macos, player2: macos, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: macos-macos, role: 2, platform: macos, os: macos-15-intel, player1: macos, player2: macos, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
           - {fixture: vectorwar, scenario: vectorwar-macos-linux, role: 1, platform: macos, os: macos-15, player1: macos, player2: linux, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
           - {fixture: vectorwar, scenario: vectorwar-macos-linux, role: 2, platform: linux, os: ubuntu-24.04, player1: macos, player2: linux, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
           - {fixture: vectorwar, scenario: vectorwar-linux-macos, role: 1, platform: linux, os: ubuntu-24.04, player1: linux, player2: macos, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
@@ -404,8 +405,8 @@ jobs:
           - {fixture: vectorwar, scenario: vectorwar-macos-android, role: 2, platform: android, os: ubuntu-24.04-arm, player1: macos, player2: android, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
           - {fixture: vectorwar, scenario: vectorwar-android-macos, role: 1, platform: android, os: ubuntu-24.04-arm, player1: android, player2: macos, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
           - {fixture: vectorwar, scenario: vectorwar-android-macos, role: 2, platform: macos, os: macos-15, player1: android, player2: macos, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
-          - {fixture: vectorwar, scenario: vectorwar-macos-macos, role: 1, platform: macos, os: macos-15, player1: macos, player2: macos, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
-          - {fixture: vectorwar, scenario: vectorwar-macos-macos, role: 2, platform: macos, os: macos-15, player1: macos, player2: macos, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-macos-macos, role: 1, platform: macos, os: macos-15-intel, player1: macos, player2: macos, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-macos-macos, role: 2, platform: macos, os: macos-15-intel, player1: macos, player2: macos, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
