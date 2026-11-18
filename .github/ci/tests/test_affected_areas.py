@@ -17,7 +17,7 @@ class Rules(unittest.TestCase):
 
     def test_documentation_runs_nothing(self):
         for path in ("doc/architecture/Testing.md", "README.md", "services/matchmaking/README.md",
-                     "infra/terraform/README.md"):
+                     "infra/terraform/README.md", ".github/release-notes.md"):
             self.check(path, ())
 
     def test_shared_core_runs_every_platform(self):
