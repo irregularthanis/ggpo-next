@@ -396,9 +396,9 @@ Deployment record) is described in
 
 After a production infrastructure apply, the
 [public multi-platform workflow](../../.github/workflows/public-multiplatform-game.yml)
-runs Linux, Windows/MSVC and Android headless peers in one three-player lobby through
-the DuckDNS name. It forces every pair through the OCI relay, then requires all
-three peers to reach frame 180 with equal state and rollback evidence. See the
+runs Linux, Windows/MSVC, Android and macOS headless peers in one four-player lobby
+through the DuckDNS name. It forces every pair through the OCI relay, then requires
+all four peers to reach frame 180 with equal state and rollback evidence. See the
 [testing contract](Testing.md#public-multi-platform-game).
 
 ## Internet play

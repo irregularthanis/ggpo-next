@@ -868,7 +868,7 @@ Operators can deploy or remove the reference server with the manual
 [`Deploy matchmaking server`](../.github/workflows/deploy-matchmaking.yml)
 workflow or follow the [Terraform instructions](../infra/terraform/README.md).
 After an automatic `master` deployment, CI resolves the DuckDNS name and runs
-one required three-player game across Linux, Windows/MSVC and Android through the OCI
+one required four-player game across Linux, Windows/MSVC, Android and macOS through the OCI
 relay. The standalone
 [`Public multi-platform game`](../.github/workflows/public-multiplatform-game.yml)
 workflow defaults to optional mode and reports a neutral skip before building

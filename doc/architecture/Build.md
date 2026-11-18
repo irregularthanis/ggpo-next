@@ -207,7 +207,7 @@ the GitHub Release.
 | Windows | Supported SDK and Vector War build | Existing reference platform |
 | Linux | SDK and SDL2 Vector War GUI supported through the Ubuntu 24.04 container | Additional distribution formats remain follow-up work |
 | Android | NDK SDK and SDL2/touch Vector War APK for arm64-v8a, armeabi-v7a, and x86_64 | Physical-device qualification remains follow-up work |
-| macOS | Universal SDK (arm64 + x86_64) and SDL2 Vector War app built for macOS 11, tested in CI on macOS 15 and 26, released as a tar.gz SDK and an unsigned `.dmg`; plays Vector War E2E pairs against Linux, Windows and Android | The public game remains ([plan](../planning/2026-11-17-macos/PRD.md)) |
+| macOS | Universal SDK (arm64 + x86_64) and SDL2 Vector War app built for macOS 11, tested in CI on macOS 15 and 26, released as a tar.gz SDK and an unsigned `.dmg`; plays generic and Vector War E2E pairs against Linux, Windows and Android, and is the public game's fourth player | — |
 | Other mobile platforms and consoles | No build target | Platform services, lifecycle, socket policy, packaging, and validation absent |
 
 The build-port roadmap should preserve the public API while moving OS facilities

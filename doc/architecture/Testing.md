@@ -854,15 +854,18 @@ flowchart TD
     Linux["Linux<br/>peer"]
     Windows["Windows<br/>MSVC peer"]
     Android["Android<br/>peer"]
+    MacOS["macOS<br/>peer"]
     Result["Frame 180<br/>equal state<br/>relay routes"]
 
     DNS --> Relay
     Linux <--> Relay
     Windows <--> Relay
     Android <--> Relay
+    MacOS <--> Relay
     Linux --> Result
     Windows --> Result
     Android --> Result
+    MacOS --> Result
 ```
 
 Before launching any peer, the workflow freshly resolves the hostname and
@@ -879,7 +882,7 @@ independent oracle, while the namespace NAT suite supplies controlled direct,
 fallback and impairment coverage.
 [`validate_manifest.py`](../../tests/e2e/validate_manifest.py) rejects a run
 unless every required generic and Vector War scenario for Linux, Windows,
-MinGW, and Android produces a passing role-2 report.
+MinGW, Android and macOS produces a passing role-2 report.
 [`compare_peer_results.py`](../../tests/smoke/compare_peer_results.py) exposes
 that validator for standalone result files. Wine is not native Windows
 interoperability evidence.
@@ -1020,10 +1023,10 @@ established by the frame, checksum, callback, and lifecycle assertions.
   but not SteamOS hardware.
 - The cross-platform E2E workflow remains a clean-link test; deterministic
   impairment belongs to the Linux namespace NAT workflow.
-- macOS runs the library, its tests, Vector War's GUI contracts and generic and
-  Vector War E2E pairs against Linux, Windows and Android, but is not yet a player in
-  the public game; macOS 11–14 are covered only
-  by build-time checks.
+- macOS runs the library, its tests, Vector War's GUI contracts, generic and
+  Vector War E2E pairs against Linux, Windows and Android, and plays the
+  public game as the fourth player; macOS 11–14 are covered only by
+  build-time checks.
 - Android ASan+UBSan is scheduled on an x86_64 emulator; Linux Clang and MSVC
   sanitizer configurations remain in the same qualification workflow.
 - Android physical devices are not yet part of required CI; current device

@@ -32,7 +32,7 @@ class PublicMultiplatformGameTest(unittest.TestCase):
                 split_server(invalid)
 
     def test_configured_platform_manifest_requires_convergence_and_relay(self):
-        self.assertEqual(PLATFORMS, ("linux", "windows", "android"))
+        self.assertEqual(PLATFORMS, ("linux", "windows", "android", "macos"))
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             for player, platform in enumerate(PLATFORMS, start=1):
@@ -40,7 +40,7 @@ class PublicMultiplatformGameTest(unittest.TestCase):
                 peer.mkdir()
                 (peer / "metadata.json").write_text(json.dumps({
                     "platform": platform, "exit_code": 0,
-                    "routes": ["relay", "relay"], "server": "host:7100",
+                    "routes": ["relay"] * (len(PLATFORMS) - 1), "server": "host:7100",
                     "lobby": "TEST",
                 }), encoding="utf-8")
                 (peer / "result.json").write_text(json.dumps({
