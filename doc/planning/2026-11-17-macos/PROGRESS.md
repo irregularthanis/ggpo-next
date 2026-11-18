@@ -45,7 +45,7 @@ Status: In progress (M1–M4 done)
 
 ### M5: Live tests (depends: M4)
 
-- [ ] M5-T01: macOS pairs in the cross-platform E2E matrix, capped for the
+- [x] M5-T01: macOS pairs in the cross-platform E2E matrix, capped for the
   macOS runner limit.
 - [ ] M5-T02: macOS as the fourth player in the public multi-platform game.
 

@@ -102,16 +102,19 @@ input timing, and platform-specific behavior. **G** is the generic peer
 fixture and **V** the Vector War fixture; each cell is one scenario per
 fixture, run as two jobs.
 
-| Player 1 ↓ / Player 2 → | Linux | Windows (MSVC) | MinGW | Android |
-| --- | --- | --- | --- | --- |
-| **Linux** | G V | G V | — | G V |
-| **Windows (MSVC)** | G V | G V | — | G V |
-| **MinGW** | G | G | — | G |
-| **Android** | G V | G V | G | G V |
+| Player 1 ↓ / Player 2 → | Linux | Windows (MSVC) | MinGW | Android | macOS |
+| --- | --- | --- | --- | --- | --- |
+| **Linux** | G V | G V | — | G V | V |
+| **Windows (MSVC)** | G V | G V | — | G V | V |
+| **MinGW** | G | G | — | G | — |
+| **Android** | G V | G V | G | G V | V |
+| **macOS** | V | V | — | V | — |
 
-That is 13 generic and 9 Vector War scenarios, 44 role jobs in total. Vector
+That is 13 generic and 15 Vector War scenarios, 56 role jobs in total. Vector
 War has no MinGW build, so MinGW pairs are generic only. MinGW is paired with
-MSVC and Linux as player 1 only, and with Android in both orders.
+MSVC and Linux as player 1 only, and with Android in both orders. macOS plays
+Vector War, the real game, against Linux, Windows and Android in both orders;
+its generic peer is covered by the macOS loopback tests.
 
 [`validate_manifest.py`](../../tests/e2e/validate_manifest.py) defines the
 required assignments. The workflow names generic scenarios `linux-linux`,
@@ -166,6 +169,24 @@ as `e2e-peer-mingw`. Vector War is not built with MinGW.
 MinGW roles run on `windows-2022` with the same firewall handling as MSVC.
 Scenarios: `mingw-windows` and `mingw-linux` (MinGW as player 1), and
 `android-mingw` / `mingw-android`. All are generic-fixture only.
+
+### macOS
+
+#### macOS: peer build
+
+The `Build native macOS peer` job compiles `ggpo_macos_peer_smoke` and
+`VectorWarHeadless` as static Release universal (arm64 + x86_64) executables
+with the pinned Xcode on `macos-15`, and uploads them as `e2e-peer-macos`.
+
+#### macOS: execution
+
+macOS roles run on `macos-15` in a separate matrix job, `execute-macos`,
+capped at four jobs (two pairs). Each pair has one macOS role, so the matrix
+holds at most two of the account's five macOS runners and leaves the rest to
+the macOS compatibility workflow. Both matrices list each pair's roles
+adjacently, and their caps sum to 16, below the 20-job account limit (checked
+by [`test_e2e_matrix.py`](../../.github/ci/tests/test_e2e_matrix.py)). The
+runners' application firewall is off, so no port rules are needed.
 
 ### Android
 

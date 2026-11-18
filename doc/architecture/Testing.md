@@ -1020,8 +1020,9 @@ established by the frame, checksum, callback, and lifecycle assertions.
   but not SteamOS hardware.
 - The cross-platform E2E workflow remains a clean-link test; deterministic
   impairment belongs to the Linux namespace NAT workflow.
-- macOS runs the library, its tests and Vector War's GUI contracts but not
-  yet the cross-platform E2E pairs or the public game; macOS 11–14 are covered only
+- macOS runs the library, its tests, Vector War's GUI contracts and Vector
+  War E2E pairs against Linux, Windows and Android, but is not yet a player in
+  the public game; macOS 11–14 are covered only
   by build-time checks.
 - Android ASan+UBSan is scheduled on an x86_64 emulator; Linux Clang and MSVC
   sanitizer configurations remain in the same qualification workflow.
