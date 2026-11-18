@@ -150,8 +150,10 @@ New jobs in `release-packages.yml` on `macos-15`:
 - `package-vectorwar-macos`: `VectorWar.app` with SDL2 linked statically,
   on an unsigned `.dmg` with an Applications link; validate by mounting it,
   auditing the binary and running `--frontend-smoke` from the image.
-- Unsigned (D1): no signing or notarization. Release notes say to open the
-  app the first time with right-click → Open.
+- Unsigned (D1): no signing or notarization. Fixed release notes
+  (`.github/release-notes.md`, placed before the generated changelog) explain
+  the first launch: Open Anyway in Privacy & Security on macOS 15+,
+  right-click → Open on 11–14.
 
 ## Adding iOS later
 

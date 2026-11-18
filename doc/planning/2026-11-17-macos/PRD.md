@@ -67,8 +67,9 @@ settings, CI and packaging. Tests run natively, as on Linux.
     Vector War app (SDL2 linked in) and an Applications link.
 - Every package is extracted or mounted and checked in CI before upload, as
   the existing packages are.
-- Packages are unsigned (D1). Players open Vector War the first time with
-  right-click → Open; the SDK works unchanged.
+- Packages are unsigned (D1). Players approve Vector War's first launch
+  (Open Anyway in Privacy & Security on macOS 15+, right-click → Open on
+  11–14), as the release notes explain; the SDK works unchanged.
 
 ## Non-goals
 

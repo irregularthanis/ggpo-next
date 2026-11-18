@@ -522,8 +522,9 @@ maps screen regions to the existing steering, fire, and bomb input bits; it
 does not change the deterministic simulation or GGPO callback contract.
 
 macOS uses the same SDL host and renderer as Linux, built as
-`VectorWar.app`. It is unsigned, so the first launch needs right-click → Open,
-and macOS asks once whether the app may accept incoming connections: direct
+`VectorWar.app`. It is unsigned, so the first launch must be approved: on
+macOS 15 and later with Open Anyway in System Settings → Privacy & Security,
+on macOS 11–14 with right-click → Open. macOS also asks once whether the app may accept incoming connections: direct
 and hole-punched play need that, relay play does not.
 
 Release tags attach standalone GUI archives for Windows x64/x86 and Linux

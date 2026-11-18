@@ -79,7 +79,7 @@ flowchart TB
         direction TB
         LINUX["Linux<br/>GCC, Clang<br/>packages,<br/>ABI ceiling<br/>ASan + UBSan"]
         ANDROID["Android<br/>3 ABIs,<br/>API 21 / 35<br/>SDK audit,<br/>APK smoke<br/>ASan + UBSan"]
-        MACOS["macOS<br/>universal,<br/>built for 11,<br/>tested on 15 / 26<br/>(not yet in E2E)"]
+        MACOS["macOS<br/>universal,<br/>built for 11,<br/>tested on 15 / 26<br/>SDK audit,<br/>.dmg smoke"]
     end
 
     E2E["Cross-platform<br/>E2E<br/>every ordered<br/>pair<br/>over UDP"]
@@ -397,7 +397,8 @@ workflow's `package-macos` job repeats them against the extracted archive.
 
 The release workflow's `package-vectorwar-macos` job builds the unsigned
 `.dmg`, mounts it, and checks the app as a player gets it: both slices,
-minimum macOS 11.0 in the binary and in `LSMinimumSystemVersion`, no external
+minimum macOS 11.0 in the binary and in `LSMinimumSystemVersion`, the app
+icon (`VectorWar.icns`), no external
 SDL2 or GGPO library, and `--frontend-smoke` from inside the mounted image.
 
 ### Android

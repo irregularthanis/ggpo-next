@@ -822,8 +822,11 @@ sudo apt install libsdl2-2.0-0
 ```
 
 On macOS, open the `.dmg` and drag Vector War to Applications. The app is
-unsigned, so open it the first time with right-click → Open, then Open again
-in the dialog. When macOS asks whether Vector War may accept incoming network
+unsigned, so macOS blocks the first launch. On macOS 15 and later, double-click
+it, dismiss the warning, then click **Open Anyway** next to Vector War in
+System Settings → Privacy & Security. On macOS 11–14, right-click it, choose
+Open, then Open again in the dialog. Later launches work normally. When macOS
+asks whether Vector War may accept incoming network
 connections, allow it for direct or hole-punched play; relay play works
 either way. Launched from Finder it shows the start screen; for the command
 line, run the executable inside the bundle:

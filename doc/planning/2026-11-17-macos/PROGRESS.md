@@ -1,6 +1,6 @@
 # PROGRESS — macOS support
 
-Status: In progress (M1–M5 and M6-T01 done)
+Status: Done
 
 [Product brief](PRD.md) · [Technical plan](TECH_PLAN.md)
 
@@ -52,7 +52,7 @@ Status: In progress (M1–M5 and M6-T01 done)
 ### M6: Finish
 
 - [x] M6-T01: Ruleset requires the macOS aggregate check (owner).
-- [ ] M6-T02: Developer guide, Testing.md and README updated.
+- [x] M6-T02: Developer guide, Testing.md and README updated.
 
 ## Log
 
@@ -61,5 +61,6 @@ Status: In progress (M1–M5 and M6-T01 done)
 - 2026-11-18: M2 done. `package-macos` in `release-packages.yml` builds, tests, audits and archives `ggpo-<version>-macos-universal.tar.gz`, then runs the C11/C++98 consumers (default, static, shared) against the extracted archive; a manual dry run passed. The per-PR workflow runs the same consumers. DeveloperGuide gains a macOS section.
 - 2026-11-18: M3 done. Platform ID 4 = macOS in the server constants, the C++ codec and the legend; the legend contract shows a macOS row and the matchmaker test proves IDs 4 and 9 pass through unchanged. The server never interprets platform IDs, so the live image needs no update.
 - 2026-11-18: M4 done. SDL2 2.30.9 from pinned, checksummed source as a static universal macOS 11 library (Homebrew's is single-arch and host-targeted, so the plan's Homebrew CI build was dropped). `VectorWar.app` runs `macos_vectorwar_frontend_smoke` and `macos_vectorwar_gui_host_contract` on all four runners (38/38). Packaged as an unsigned `.dmg` (owner's choice over a zip), validated mounted. No app icon yet.
-- 2026-11-18: M5 done. macOS E2E pairs against Linux, Windows and Android in both orders with both fixtures (24 jobs, capped matrix); the macOS runner's DNS is restored after joining the tailnet. macOS is the public game's fourth player: a four-player forced-relay match through the DuckDNS server (passes once run after merge; see log).
+- 2026-11-18: M5 done. macOS E2E pairs against Linux, Windows and Android in both orders with both fixtures (24 jobs, capped matrix); the macOS runner's DNS is restored after joining the tailnet. macOS is the public game's fourth player: a four-player forced-relay match through the DuckDNS server passed (run 44237592441: all four peers at frame 180, checksum f23584de, 12 relay paths).
 - 2026-11-18: M6-T01 done at the owner's request: ruleset 26776893 ("Master PR and CI baseline") requires "Complete macOS compatibility"; other rules unchanged.
+- 2026-11-18: M6-T02 done. Docs pass: release notes (`.github/release-notes.md`) explain the unsigned first launch, corrected for macOS 15+, where right-click → Open no longer bypasses Gatekeeper (Open Anyway in Privacy & Security); stale "not yet in E2E" removed. App icon: the GGPO mark from the README header, built into `VectorWar.icns`.

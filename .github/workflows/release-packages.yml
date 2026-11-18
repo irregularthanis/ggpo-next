@@ -391,6 +391,8 @@ jobs:
           test -L /tmp/vw/Applications
           plutil -p "$app/Contents/Info.plist"
           test "$(plutil -extract LSMinimumSystemVersion raw "$app/Contents/Info.plist")" = "$MACOS_DEPLOYMENT_TARGET"
+          test "$(plutil -extract CFBundleIconFile raw "$app/Contents/Info.plist")" = VectorWar.icns
+          test -s "$app/Contents/Resources/VectorWar.icns"
           python3 scripts/macos/audit_binaries.py "$app" \
             --arch arm64 --arch x86_64 --minos "$MACOS_DEPLOYMENT_TARGET"
           if otool -L "$app/Contents/MacOS/VectorWar" | grep -E 'SDL2|libGGPO'; then
@@ -531,6 +533,8 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Check out the tagged source (release notes)
+        uses: actions/checkout@v4
       - name: Collect packaged SDK artifacts
         uses: actions/download-artifact@v4
         with:
@@ -553,6 +557,10 @@ jobs:
             if [[ "$TAG" == *-rc.* ]]; then
               prerelease_args=(--prerelease)
             fi
-            gh release create "$TAG" --verify-tag --generate-notes --title "GGPO $TAG" "${prerelease_args[@]}"
+            # Fixed install notes (unsigned macOS app) first, then the
+            # generated changelog.
+            gh release create "$TAG" --verify-tag --generate-notes \
+              --notes-file .github/release-notes.md \
+              --title "GGPO $TAG" "${prerelease_args[@]}"
           fi
           gh release upload "$TAG" release-assets/ggpo-*.zip release-assets/ggpo-*.tar.gz release-assets/ggpo-*.deb release-assets/ggpo-*.rpm release-assets/ggpo-*.apk release-assets/ggpo-*.dmg release-assets/SHA256SUMS --clobber
