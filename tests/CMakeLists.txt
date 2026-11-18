@@ -185,6 +185,24 @@ set_tests_properties(${GGPO_SMOKE_PREFIX}_peer_loopback PROPERTIES
     LABELS "native;network"
 )
 
+if(WIN32)
+    # The same loopback at Windows' default ~15.6 ms timer tick (no
+    # timeBeginPeriod), as in a game that never raises the timer resolution.
+    # About 15x slower, so it gets a longer budget.
+    add_test(NAME ${GGPO_SMOKE_PREFIX}_peer_loopback_default_timer
+        COMMAND ${PYTHON_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/smoke/run_peer_smoke.py
+                $<TARGET_FILE:${GGPO_PEER_TARGET}>
+                --frames 180
+                --timeout 300
+    )
+    set_tests_properties(${GGPO_SMOKE_PREFIX}_peer_loopback_default_timer PROPERTIES
+        ENVIRONMENT "GGPO_SMOKE_DEFAULT_TIMER=1"
+        TIMEOUT 360
+        LABELS "native;network;windows-timer"
+    )
+endif()
+
 # Exercise the portable result schema and two-peer completion barrier locally.
 add_test(NAME ${GGPO_SMOKE_PREFIX}_peer_schema2_loopback
     COMMAND ${PYTHON_EXECUTABLE}

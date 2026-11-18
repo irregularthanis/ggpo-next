@@ -181,12 +181,13 @@ targets. MSVC names these `Win32` and `x64`; MinGW-w64 release artifacts use
 #### MSVC: registered tests
 
 Runs every [shared test](#shared-tests) with the `windows_` prefix, plus the
-test below. DLL exports are checked in the [CI lane](#msvc-ci-lanes) with
+tests below. DLL exports are checked in the [CI lane](#msvc-ci-lanes) with
 `dumpbin` rather than as a CTest test.
 
 | Test | Code | What it tests |
 | --- | --- | --- |
 | `windows_vectorwar_gui_host_contract` | [`win32_host_contract_test.cpp`](../../tests/vectorwar/win32_host_contract_test.cpp) | Real hidden Win32 window: client bounds, GDI renderer, diagnostics, the start dialog driven with synthetic input, the compiled `.rc`, and the legend drawn by GDI |
+| `windows_peer_loopback_default_timer` | [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py), [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp) | Peer loopback at Windows' default ~15.6 ms timer tick (`GGPO_SMOKE_DEFAULT_TIMER=1` skips `timeBeginPeriod`), as in a game that never raises the timer resolution; every other test runs at 1 ms |
 
 #### MSVC: run locally
 
@@ -260,7 +261,8 @@ the two headless Vector War tests: MinGW builds neither Vector War's Win32/GDI
 frontend nor its headless app. Exports and runtime imports are checked in the
 [CI lane](#mingw-ci-lanes).
 
-*No platform-only tests.*
+`windows_peer_loopback_default_timer` (see [MSVC](#msvc-registered-tests))
+also runs here.
 
 #### MinGW: run locally
 
