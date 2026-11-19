@@ -122,7 +122,8 @@ portable core sources and the public header remain shared.
 An adapter is **experimental** while any mandatory shared/native contract,
 package/consumer check, documented limitation, or CI lane is missing. It becomes
 **supported** only when all rows above have reproducible evidence. Cross-host
-result and orchestration ownership remains with [PR #5](https://github.com/irregularthanis/ggpo-next/pull/5).
+interoperability is qualified by the
+[native cross-platform E2E](CrossPlatformTesting.md) workflow.
 
 The Windows [compatibility workflow](../../.github/workflows/windows-compatibility.yml)
 remains required while another adapter is introduced.

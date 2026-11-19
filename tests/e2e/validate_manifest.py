@@ -19,10 +19,11 @@ ANDROID_SMOKE_SCENARIOS = ("android-android", "android-linux", "linux-android",
 ANDROID_VECTORWAR_SCENARIOS = ("android-android", "android-linux", "linux-android",
                                "android-windows", "windows-android")
 
-# macOS peers against Linux, Windows and Android in both player orders, with
-# both fixtures (their own capped matrix job).
+# macOS peers against Linux, Windows, Android and macOS, in both player
+# orders, with both fixtures (their own capped matrix job).
 MACOS_SCENARIOS = ("macos-linux", "linux-macos", "macos-windows",
-                   "windows-macos", "macos-android", "android-macos")
+                   "windows-macos", "macos-android", "android-macos",
+                   "macos-macos")
 
 
 def build_manifest(root):

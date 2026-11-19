@@ -15,6 +15,9 @@
   - [Windows with MinGW-w64](#windows-with-mingw-w64)
     - [MinGW: peer build](#mingw-peer-build)
     - [MinGW: execution](#mingw-execution)
+  - [macOS](#macos)
+    - [macOS: peer build](#macos-peer-build)
+    - [macOS: execution](#macos-execution)
   - [Android](#android)
     - [Android: peer build](#android-peer-build)
     - [Android: execution](#android-execution)
@@ -22,6 +25,7 @@
   - [Why each scenario has two jobs](#why-each-scenario-has-two-jobs)
   - [Components](#components)
   - [Control and data boundaries](#control-and-data-boundaries)
+    - [Address discovery](#address-discovery)
   - [Deterministic state contract](#deterministic-state-contract)
   - [Completion protocol](#completion-protocol)
   - [Security model](#security-model)
@@ -35,7 +39,7 @@
 ## Overview
 
 The native E2E suite proves that GGPO peers built from one source revision for
-Linux, Windows (MSVC and MinGW) and Android can establish a real UDP session
+Linux, Windows (MSVC and MinGW), Android and macOS can establish a real UDP session
 between two hosts, exchange deterministic inputs, converge after prediction and
 rollback, and close cleanly.
 
@@ -60,11 +64,12 @@ flowchart TB
         BW["Windows MSVC<br/>windows-2022<br/>static x64"]
         BM["MinGW-w64<br/>windows-2022<br/>static x64"]
         BA["Android NDK<br/>static arm64"]
+        BMac["macOS<br/>macos-15<br/>static universal"]
     end
 
     subgraph COMMON["Common to all<br/>platforms"]
         direction TB
-        MATRIX["44 role jobs<br/>22 ordered<br/>scenarios<br/>generic +<br/>Vector War"]
+        MATRIX["72 role jobs<br/>36 ordered<br/>scenarios<br/>generic +<br/>Vector War"]
         NET["Ephemeral<br/>tailnet<br/>HMAC control,<br/>GGPO over UDP"]
         ORACLE["Independent<br/>canonical oracle"]
         MAN["Fail-closed<br/>complete<br/>manifest"]
@@ -79,7 +84,7 @@ flowchart TB
 | Contract | How it is checked | Why it matters |
 | --- | --- | --- |
 | Source identity | Both native bundles come from the same workflow checkout | Prevents comparing unrelated revisions |
-| Native execution | Each platform runs its own native binary on its own runner (ELF, PE, Android NDK) | Wine or cross-compiled peers cannot substitute for native interoperability |
+| Native execution | Each platform runs its own native binary on its own runner (ELF, PE, Android NDK, Mach-O) | Wine or cross-compiled peers cannot substitute for native interoperability |
 | GGPO transport | Peers exchange production GGPO messages over UDP | Exercises platform sockets and the peer protocol |
 | Role symmetry | Each mixed-platform pair runs in both player orders | Detects behavior tied to host role |
 | Deterministic convergence | Both peers match an independent canonical oracle | Detects prediction, rollback, serialization, or input divergence |
@@ -108,12 +113,13 @@ fixture, run as two jobs.
 | **Windows (MSVC)** | G V | G V | — | G V | G V |
 | **MinGW** | G | G | — | G | — |
 | **Android** | G V | G V | G | G V | G V |
-| **macOS** | G V | G V | — | G V | — |
+| **macOS** | G V | G V | — | G V | G V |
 
-That is 19 generic and 15 Vector War scenarios, 68 role jobs in total. Vector
+That is 20 generic and 16 Vector War scenarios, 72 role jobs in total. Vector
 War has no MinGW build, so MinGW pairs are generic only. MinGW is paired with
 MSVC and Linux as player 1 only, and with Android in both orders. macOS plays
-Linux, Windows and Android in both orders with both fixtures.
+Linux, Windows and Android in both orders, and itself, with both fixtures.
+Every platform except MinGW also plays itself across two hosts.
 
 [`validate_manifest.py`](../../tests/e2e/validate_manifest.py) defines the
 required assignments. The workflow names generic scenarios `linux-linux`,
@@ -152,7 +158,7 @@ The `Build native Windows peer` job compiles `ggpo_windows_peer_smoke` and
 
 Windows roles run on `windows-2022`. Each Windows job opens only the E2E ports
 (TCP `24871`, UDP `24872–24873`) in the firewall and removes those rules with
-`if: always()`. MSVC Windows plays Linux and Android in both orders with both
+`if: always()`. MSVC Windows plays Linux, Android and macOS in both orders with both
 fixtures, and meets MinGW as player 2 in the generic fixture.
 
 ### Windows with MinGW-w64
@@ -179,10 +185,16 @@ with the pinned Xcode on `macos-15`, and uploads them as `e2e-peer-macos`.
 
 #### macOS: execution
 
-macOS roles run on `macos-15` in a separate matrix job, `execute-macos`,
-capped at four jobs (two pairs). Each pair has one macOS role, so the matrix
-holds at most two of the account's five macOS runners and leaves the rest to
-the macOS compatibility workflow. Both matrices list each pair's roles
+macOS roles run in a separate matrix job, `execute-macos`: the
+`macos-macos` pairs on Intel Macs (`macos-15-intel`) and every other macOS role
+on Apple Silicon (`macos-15`), so both architectures play across hosts. It is
+capped at four jobs (two pairs). Every pair has a macOS role and the two
+`macos-macos` pairs have two, so at worst (both of those at once) the matrix
+holds four of the account's five macOS runners and other macOS work briefly
+queues. Because macOS runners can take many minutes to be assigned while
+their Linux or Windows partner starts at once, each role in this matrix waits
+up to 20 minutes for its partner (10 in the other matrix), and its jobs time
+out after 30 minutes instead of 15. Both matrices list each pair's roles
 adjacently, and their caps sum to 16, below the 20-job account limit (checked
 by [`test_e2e_matrix.py`](../../.github/ci/tests/test_e2e_matrix.py)). The
 runners' application firewall is off, so no port rules are needed. On macOS the
@@ -403,7 +415,7 @@ pushes, or manual dispatch. The workflow does not use `pull_request_target`.
 | Agent authentication or identity mismatch | Control or rendezvous validation fails closed | Supervisor cancellation and action cleanup run |
 | Peer startup/crash | Nonzero process status before the completion barrier | Surviving child is terminated |
 | Peer timeout | Bounded rendezvous, control, execution, and job deadlines | Child, server, firewall, and ephemeral node cleanup run |
-| Missing paired role | Role 1 and role 2 fail after the 10-minute rendezvous deadline | Published endpoint is retired and the surviving agent is stopped |
+>>>>>>> origin/master
 | Cancelled or crashed role job | The role never reaches its own cleanup | The final job (`if: always()`, so also on cancellation) runs [`rendezvous_cleanup.py`](../../tests/e2e/rendezvous_cleanup.py), which retires and deletes every `ggpo-e2e-*` deployment whose record names this run and attempt; the public multi-platform game does the same |
 | GitHub API 5xx | Lookups, retiring and deleting retry three times (1 s, 3 s, 9 s); creating the deployment never retries, so a pair cannot publish twice | A persistent error still fails the role |
 | State divergence | Live snapshot never reaches the oracle or final schema validation fails | Scenario report is absent or non-passing |
@@ -486,15 +498,19 @@ qualification when its cost becomes excessive.
   physical devices.
 - It uses two players and does not cover spectators or disconnect/resume.
 - Clean qualification injects no latency or packet loss.
-- It does not test NAT traversal, relay selection, matchmaking, encryption, or
-  public-Internet reachability; see [Matchmaking: testing](Matchmaking.md#testing)
-  for controlled matchmaking, relay and hole-punching tests, and the
-  [public multi-platform game](Testing.md#public-multi-platform-game) for the
-  deployed DuckDNS/OCI path.
+- Peers are given each other's tailnet address directly, so it does not test
+  matchmaking, relay selection, or Vector War's own NAT traversal (Tailscale
+  connects the runners). Packets travel inside Tailscale's encrypted tunnel;
+  GGPO's own traffic is unencrypted, and the suite does not test that
+  either. See [Matchmaking: testing](Matchmaking.md#testing) for controlled
+  matchmaking, relay, hole-punching and impairment tests, and the
+  [public multi-platform game](Testing.md#public-multi-platform-game) for a
+  match through the deployed server over the public Internet.
 - It is a correctness suite, not a throughput or latency benchmark.
 
-Seeded impairment is the next independent nightly tier; it is not part of the
-completed clean interoperability gate.
+Network impairment (delay, jitter, loss, reordering) is tested separately by
+the [NAT traversal](Matchmaking.md#nat-matrix-results) workflow with `tc
+netem`; this cross-host gate stays a clean-link test.
 
 ### References
 
