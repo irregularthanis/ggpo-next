@@ -972,7 +972,9 @@ suite.
 Pull-request runs of the compatibility and native E2E workflows share one
 concurrency group per PR: a new push cancels the superseded run, so runners
 only work on the latest commit. Cancelled E2E roles still run their
-`if: always()` cleanup. Runs on `master` and manual dispatches are never
+`if: always()` steps (Tailscale logout, Windows firewall rules, evidence
+upload), but not the rendezvous cleanup inside the role's script, so each
+workflow's final job deletes any rendezvous deployment the run left behind. Runs on `master` and manual dispatches are never
 cancelled; release packaging, sanitizer qualification and the owner-approval
 check have no concurrency group.
 

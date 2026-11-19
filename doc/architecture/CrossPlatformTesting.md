@@ -292,8 +292,11 @@ never uses runner hostnames or public IPs:
 2. Role 1 starts [`host_agent.py`](../../tests/e2e/host_agent.py), which
    publishes that address as a transient GitHub Deployment keyed to the exact
    run ID and scenario ([`rendezvous.py`](../../tests/e2e/rendezvous.py)).
-   Every scenario uses a distinct Deployment environment, so a large matrix
-   cannot hide one pair's rendezvous record behind newer scenarios.
+   Every scenario uses its own Deployment environment, `ggpo-e2e-<scenario>`,
+   so a large matrix cannot hide one pair's rendezvous record behind other
+   scenarios. The name is the same in every run, so environments don't pile up
+   (the workflow token cannot delete them); runs sharing one are told apart by
+   the commit, run ID and attempt in the record.
 3. Role 2's [`execute_pair.py`](../../tests/e2e/execute_pair.py) discovers that
    record, rejecting stale, duplicate, or mismatched records, and connects to
    the role-1 agent on TCP `24871` with run-bound HMAC authentication.
@@ -413,6 +416,7 @@ pushes, or manual dispatch. The workflow does not use `pull_request_target`.
 | Peer startup/crash | Nonzero process status before the completion barrier | Surviving child is terminated |
 | Peer timeout | Bounded rendezvous, control, execution, and job deadlines | Child, server, firewall, and ephemeral node cleanup run |
 | Missing paired role | Role 1 and role 2 fail after the rendezvous deadline: 10 minutes, or 20 in the macOS matrix | Published endpoint is retired and the surviving agent is stopped |
+| Cancelled or crashed role job | The role never reaches its own cleanup | The final job (`if: always()`, so also on cancellation) runs [`rendezvous_cleanup.py`](../../tests/e2e/rendezvous_cleanup.py), which retires and deletes every `ggpo-e2e-*` deployment whose record names this run and attempt; the public multi-platform game does the same |
 | GitHub API 5xx | Lookups, retiring and deleting retry three times (1 s, 3 s, 9 s); creating the deployment never retries, so a pair cannot publish twice | A persistent error still fails the role |
 | State divergence | Live snapshot never reaches the oracle or final schema validation fails | Scenario report is absent or non-passing |
 | Missing or duplicate scenario | [`validate_manifest.py`](../../tests/e2e/validate_manifest.py) rejects the evidence set | Final job fails even if other scenarios passed |
