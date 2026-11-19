@@ -306,8 +306,9 @@ flowchart LR
 ### Native cross-platform E2E
 
 Two GGPO peers on two different hosted runners, connected over an ephemeral
-Tailscale network, for every ordered platform pair and both test programs
-(the generic peer and Vector War). The macOS pairs have their own matrix so
+Tailscale network: every ordered pair of Linux, Windows (MSVC), Android and
+macOS, each also against itself, with both test programs (the generic peer
+and Vector War), plus MinGW against the others with the generic peer. The macOS pairs have their own matrix so
 they can be capped separately. Pull requests run it only from branches in this
 repository by the repository owner, because it uses repository secrets.
 Details, including the scenario table: [Native cross-platform
@@ -324,7 +325,7 @@ flowchart LR
     BM["Build native<br/>MinGW peer"]
     BMac["Build native<br/>macOS peer"]
     X["Matrix: execute<br/>44 jobs, max 12 at once<br/>Linux, Windows, MinGW,<br/>Android pairs"]
-    XM["Matrix: execute-macos<br/>24 jobs, max 4 at once<br/>macOS against Linux,<br/>Windows, Android"]
+    XM["Matrix: execute-macos<br/>28 jobs, max 4 at once<br/>macOS against Linux,<br/>Windows, Android, macOS<br/>(macOS–macOS on Intel)"]
     F["Complete native<br/>E2E matrix"]
     C --> Builds
     C --> BM
@@ -342,7 +343,8 @@ flowchart LR
 Each scenario is two adjacent matrix entries (role 1 hosts player 1, role 2
 runs player 2 and validates). The caps keep a waiting role's partner next in
 line and stay below the 20-job account limit; macOS jobs are capped at two
-pairs so at most two of the five macOS runners are held. These invariants are
+pairs, so at most four of the five macOS runners are held (when both
+macOS–macOS pairs run together). These invariants are
 checked by [`test_e2e_matrix.py`](../../.github/ci/tests/test_e2e_matrix.py).
 To retry a failed scenario, re-run the whole workflow: re-running only the
 failed role leaves it waiting for a partner that already finished.

@@ -43,14 +43,21 @@ class E2EMatrix(unittest.TestCase):
             self.assertEqual(cap % 2, 0)
         self.assertLess(sum(caps), 20)
 
-    def test_macos_pairs_hold_at_most_two_macos_runners(self):
-        # The account runs five macOS jobs at once; the macOS matrix's cap
-        # (two pairs) times macOS roles per pair must stay well below that.
-        macos_entries = re.findall(r"^\s*-\s*\{.*\bos:\s*macos-[^,}]*", self.text, re.MULTILINE)
-        self.assertTrue(macos_entries)
-        caps = [int(value) for value in MAX_PARALLEL.findall(self.text)]
-        self.assertLessEqual(min(caps) // 2, 2)
-
+    def test_macos_pairs_leave_a_macos_runner_free(self):
+        # The account runs five macOS jobs at once. Worst case for the macOS
+        # matrix: its cap's worth of pairs, choosing the pairs with the most
+        # macOS roles (macos-macos has two). Keep it below five so at least
+        # one runner stays free for other macOS work.
+        section = self.text[self.text.index("  execute-macos:"):]
+        section = section[:section.index("    steps:")]
+        cap = int(MAX_PARALLEL.search(section).group(1))
+        per_pair = {}
+        for line in re.findall(r"^\s*-\s*\{.*\}$", section, re.MULTILINE):
+            scenario = re.search(r"\bscenario:\s*([\w-]+)", line).group(1)
+            per_pair[scenario] = per_pair.get(scenario, 0) + ("os: macos-" in line)
+        worst = sum(sorted(per_pair.values(), reverse=True)[:cap // 2])
+        self.assertTrue(per_pair)
+        self.assertLessEqual(worst, 4)
 
 if __name__ == "__main__":
     unittest.main()

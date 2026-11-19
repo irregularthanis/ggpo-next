@@ -8,10 +8,16 @@
 - [Protocol](#protocol)
 - [Relay forwarding](#relay-forwarding)
 - [Hole punching with relay fallback](#hole-punching-with-relay-fallback)
+  - [Placement](#placement)
+  - [Candidates](#candidates)
+  - [Probes](#probes)
+  - [Path selection](#path-selection)
+  - [NAT outcomes](#nat-outcomes)
 - [Safety](#safety)
 - [Compatibility](#compatibility)
 - [Server and deployment](#server-and-deployment)
 - [Testing](#testing)
+  - [NAT matrix results](#nat-matrix-results)
 - [Limits](#limits)
 
 ## Purpose and boundaries
@@ -42,7 +48,7 @@ Plan and decisions: [internet play plan](../planning/2026-11-11-internet_play/TE
 | Probes | 32-byte `PROBE`, `PROBE_ACK`, `KEEPALIVE` with a SipHash-2-4 MAC keyed by the session token | [`vw_path_probe`](../../src/apps/vectorwar/net/vw_path_probe.h), [`vw_siphash`](../../src/apps/vectorwar/net/vw_siphash.h) |
 | Path selector | Per-peer choice between the relay and direct candidates | [`vw_path_selector`](../../src/apps/vectorwar/net/vw_path_selector.h) |
 | Path proxy | Owns the public socket; sits between GGPO and the network on its own thread | [`vw_path_proxy`](../../src/apps/vectorwar/net/vw_path_proxy.h) |
-| Frontend glue | `--matchmaking` for the Win32, SDL (Linux, Android) and headless frontends: resolve, matchmake, start the proxy, build GGPO's player list | [`matchmade`](../../src/apps/vectorwar/matchmade.h) |
+| Frontend glue | `--matchmaking` for the Win32, SDL (Linux, Android, macOS) and headless frontends: resolve, matchmake, start the proxy, build GGPO's player list | [`matchmade`](../../src/apps/vectorwar/matchmade.h) |
 | Sockets and threads | Non-blocking IPv4 UDP, `select`, mutex, thread for Windows and POSIX | [`vw_udp`](../../src/apps/vectorwar/net/vw_udp.h) |
 | Infrastructure | Oracle Cloud always-free VM, DuckDNS name, Terraform, deploy workflow | [`infra/terraform`](../../infra/terraform/README.md) |
 

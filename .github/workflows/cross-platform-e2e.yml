@@ -365,14 +365,19 @@ jobs:
       github.actor == github.repository_owner))
     needs: [changes, build-linux, build-windows, build-android, build-macos]
     runs-on: ${{ matrix.os }}
-    # Role jobs are scheduled independently across three runner pools. Keep a
-    # bounded window for queue skew, but fail a missing pair promptly.
-    timeout-minutes: 15
+    # macOS runners can take many minutes to be assigned while the partner's
+    # Linux or Windows runner starts at once, so each role waits up to 20
+    # minutes for its partner (10 in the other matrix); the job allows that
+    # wait plus setup and the match.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       # Its own matrix so macOS pairs are capped apart from the rest: four
-      # jobs are two pairs, so at most two macOS runners (of the account's
-      # five) are held at once. Roles stay adjacent, as above.
+      # jobs are two pairs. Every pair has a macOS role and the two
+      # macos-macos pairs have two each, so at worst (both of those at once)
+      # four of the account's five macOS runners are held. Roles stay
+      # adjacent, as above. The macos-macos pairs run on Intel Macs and the
+      # rest on Apple Silicon, so both architectures play across hosts.
       max-parallel: 4
       matrix:
         include:
@@ -388,6 +393,8 @@ jobs:
           - {fixture: smoke, scenario: macos-android, role: 2, platform: android, os: ubuntu-24.04-arm, player1: macos, player2: android, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
           - {fixture: smoke, scenario: android-macos, role: 1, platform: android, os: ubuntu-24.04-arm, player1: android, player2: macos, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
           - {fixture: smoke, scenario: android-macos, role: 2, platform: macos, os: macos-15, player1: android, player2: macos, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: macos-macos, role: 1, platform: macos, os: macos-15-intel, player1: macos, player2: macos, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
+          - {fixture: smoke, scenario: macos-macos, role: 2, platform: macos, os: macos-15-intel, player1: macos, player2: macos, executable: peer/ggpo_peer_smoke, player1_executable: peer/ggpo_peer_smoke}
           - {fixture: vectorwar, scenario: vectorwar-macos-linux, role: 1, platform: macos, os: macos-15, player1: macos, player2: linux, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
           - {fixture: vectorwar, scenario: vectorwar-macos-linux, role: 2, platform: linux, os: ubuntu-24.04, player1: macos, player2: linux, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
           - {fixture: vectorwar, scenario: vectorwar-linux-macos, role: 1, platform: linux, os: ubuntu-24.04, player1: linux, player2: macos, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
@@ -400,6 +407,8 @@ jobs:
           - {fixture: vectorwar, scenario: vectorwar-macos-android, role: 2, platform: android, os: ubuntu-24.04-arm, player1: macos, player2: android, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
           - {fixture: vectorwar, scenario: vectorwar-android-macos, role: 1, platform: android, os: ubuntu-24.04-arm, player1: android, player2: macos, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
           - {fixture: vectorwar, scenario: vectorwar-android-macos, role: 2, platform: macos, os: macos-15, player1: android, player2: macos, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-macos-macos, role: 1, platform: macos, os: macos-15-intel, player1: macos, player2: macos, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
+          - {fixture: vectorwar, scenario: vectorwar-macos-macos, role: 2, platform: macos, os: macos-15-intel, player1: macos, player2: macos, executable: peer/vectorwar_headless, player1_executable: peer/vectorwar_headless}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -464,7 +473,7 @@ jobs:
           python tests/e2e/host_agent.py \
             --workspace "$GITHUB_WORKSPACE" \
             --address "${{ steps.address.outputs.ipv4 }}" \
-            --session-id "${{ matrix.scenario }}" --timeout 600
+            --session-id "${{ matrix.scenario }}" --timeout 1200
       - name: Coordinate player 2 and validate the session
         if: matrix.role == 2
         shell: bash
@@ -478,7 +487,7 @@ jobs:
             --player1-executable "${{ matrix.player1_executable }}" \
             --local-address "${{ steps.address.outputs.ipv4 }}" \
             --session-id "${{ matrix.scenario }}" \
-            --rendezvous-timeout 600 \
+            --rendezvous-timeout 1200 \
             --scenario "${{ matrix.scenario }}" \
             --fixture "${{ matrix.fixture }}" \
             --player1-platform "${{ matrix.player1 }}" \

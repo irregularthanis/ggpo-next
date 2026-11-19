@@ -32,9 +32,10 @@ The reason this fork exists as it is right now is to:
 | macOS | 11+, universal arm64 + x86_64 | SDL2 app | macOS 15 and 26, Apple Silicon and Intel |
 
 All platforms share one portable core behind a small OS adapter, use the same
-public API and wire format, and play each other: every ordered pair of
-platforms is tested in CI over a real network, and so is a live four-platform
-match.
+public API and wire format, and play each other. CI plays every ordered pair
+of Linux, Windows (MSVC), Android and macOS, each also against itself, across
+two hosts over a real network, plus MinGW against the others; and a live
+four-platform match through the deployed server.
 
 **SDK and packaging**
 
@@ -103,11 +104,11 @@ integration guidance is in the [Developer Guide](doc/DeveloperGuide.md).
 
 ## Install or build the SDK
 
-The SDK supports Windows (MSVC and MinGW-w64, x64 and x86), Linux, and Android
-(arm64-v8a, armeabi-v7a, and x86_64). Vector War runs on Windows (Win32/GDI),
-Linux (SDL2), Android (SDL2/touch), and macOS (SDL2). The SDK also supports
-macOS 11 and later as one universal (arm64 + x86_64) library, tested on macOS
-15 and 26. iOS and other unsupported SDK targets fail
+The SDK supports Windows (MSVC and MinGW-w64, x64 and x86), Linux, Android
+(arm64-v8a, armeabi-v7a, and x86_64) and macOS 11 and later (one universal
+arm64 + x86_64 library, tested on macOS 15 and 26). Vector War runs on Windows
+(Win32/GDI), Linux (SDL2), Android (SDL2/touch), and macOS (SDL2). iOS and
+other unsupported SDK targets fail
 configuration explicitly.
 
 Choose either:

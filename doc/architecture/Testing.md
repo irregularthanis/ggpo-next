@@ -82,7 +82,7 @@ flowchart TB
         MACOS["macOS<br/>universal,<br/>built for 11,<br/>tested on 15 / 26<br/>SDK audit,<br/>.dmg smoke"]
     end
 
-    E2E["Cross-platform<br/>E2E<br/>every ordered<br/>pair<br/>over UDP"]
+    E2E["Cross-platform<br/>E2E<br/>ordered pairs<br/>across hosts<br/>over UDP"]
 
     COMMON --> WIN
     COMMON --> POSIX
@@ -137,7 +137,7 @@ flowchart TB
     subgraph A["5. Application"]
         direction TB
         A1["Vector War<br/>simulation and<br/>gameplay<br/>contracts"]
-        A2["Native host<br/>contracts:<br/>Win32, SDL2,<br/>Android"]
+        A2["Native host<br/>contracts:<br/>Win32, SDL2<br/>(Linux, macOS),<br/>Android"]
         A3["Headless Vector<br/>War loopback<br/>and E2E"]
         A4["APK smoke<br/>on API 21 / 35"]
     end
@@ -531,7 +531,7 @@ libraries, which is the default.
 | `vectorwar_matchmaking_loopback` ¹ ² | [`run_matchmaking_loopback.py`](../../tests/vectorwar/run_matchmaking_loopback.py) | Real server and real Vector War sessions: 2, 3 and 4 players with every pair direct, 2 players relay-only; every group converges and two players reach the portable frozen checksum |
 
 ¹ Needs the headless Vector War app, which MinGW does not build.
-² Native builds only (Linux, Windows MSVC, MinGW): a cross-compiled Android test
+² Native builds only (Linux, Windows MSVC, MinGW, macOS): a cross-compiled Android test
 cannot reach the build host's loopback server.
 
 ### Coverage map
@@ -540,17 +540,17 @@ cannot reach the build host's loopback server.
 | --- | --- | --- | --- |
 | Public ABI | Public sizes, offsets, enum values, callback order, and DLL/shared-object exports | [`public_layout.cpp`](../../tests/baseline/windows/public_layout.cpp), [`exports-x64.txt`](../../tests/baseline/windows/exports-x64.txt), [`linux/exports.txt`](../../tests/baseline/linux/exports.txt) | Compiled header, shared DLL and `libGGPO.so` |
 | Installed consumers | C11 and C++98 programs build and run from installed files for every linkage: default, `GGPO_USE_STATIC=ON`, and `GGPO::shared`; each binary's real runtime dependency is checked | [`tests/consumer`](../../tests/consumer/CMakeLists.txt), [`verify_consumers.py`](../../tests/consumer/verify_consumers.py) | Installed header plus shared and static libraries |
-| Wire layout | Packed `UdpMsg` sizes, offsets, and representative packet lengths | [`packet_layout.cpp`](../../tests/baseline/windows/packet_layout.cpp) | Internal protocol structures on Windows, Linux, MinGW, and Android |
+| Wire layout | Packed `UdpMsg` sizes, offsets, and representative packet lengths | [`packet_layout.cpp`](../../tests/baseline/windows/packet_layout.cpp) | Internal protocol structures on Windows, Linux, MinGW, Android and macOS |
 | Portable core | Queue prediction, rollback/replay, time sync, containers, and bit encoding | [`tests/unit`](../../tests/unit/input_queue_test.cpp) | Production algorithms with deterministic state |
 | Public API | Session construction, lifecycle, null guards, configuration, and logging | [`public_api_contract_test.cpp`](../../tests/contract/public_api_contract_test.cpp) | Production backends with fake services |
 | Protocol safety | Exact packet sizes and truncated, trailing, or unknown messages | [`protocol_test.cpp`](../../tests/unit/protocol_test.cpp) | Production packet validator and receive guard |
 | Platform contract | Virtual clock/wait, fallbacks, endpoint/socket results, failure, and cleanup | [`platform_fake_test.cpp`](../../tests/platform/fake/platform_fake_test.cpp) | Deterministic fake adapter |
-| Native conformance | One clock/config/endpoint/UDP assertion source | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | Fake, Windows, Linux, and Android adapters |
+| Native conformance | One clock/config/endpoint/UDP assertion source | [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) | Fake, Windows, Linux, Android and macOS adapters |
 | Platform-free rollback | Production core linked without the Windows adapter | [`platform_fake.cpp`](../../tests/platform/fake/platform_fake.cpp), [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | Fake adapter and production rollback core |
 | Sample simulation | Scripted Vector War inputs, explicit arena bounds, and canonical checkpoints | [`gamestate_contract_test.cpp`](../../tests/vectorwar/gamestate_contract_test.cpp), [`state_contract.cpp`](../../src/apps/vectorwar/state_contract.cpp) | Real sample `GameState` without a window or socket |
-| Sample gameplay determinism | Exact cardinal starts and shared initialization semantics | [`gameplay_determinism_test.cpp`](../../tests/vectorwar/gameplay_determinism_test.cpp) | Same gameplay assertions on Windows, Linux, and Android |
-| Sample native hosts | Native clock, sleep, bounds, input and presentation ownership | [`native_host_contract_test.cpp`](../../tests/vectorwar/native_host_contract_test.cpp), [`win32_host_contract_test.cpp`](../../tests/vectorwar/win32_host_contract_test.cpp), [`sdl_host_contract_test.cpp`](../../tests/vectorwar/sdl_host_contract_test.cpp) | POSIX/Win32 adapter branches and the Windows, Linux, and Android GUI hosts |
-| Sample application loopback | Real Vector War callbacks, scripted host input, native UDP, rollback, and final golden state | [`headless_main.cpp`](../../src/apps/vectorwar/headless_main.cpp), [`run_headless_loopback.py`](../../tests/vectorwar/run_headless_loopback.py) | Two headless Vector War processes on Windows, Linux, or Android |
+| Sample gameplay determinism | Exact cardinal starts and shared initialization semantics | [`gameplay_determinism_test.cpp`](../../tests/vectorwar/gameplay_determinism_test.cpp) | Same gameplay assertions on Windows, Linux, Android and macOS |
+| Sample native hosts | Native clock, sleep, bounds, input and presentation ownership | [`native_host_contract_test.cpp`](../../tests/vectorwar/native_host_contract_test.cpp), [`win32_host_contract_test.cpp`](../../tests/vectorwar/win32_host_contract_test.cpp), [`sdl_host_contract_test.cpp`](../../tests/vectorwar/sdl_host_contract_test.cpp) | POSIX/Win32 adapter branches and the Windows, Linux, Android and macOS GUI hosts |
+| Sample application loopback | Real Vector War callbacks, scripted host input, native UDP, rollback, and final golden state | [`headless_main.cpp`](../../src/apps/vectorwar/headless_main.cpp), [`run_headless_loopback.py`](../../tests/vectorwar/run_headless_loopback.py) | Two headless Vector War processes on Windows, Linux, Android or macOS |
 | Sample application negatives | Startup, timeout, divergence, absent rollback, and dirty shutdown are rejected | [`headless_negative.py`](../../tests/vectorwar/headless_negative.py) | Fault-injected Vector War processes |
 | Rollback behavior | Save, restore, synchronized input, replay, and deterministic final state | [`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp) | SyncTest backend without sockets |
 | Native transport | Handshake, events, prediction, rollback, UDP delivery, and shutdown | [`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), [`run_peer_smoke.py`](../../tests/smoke/run_peer_smoke.py) | Two native or on-device GGPO processes on every supported platform |
@@ -560,13 +560,14 @@ cannot reach the build host's loopback server.
 | Linux package | GCC/Clang with both libraries, installed consumers and ABI ceiling | [`linux-compatibility.yml`](../../.github/workflows/linux-compatibility.yml) | Shared Ubuntu 24.04 image |
 | MinGW-w64 | x64 (MINGW64) and x86 (MINGW32), both MSVCRT, with both libraries: full CTest, installed consumers, export manifest, no MinGW runtime imports | [`mingw-compatibility.yml`](../../.github/workflows/mingw-compatibility.yml) | MSYS2 on Windows runners |
 | Toolchain isolation | MSVC and MinGW SDKs reject each other's CMake consumers; a MinGW program runs against the MSVC `GGPO.dll` | [`mingw-compatibility.yml`](../../.github/workflows/mingw-compatibility.yml) | One runner with both toolchains |
-| Android compatibility | Three ABIs, API 21/current emulators, installed consumers, SDK audit, APK smoke, and sanitizer qualification | [`android-compatibility.yml`](../../.github/workflows/android-compatibility.yml), [`tests/android`](../../tests/android) | NDK builds, native ARM execution, and x86_64 Android emulators |
+| Android compatibility | Three ABIs, API 21/current emulators, installed consumers, SDK audit and APK smoke; ASan + UBSan run in the weekly sanitizer workflow | [`android-compatibility.yml`](../../.github/workflows/android-compatibility.yml), [`tests/android`](../../tests/android) | NDK builds, native ARM execution, and x86_64 Android emulators |
+| macOS compatibility | One universal build (macOS 11 minimum, both slices audited) tested on macOS 15 and 26, Apple Silicon and Intel; installed consumers; app frontend smoke | [`macos-compatibility.yml`](../../.github/workflows/macos-compatibility.yml), [`audit_binaries.py`](../../scripts/macos/audit_binaries.py) | Native macOS runners; SDL dummy display |
 | Matchmaking server | Protocol, lobbies, relay, candidates, abuse limits | [`services/matchmaking/tests`](../../services/matchmaking/tests) | Python server, unit and real-socket loopback |
 | Hole punching | Codec vs shared vectors, probe authentication, path selection, proxy forwarding, real sessions direct and relay-only | [`tests/vectorwar`](../../tests/vectorwar/net_contract_test.cpp), [`src/apps/vectorwar/net`](../../src/apps/vectorwar/net) | `VectorWarNet` on every platform; loopback sessions on native platforms |
 | Start screen and legend | Fields map to the command-line arguments on every screen; dialog and SDL form driven by synthetic input; legend rows, platform numbering, colors (SDL swatch read back) and font | [`start_form_contract_test.cpp`](../../tests/vectorwar/start_form_contract_test.cpp), [`legend_contract_test.cpp`](../../tests/vectorwar/legend_contract_test.cpp), the GUI host contracts, [`StartArgsTest.java`](../../tests/android/StartArgsTest.java) | Portable tests everywhere; Win32 dialog on MSVC; SDL form on Linux and macOS (dummy driver) and the Android emulator; plain Java in the APK job |
 | NAT traversal | Two-to-four-player mixed NAT converges; cone and LAN paths can go direct, restrictive paths retain relay fallback, impairment selects a measured viable route, direct loss falls back, and server loss does not stop an established direct match | [`nat-traversal.yml`](../../.github/workflows/nat-traversal.yml), [`run_nat_matrix.py`](../../tests/nat/run_nat_matrix.py) | Linux network namespaces with emulated NAT routers and `tc netem` on a hosted runner |
 | Infrastructure | Terraform plan/state assertions, lint and server image on every relevant PR; trusted owner PRs add a real remote-state plan; matching `master` merges apply and verify DNS plus lobby health | [`infrastructure.yml`](../../.github/workflows/infrastructure.yml), [`deploy-matchmaking.yml`](../../.github/workflows/deploy-matchmaking.yml), [`infra/terraform`](../../infra/terraform/README.md) | Mocked providers for all PRs; repository secrets and the `matchmaking` approval boundary for real-cloud gates |
-| Cross-host | Linux, Windows, MinGW, and Android peers converge | [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml), [`tests/e2e`](../../tests/e2e) | Native hosted runners joined through ephemeral Tailscale nodes |
+| Cross-host | Linux, Windows, MinGW, Android and macOS peers converge | [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml), [`tests/e2e`](../../tests/e2e) | Native hosted runners joined through ephemeral Tailscale nodes |
 | Public multi-platform game | Every platform with a Vector War build completes one shared match with equal state through the deployed relay | [`public-multiplatform-game.yml`](../../.github/workflows/public-multiplatform-game.yml), [`public_multiplatform_game.py`](../../tests/e2e/public_multiplatform_game.py) | DuckDNS production name, OCI lobby/relay and one native hosted runner per supported game build |
 
 ### Shared contracts
@@ -577,10 +578,10 @@ artifact inspection:
 | Contract | Common test source | Platform-specific execution |
 | --- | --- | --- |
 | Core, API, protocol and rollback | One assertion set for algorithms, all 16 public entry points, packet validation and SyncTest | Compiled with each supported toolchain; fake services isolate shared behavior |
-| Platform adapter | One [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) contract | Linked once to the fake adapter and again to MSVC/MinGW Windows or POSIX Linux/Android implementations |
-| ABI and wire layout | Frozen sizes, offsets, enums, callbacks and packet layouts | MSVC/MinGW inspect PE exports; Linux/Android inspect ELF exports, SONAME, dependencies and ABI ceilings |
+| Platform adapter | One [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp) contract | Linked once to the fake adapter and again to MSVC/MinGW Windows or POSIX Linux/Android/macOS implementations |
+| ABI and wire layout | Frozen sizes, offsets, enums, callbacks and packet layouts | MSVC/MinGW inspect PE exports; Linux/Android inspect ELF exports, SONAME, dependencies and ABI ceilings; macOS inspects Mach-O exports, both slices and the macOS 11 minimum |
 | Installed SDK | Same C11/C++98 consumers and shared/static selection | Native compiler, package layout, runtime loader and toolchain-isolation checks per SDK |
-| Vector War gameplay | Shared deterministic state, inputs, checkpoints and rollback oracle | Win32, SDL2 Linux and SDL2 Android hosts add window, input, renderer and lifecycle contracts |
+| Vector War gameplay | Shared deterministic state, inputs, checkpoints and rollback oracle | Win32, SDL2 Linux, SDL2 Android and SDL2 macOS hosts add window, input, renderer and lifecycle contracts |
 | Native networking | Same peer and Vector War headless protocols and result schema | Local loopback per platform, then ordered cross-platform pairs over ephemeral Tailscale nodes |
 
 Common sources define what must remain identical. Platform wrappers only
@@ -601,7 +602,7 @@ state, and argument. Deeper behavior is divided deliberately:
 - SyncTest and focused core contracts cover rollback and replay;
 - native peer tests cover real platform sockets and two-process sessions; and
 - native layout fixtures cover the frozen ABI, exports, and packet layout on
-  Windows, Linux, MinGW, and Android.
+  Windows, Linux, MinGW, Android and macOS.
 
 [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp)
 is the single assertion source compiled against the fake, Windows, Linux, and
@@ -800,9 +801,10 @@ tests.
 ### Cross-platform E2E
 
 [`cross-platform-e2e.yml`](../../.github/workflows/cross-platform-e2e.yml)
-automates ordered Linux, Windows, MinGW, and Android role assignments on
-GitHub-hosted runners. The generic fixture covers every supported pairing;
-Vector War covers platforms where that sample builds. Every assignment runs
+automates ordered Linux, Windows, MinGW, Android and macOS role assignments
+on GitHub-hosted runners. The generic fixture and Vector War run the pairings
+in the [scenario matrix](CrossPlatformTesting.md#scenario-matrix); Vector War
+only where that sample builds (not MinGW). Every assignment runs
 from the same source SHA for 180 deterministic frames:
 
 - `ggpo_peer_smoke` isolates the public GGPO session and transport contract.
@@ -897,7 +899,7 @@ protocol, security model, failure contracts, evidence, and execution guide.
 The trusted-only [native E2E workflow](../../.github/workflows/cross-platform-e2e.yml)
 builds static Release peers on their native runners. It joins ephemeral
 Tailscale nodes with a commit-pinned action, executes the required ordered
-Linux, Windows, MinGW, and Android roles, uploads per-role evidence, and rejects
+Linux, Windows, MinGW, Android and macOS roles, uploads per-role evidence, and rejects
 a missing, duplicate, or failed scenario in an unconditional final job. It runs for owner-authored
 same-repository PRs, trusted `master` pushes, and manual dispatch; fork and
 non-owner PR jobs are skipped.
@@ -950,7 +952,7 @@ flowchart LR
   placeholder image digest; the separate image lane builds and smoke-tests the
   candidate. Matching `master` merges publish the image, resolve its real
   digest, apply Terraform, verify DuckDNS plus a lobby answer, then require one
-  public Linux/Windows/Android relay match. Its aggregate is
+  public Linux/Windows/Android/macOS relay match. Its aggregate is
   `Complete infrastructure checks`.
 - **Deploy matchmaking server** remains manually dispatchable for explicit
   `plan`, `apply` and `destroy`; `destroy` also clears the DuckDNS record.
@@ -1019,16 +1021,21 @@ established by the frame, checksum, callback, and lifecycle assertions.
 - No spectator or disconnect/resume automated session exists. Matchmaking
   loopback covers 2, 3 and 4 players; the NAT matrix covers mixed four-player
   routing and a paced latency/jitter/loss/reordering scenario.
-- The NAT matrix models symmetric NAT but not a real carrier-grade provider;
-  public mobile and carrier-grade networks remain part of the friends trial.
-- The matchmaking server is not deployed yet, so no test reaches a public
-  server; every matchmaking test uses a server on the runner.
-- The automated matrix covers native Linux, Windows, MinGW, and Android peers,
-  but not SteamOS hardware.
+- The NAT matrix models symmetric NAT but not a real carrier-grade provider.
+  Real home, mobile and carrier-grade networks are covered only by manual
+  trials: on 2026-11-18 a Linux desktop and an Android phone on one LAN
+  played direct while a macOS player in another country joined through the
+  relay.
+- Only the [public multi-platform game](#public-multi-platform-game) reaches
+  the deployed server, and it forces every pair onto the relay; hole punching
+  across the public Internet is not tested automatically. Every other
+  matchmaking test uses a server on the runner.
+- The automated matrix covers native Linux, Windows, MinGW, Android and macOS
+  peers, but not SteamOS hardware.
 - The cross-platform E2E workflow remains a clean-link test; deterministic
   impairment belongs to the Linux namespace NAT workflow.
 - macOS runs the library, its tests, Vector War's GUI contracts, generic and
-  Vector War E2E pairs against Linux, Windows and Android, and plays the
+  Vector War E2E pairs against Linux, Windows, Android and itself, and plays the
   public game as the fourth player; macOS 11–14 are covered only by
   build-time checks.
 - Android ASan+UBSan is scheduled on an x86_64 emulator; Linux Clang and MSVC
