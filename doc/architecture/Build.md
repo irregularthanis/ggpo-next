@@ -162,7 +162,7 @@ The SDK install rules in [`src/CMakeLists.txt`](../../src/CMakeLists.txt) place:
 ├── bin/libGGPO.dll               # Windows shared library (MinGW)
 ├── lib/libGGPO.dll.a             # MinGW import library for libGGPO.dll
 ├── lib/libGGPO.a                 # MinGW and Linux static library
-├── lib/libGGPO.so.0              # Linux shared library
+├── lib/libGGPO.so.1              # Linux shared library
 ├── lib/cmake/GGPO/               # CMake package and target exports
 └── share/GGPO/                   # license and README
 ```
