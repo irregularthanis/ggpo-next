@@ -605,8 +605,8 @@ state, and argument. Deeper behavior is divided deliberately:
   Windows, Linux, MinGW, Android and macOS.
 
 [`platform_conformance_test.cpp`](../../tests/platform/conformance/platform_conformance_test.cpp)
-is the single assertion source compiled against the fake, Windows, Linux, and
-Android adapters. It exercises clocks, waits, process identity, configuration
+is the single assertion source compiled against the fake, Windows, Linux,
+Android and macOS adapters. It exercises clocks, waits, process identity, configuration
 defaults, directory handling, endpoints, network lifetime, and UDP lifecycle. All 16
 callable platform operations plus socket construction/destruction are linked.
 `AssertFailed` is link-checked but not invoked because the Windows contract
