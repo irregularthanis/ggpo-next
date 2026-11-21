@@ -13,6 +13,7 @@
 struct MatchmadeSession {
    vwnet::PathProxy proxy;
    vwnet::MatchResult match;
+   bool direct_allowed;
 };
 
 namespace {
@@ -127,6 +128,7 @@ MatchmadeStart(const MatchmadeArgs &args, GGPOPlayer players[GGPO_MAX_PLAYERS], 
       vwnet::UdpSocket probe;
       if (probe.Open(0, true)) port = probe.LocalPort();
    }
+   session->direct_allowed = !args.relay_only && session->match.have_candidates;
    if (!port || !session->proxy.Start(session->match, port, !args.relay_only)) {
       snprintf(error, error_length, "cannot start the path proxy");
       MatchmadeStop(session);
@@ -176,6 +178,17 @@ MatchmadeReportPaths(MatchmadeSession *session)
                status.switches_to_direct, status.fallbacks);
       Say(text);
    }
+}
+
+bool
+MatchmadePathsSettled(MatchmadeSession *session)
+{
+   if (!session || !session->direct_allowed) return true;
+   const vwnet::MatchResult &match = session->match;
+   for (int k = 1; k <= match.count; ++k) {
+      if (k != match.player && !session->proxy.Status(k).direct) return false;
+   }
+   return true;
 }
 
 void
