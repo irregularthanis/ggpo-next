@@ -41,6 +41,12 @@ MatchmadeSession *MatchmadeStart(const MatchmadeArgs &args, GGPOPlayer players[G
 /* One "vectorwar-path:" line per remote player: route and round-trip times. */
 void MatchmadeReportPaths(MatchmadeSession *session);
 
+/* True when no peer is still expected to reach the direct path: relay-only,
+ * no candidates, or every remote player already on direct. A headless run
+ * waits on this before reporting routes, so a transient fallback on a
+ * loaded machine can recover first. NULL counts as settled. */
+bool MatchmadePathsSettled(MatchmadeSession *session);
+
 struct VwLegend;
 
 /* Fills the legend from the match (platforms) and the proxy (routes). */

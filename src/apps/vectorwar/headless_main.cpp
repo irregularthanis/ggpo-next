@@ -174,6 +174,15 @@ RunSession(HeadlessVectorWarHost *host, int local_player, unsigned short local_p
          VectorWar_Idle(1);
          host->SleepMs(1);
       }
+      /* A direct path that fell back under load retries with backoff;
+       * keep the session alive (up to 5 s more) so the reported routes are
+       * the settled ones, not a snapshot of the recovery. */
+      const unsigned int paths_start = host->NowMs();
+      while (!MatchmadePathsSettled(matchmade) &&
+             host->NowMs() - paths_start < 5000) {
+         VectorWar_Idle(1);
+         host->SleepMs(1);
+      }
    }
 
    const int frame = matchmade ? target_frames : VectorWar_FrameNumber();
