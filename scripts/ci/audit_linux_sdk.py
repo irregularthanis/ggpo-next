@@ -41,8 +41,11 @@ def main():
                 f"{library.name} requires GLIBC_{maximum[0]}.{maximum[1]}, "
                 f"newer than {args.max_glibc}"
             )
+        # The SONAME carries the major version of the installed library file.
+        major = library.name.split(".")[2]
+        soname = f"libGGPO.so.{major}"
         dynamic = output("readelf", "-d", str(library))
-        if "Library soname: [libGGPO.so.0]" not in dynamic:
+        if f"Library soname: [{soname}]" not in dynamic:
             raise SystemExit(f"unexpected or missing SONAME in {library.name}")
         symbols = output("nm", "-D", "--defined-only", str(library))
         exports = sorted(set(re.findall(r"\b(ggpo_[A-Za-z0-9_]+)$", symbols,
@@ -52,7 +55,7 @@ def main():
         report.update({
             "library": library.name,
             "max_glibc_required": f"{maximum[0]}.{maximum[1]}",
-            "soname": "libGGPO.so.0",
+            "soname": soname,
             "ggpo_exports": exports,
         })
     else:

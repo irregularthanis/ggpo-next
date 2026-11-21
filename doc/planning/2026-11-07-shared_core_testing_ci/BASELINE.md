@@ -1,9 +1,14 @@
 # Shared-core testing baseline
 
+> **Historical.** This is the snapshot taken before the shared-core testing
+> work began, kept as that plan's M0 evidence. Every gap it lists has since
+> been closed; the current coverage is in
+> [Testing](../../architecture/Testing.md#coverage-map).
+
 Source: `d427210dc4b68f30dc6747de1a912dd6af4a3397`
 
 This inventory freezes the evidence available before implementing the
-[shared-core testing plan](../planning/2026-11-07-shared_core_testing_ci/TECH_PLAN.md).
+[shared-core testing plan](TECH_PLAN.md).
 “Called” means an existing smoke test reaches the API; it does not imply that
 invalid inputs, lifecycle transitions, cleanup, or backend differences are
 covered.
@@ -29,9 +34,9 @@ covered.
 | `ggpo_log` | None | Missing | Null/closed/session applicability |
 | `ggpo_logv` | None | Missing | Controlled variadic wrapper contract |
 
-Sources: [`ggponet.h`](../../src/include/ggponet.h),
-[`peer_smoke.cpp`](../../tests/smoke/peer_smoke.cpp), and
-[`synctest_smoke.cpp`](../../tests/smoke/synctest_smoke.cpp).
+Sources: [`ggponet.h`](../../../src/include/ggponet.h),
+[`peer_smoke.cpp`](../../../tests/smoke/peer_smoke.cpp), and
+[`synctest_smoke.cpp`](../../../tests/smoke/synctest_smoke.cpp).
 
 ## Portable core
 
@@ -45,14 +50,14 @@ Sources: [`ggponet.h`](../../src/include/ggponet.h),
 | `BitVector` | Production use | Indirect | P1: bit boundaries and reset |
 | UDP message/protocol | Frozen Windows layout | Partial | P0: lengths, types and malformed datagrams |
 
-Sources: [`input_queue.h`](../../src/lib/ggpo/input_queue.h),
-[`sync.h`](../../src/lib/ggpo/sync.h),
-[`timesync.h`](../../src/lib/ggpo/timesync.h), and
-[`udp_msg.h`](../../src/lib/ggpo/network/udp_msg.h).
+Sources: [`input_queue.h`](../../../src/lib/ggpo/input_queue.h),
+[`sync.h`](../../../src/lib/ggpo/sync.h),
+[`timesync.h`](../../../src/lib/ggpo/timesync.h), and
+[`udp_msg.h`](../../../src/lib/ggpo/network/udp_msg.h).
 
 ## Platform boundary
 
-[`platform.h`](../../src/lib/ggpo/platform.h) contains 16 callable operations,
+[`platform.h`](../../../src/lib/ggpo/platform.h) contains 16 callable operations,
 plus `UdpSocket` constructor/destructor lifecycle.
 
 | Group | Operations | Current direct evidence | Priority |
@@ -65,7 +70,7 @@ plus `UdpSocket` constructor/destructor lifecycle.
 | UDP socket | `OpenAndBind`, `Send`, `Receive`, `Close` | Fake covers basic open/failure/recovery | P0 |
 
 The current fake contract is
-[`platform_fake_test.cpp`](../../tests/platform/fake/platform_fake_test.cpp).
+[`platform_fake_test.cpp`](../../../tests/platform/fake/platform_fake_test.cpp).
 Windows and Linux exercise their adapters through separate native loopbacks;
 they do not yet run one reusable conformance assertion source.
 
@@ -84,9 +89,9 @@ they do not yet run one reusable conformance assertion source.
 | Frozen compatibility | Baseline/candidate Windows comparison | Yes |
 | Release packages | Release packaging and package consumption | Yes |
 
-Sources: [`tests/CMakeLists.txt`](../../tests/CMakeLists.txt),
-[`linux-compatibility.yml`](../../.github/workflows/linux-compatibility.yml), and
-[`windows-compatibility.yml`](../../.github/workflows/windows-compatibility.yml).
+Sources: [`tests/CMakeLists.txt`](../../../tests/CMakeLists.txt),
+[`linux-compatibility.yml`](../../../.github/workflows/linux-compatibility.yml), and
+[`windows-compatibility.yml`](../../../.github/workflows/windows-compatibility.yml).
 
 ## CI baseline
 

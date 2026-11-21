@@ -113,7 +113,7 @@ IoResult Receive(void *data, int capacity, int *bytes, UdpEndpoint *from);
 
 | Status | Path | Practical change | Milestone |
 |---|---|---|---|
-| Add | `doc/testing/` or generated evidence directory | API/core/platform/CI inventories with test references | M0 |
+| Add | `doc/testing/` or generated evidence directory (now [`BASELINE.md`](BASELINE.md)) | API/core/platform/CI inventories with test references | M0 |
 | Add | `tests/unit/` | InputQueue, Sync, TimeSync, containers and protocol cases | M1, M4 |
 | Add | `tests/contract/` | Backend-aware public API fixture and 16-export matrix | M2 |
 | Extend | `tests/platform/fake/` | Only capabilities required by deterministic failure cases | M3, M4 |
