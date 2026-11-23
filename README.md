@@ -60,6 +60,9 @@ four-platform match through the deployed server.
 - Terraform for a free-tier OCI server with a DuckDNS name; every deployment
   is qualified by a real four-platform match through it.
 
+  <img width="627" height="502" alt="image" src="https://github.com/user-attachments/assets/1d297a99-0047-45cd-bf93-da9d11b00347" />
+
+
 **Testing and CI**
 
 - Per-platform compatibility workflows, a native cross-platform E2E matrix,
